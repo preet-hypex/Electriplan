@@ -1,0 +1,13 @@
+{
+  "configured": false,
+  "name": "Your App",
+  "accent": "#2563EB",
+  "headline": "Everything your team needs,\none sign-in away.",
+  "blurb": "Sign in with the email address you were invited with. Forgotten your password? A reset link is one click away.",
+  "highlights": [
+    "Secure sign-in",
+    "Password reset by email",
+    "Accounts by invitation"
+  ],
+  "footer": ""
+}

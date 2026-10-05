@@ -1,0 +1,24 @@
+:root {
+  --ink-2: #1B2A55;
+  --text: #1F2A44;
+  --body: #3C4863;
+  --muted: #6A7590;
+  --faint: #98A1B5;
+
+  --canvas: #F4F6FA;
+  --surface: #FFFFFF;
+  --line: #E3E7EE;
+  --hair: #EEF1F5;
+  --sub: #F8F9FB;
+
+  --ok: #1B8F55;   --ok-t: #E7F6EE;   --ok-b: #BFE7D0;
+  --warn: #B86E00; --warn-t: #FFF5E1; --warn-b: #F3D9A0;
+  --bad: #CC3B34;  --bad-t: #FDEDEC;  --bad-b: #F4BFBB;
+
+  --r: 6px;
+  --rs: 4px;
+  --sh-pop: 0 8px 24px rgba(15, 29, 69, .12), 0 1px 3px rgba(15, 29, 69, .08);
+
+  --font: 'Inter', system-ui, -apple-system, sans-serif;
+  --font-brand: 'Poppins', var(--font);
+}

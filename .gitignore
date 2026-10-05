@@ -1,0 +1,16 @@
+.env
+.env.*
+!.env.example
+*.env.bak
+
+node_modules/
+dist/
+coverage/
+.vite/
+
+.DS_Store
+.idea/
+.vscode/*
+!.vscode/settings.json
+*.log
+.vercel
