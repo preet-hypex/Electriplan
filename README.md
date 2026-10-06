@@ -1,117 +1,168 @@
 # LoginPage
 
-A modular login page to build things on top of. React (Vite) in the browser, Supabase Auth for
-identity. It ships sign-in, forgotten password, reset password and accept-an-invitation flows,
-plus a protected home page that you replace with your app.
+A login page and an API to build things on top of. React (Vite) in the browser, Supabase Auth for
+identity, a Spring Boot API (Java 21, Spring Modulith) for business logic, and a local Postgres that
+holds a read-only copy of Supabase's users for that logic to use. Everything runs in Docker.
+
+## How authentication works
+
+**Supabase is the source of truth for authentication.** Signing in, passwords, password resets,
+invitations, email confirmation and banning all happen in Supabase. The API never handles a
+password, never sends an email and keeps no roles, permissions or account state of its own.
+
+```
+                 1. sign in, reset password, accept invitation
+   ┌──────────┐ ─────────────────────────────────────────► ┌───────────────────┐
+   │  React   │ ◄───────────────────────────────────────── │   Supabase Auth   │
+   │ (browser)│         2. access token (ES256 JWT)        │ (source of truth) │
+   └──────────┘                                            └───────────────────┘
+        │                                                     ▲             ▲
+        │ 3. Authorization: Bearer <token>                    │ 4. JWKS     │ 5. Admin API
+        ▼                                                     │             │
+   ┌──────────┐ ──────────────────────────────────────────────┘             │
+   │  Java    │ ────────────────────────────────────────────────────────────┘
+   │   API    │   4. verify each token's signature, issuer and audience
+   └──────────┘   5. list and read users with the secret key
+        │ 6. JDBC
+        ▼
+   ┌────────────────────┐
+   │ Postgres (local)   │   localhost:5433, in Docker.
+   │ app.supabase_user  │   A read-only copy of Supabase's users.
+   └────────────────────┘   The browser has no privileges here.
+```
+
+1. The React app talks to Supabase directly with `@supabase/supabase-js`: sign-in, the "Forgot?"
+   reset link, accepting an invitation, choosing a new password. Supabase sends every email.
+2. Supabase issues a JWT signed with the project's asymmetric key. It carries identity only.
+3. Calls to the API send `Authorization: Bearer <token>` (`frontend/src/lib/api.js`).
+4. The `security` module verifies the token against the project's public **JWKS** endpoint
+   (ES256 / RS256) and checks the issuer, the `authenticated` audience and that `sub` is a Supabase
+   user id. **Any valid Supabase token gets in.** There is no invitation gate, role or deactivation
+   check in the API; to stop someone signing in, ban or delete them in Supabase, and to stop
+   strangers signing up, turn off sign-ups in Supabase (setup offers to).
+5. The `users` module copies Supabase's users into Postgres with the secret key (see below).
+6. The API reaches Postgres over JDBC. The browser never does.
+
+## The copy of Supabase's users
+
+`app.supabase_user` mirrors Supabase's `auth.users`: id, email, phone, `user_metadata`,
+`app_metadata`, email confirmation, invitation, last sign-in, ban and created/updated times, plus
+`copied_at`. The id is the Supabase user id, which is also the token's `sub`.
+
+- **Every 5 minutes** (`USER_SYNC_INTERVAL`, and once at start-up) the API lists every user through
+  Supabase's Admin API and writes the ones that changed. A user missing from the listing is looked
+  up on its own and removed from the copy only when Supabase answers that it no longer exists, so a
+  failed or shifting listing never deletes anyone.
+- **On the first API call** from someone the copy does not have yet, the API copies that one user
+  straight away, so whoever is calling always has a row.
+- Nothing else writes to the table. Don't edit it by hand, and don't add columns for your own data:
+  put business data in your own tables and point them at `app.supabase_user(id)`.
+
+In Java, `SupabaseUsers.find(id)` reads the copy, and `AuthenticatedUsers.current()` gives the
+caller's id. `SupabaseUsers.copy(id)` refreshes one user on demand.
 
 ## Quick start
 
-```sh
-./run.sh            # checks Node, installs, then runs setup on first use and starts the dev server
+Needs Docker and Node 22.12+. Java is only needed to run the API outside Docker.
+
+```bash
+node scripts/setup.mjs                       # name, colour theme, Supabase keys -> frontend/.env, backend/.env
+docker compose up -d --build --wait          # Postgres, API and web
+./scripts/smoke.sh                           # read-only checks that the stack is wired up
 ```
 
-or by hand:
+Then open **http://localhost:4180** and sign in. Setup offers to create an account in Supabase for
+you; add more people in the Supabase dashboard under **Authentication → Users** (invite, or add with
+a password). Invitation and reset emails come from Supabase and link back to `/invite` and
+`/reset-password`.
 
-```sh
-npm install
-npm run setup       # name, colour theme, then Supabase
-npm run dev         # http://localhost:5180
+For hot reload, run the frontend with Vite against the API in Docker:
+
+```bash
+cd frontend && npm run dev                   # http://localhost:5180, /api proxied to localhost:8081
 ```
 
-`npm run dev` runs setup itself the first time (`predev`), so a fresh checkout never starts with
-the configuration screen.
+After changing backend code, `docker compose up -d --build api`, or stop that container and run
+`backend/run.sh` (JDK 21) on the same port.
 
-## What setup does
+### Ports
 
-**Brand.** It asks for an app name and a colour theme (eight presets or any hex colour). From
-that one colour it generates every themed token in `src/styles/theme.css`: hover, tint, focus
-ring, the dark side panel and its text, link colour and button text colour. It checks each one
-against WCAG contrast, so a light colour such as yellow gets dark button text and darker links
-automatically. It also writes `public/favicon.svg` and the name into `src/brand.json`.
+PlannaOne's stack uses 5173, 4173, 8080 and 5432 on this machine, so this one stays out of its way.
+Supabase's redirect allow list holds the two web origins, so keep them fixed.
 
-The sign-in page copy (headline, blurb, highlight pills and footer) is in `src/brand.json`. Edit
-it by hand; setup leaves those fields alone.
+| Port | What | Set by |
+|---|---|---|
+| 5180 | Vite dev server (`npm run dev`) | `frontend/ports.mjs` |
+| 4180 | web container (nginx: the built app, `/api` proxied) and `vite preview` | `WEB_PORT`, `frontend/ports.mjs` |
+| 8081 | API | `API_PORT` |
+| 5433 | Postgres (`psql -h localhost -p 5433 -U app app`) | `DB_PORT` |
 
-**Supabase.** Paste a personal access token
-([dashboard → account → tokens](https://supabase.com/dashboard/account/tokens)), and setup:
+All of them are bound to 127.0.0.1. The database trusts local connections, as PlannaOne's does;
+it is for development, not for exposing.
 
-1. lists your projects and lets you pick one,
-2. fetches the project URL, the **publishable** key and the **secret** key,
-3. adds this app's redirect URLs (`http://localhost:5180/**`, `http://localhost:4180/**` and your
-   production URL, if you give one) to **Authentication → URL Configuration**, keeping the ones
-   already there. It only replaces the site URL if it is still the `localhost:3000` default,
-4. offers to turn off public sign-ups. The page has no sign-up form, but the API accepts sign-ups
-   until you do,
-5. shows every auth change and asks before applying it,
-6. stores the URL and keys in the macOS login keychain and writes `.env` and `.env.server`,
-7. optionally creates a first account so you can sign in straight away.
+## The setup script
 
-The token is used for that run only and is never written anywhere. Set `SUPABASE_ACCESS_TOKEN`
-to skip the prompt. Leave the prompt blank to paste the URL and keys yourself instead.
+`scripts/setup.mjs` has no dependencies and is safe to re-run.
 
-| File          | Holds                                              | Committed |
-|---------------|----------------------------------------------------|-----------|
-| `.env`        | `VITE_SUPABASE_URL`, `VITE_SUPABASE_PUBLISHABLE_KEY` | no        |
-| `.env.server` | `SUPABASE_URL`, `SUPABASE_SECRET_KEY` (mode 600)   | no        |
-| keychain      | `<slug>:SUPABASE_URL`, `…PUBLISHABLE_KEY`, `…SECRET_KEY` | —   |
-
-Only `VITE_` values reach the browser. The publishable key is public by design. The secret key
-bypasses row level security and can create or delete any account, so it lives only in
-`.env.server` and the keychain. The app refuses to start if a secret key ends up in
-`VITE_SUPABASE_PUBLISHABLE_KEY`.
-
-### Commands
-
-```sh
-npm run setup                    # everything
-npm run setup -- brand           # just the name and colour theme
-npm run setup -- supabase        # just the Supabase URL, keys and auth settings
-npm run setup -- sync            # fresh clone: rebuild .env files from the keychain
-npm run setup -- status          # what is configured (never prints secrets)
-npm run setup -- forget all      # remove the keychain entries (or name the keys)
+```bash
+node scripts/setup.mjs                    # everything below, in order
+node scripts/setup.mjs brand              # app name and colour theme
+node scripts/setup.mjs supabase           # project URL, keys and auth settings
+node scripts/setup.mjs sync               # fresh clone: rebuild both .env files from the keychain
+node scripts/setup.mjs status             # what is configured, and how many users are copied
+node scripts/setup.mjs forget <KEY|all>
 ```
 
-The keychain entries are named after the `slug` in `src/brand.json`. It is set once on the first
-run and kept when you rename the app, so `sync` keeps finding them. Outside macOS, or with
-`SETUP_NO_KEYCHAIN=1`, setup just writes the `.env` files.
+- **Brand.** It asks for a name and a colour and generates every themed token in
+  `frontend/src/styles/theme.css` (contrast-checked, so a light colour gets dark button text) and
+  the favicon. The sign-in copy is in `frontend/src/brand.json`.
+- **Supabase.** With a personal access token it lists your projects, fetches the URL and the
+  publishable and secret keys, adds `http://localhost:5180/**` and `http://localhost:4180/**` (and
+  a production URL if you give one) to the redirect allow list, and offers to turn off public
+  sign-ups. It shows each change and asks first. The token is never stored. The URL and keys go in
+  the macOS keychain and in `frontend/.env` (the publishable key only) and `backend/.env` (the
+  secret key, mode 600). It then offers to create an account to sign in with.
+
+The API refuses to start without `SUPABASE_SECRET_KEY`, since it copies the users with it.
 
 ## Layout
 
 ```
-src/
-  brand.json                 name, accent and sign-in copy (written by setup)
-  lib/supabase.js            client, config validation, redirect error parsing
-  lib/recovery.js            remembers a password-reset link across reloads
-  lib/invitation.js          has an invited user finished setting up?
-  lib/palette.js             one accent colour → every themed token, contrast-checked
-  context/AuthContext.jsx    session state and auth actions (useAuth)
-  components/AuthLayout.jsx  split screen: branded panel + form
-  components/ProtectedRoute  sends users to /login, /invite or /reset-password as needed
-  components/ConfigError     shown instead of the app when Supabase is not configured
-  pages/                     Login, Invite, ResetPassword, Home
-  styles/                    tokens.css (neutral), theme.css (generated), app.css
-scripts/setup.mjs            the setup script (no dependencies)
-public/env.js                runtime config hook for hosted builds
+frontend/                React app (see below), Dockerfile, nginx.conf
+backend/                 Spring Boot API, Dockerfile, .env.example, run.sh
+  src/main/java/loginpage/
+    security/            JWT verification against Supabase's JWKS, the current caller
+    users/               the copy of Supabase's users: sync, Admin API client, /api/me
+  src/main/resources/db/migration/   Flyway: V1 app.supabase_user
+scripts/setup.mjs        brand, Supabase environment, keychain, first account
+scripts/smoke.sh         read-only checks against a running stack
+docker-compose.yml       db, api, web
+documents/api.md         every endpoint
 ```
 
-## Building on top
+Each top-level package under `loginpage` is a Spring Modulith module; `ModularityTests` fails the
+build if one reaches into another's internals. `security` depends on no other module; `users`
+depends on `security`. Add business logic as new modules beside them. Data access is plain SQL
+through `JdbcClient` (no JPA).
 
-Add routes in `src/App.jsx` and wrap anything private in `<ProtectedRoute>`. `useAuth()` gives
-you `user`, `session`, `signOut` and the rest. Replace `src/pages/Home.jsx` with your app.
-
-For a hosted build, you can inject config at container start instead of baking it in. Write
-`window.__APP_ENV__ = { VITE_SUPABASE_URL: "…", VITE_SUPABASE_PUBLISHABLE_KEY: "…" }` to
-`/env.js`. It takes precedence over the values in `.env`.
-
-### Accounts
-
-Accounts are by invitation. Invite people from the Supabase dashboard (**Authentication → Users →
-Invite**). The link brings them to `/invite` to choose a name and password. Password reset emails
-link back to `/reset-password`. Both need this app's URL in the redirect allow list, which setup
-adds for you.
+In the frontend, `context/AuthContext.jsx` wraps Supabase Auth, `components/ProtectedRoute.jsx`
+sends signed-out visitors to sign in, and `lib/api.js` adds the Bearer token to API calls. The pages
+are Login, Invite (choose a name and password), ResetPassword and Home, which shows your Supabase
+session next to the API's copy of you from `/api/me`.
 
 ## Tests
 
-```sh
-npm test
+```bash
+cd frontend && npm test                         # Vitest: pages, routing, api client, palette
+node --test scripts/lib/                        # setup script helpers
+cd backend && mvn test                          # JDK 21: token checks, sync rules, Admin API client (no Supabase needed)
+APP_TEST_DB_URL=jdbc:postgresql://localhost:5433/app mvn test   # adds the *PostgresTests: real migration and SQL
+./scripts/smoke.sh                              # against the running stack
+```
+
+Without a local JDK 21 the backend tests run in the same image the Dockerfile builds with:
+
+```bash
+docker run --rm --network loginpage_default -e APP_TEST_DB_URL=jdbc:postgresql://db:5432/app \
+  -v "$PWD/backend":/src -v "$HOME/.m2":/root/.m2 -w /src maven:3.9-eclipse-temurin-21 mvn test
 ```

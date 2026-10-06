@@ -8,6 +8,7 @@ const mocks = vi.hoisted(() => ({ auth: null }))
 vi.mock('../context/AuthContext', () => ({ useAuth: () => mocks.auth }))
 vi.mock('../lib/supabase', () => ({ supabase: {}, authRedirectError: null }))
 
+import brand from '../lib/brand'
 import Login from './Login'
 
 function renderLogin(extra = {}) {
@@ -18,7 +19,7 @@ function renderLogin(extra = {}) {
 describe('Login', () => {
   it('shows the brand from src/brand.json', () => {
     renderLogin()
-    expect(screen.getAllByLabelText('Your App').length).toBeGreaterThan(0)
+    expect(screen.getAllByLabelText(brand.name).length).toBeGreaterThan(0)
   })
 
   it('offers no way to create an account', () => {
@@ -56,6 +57,16 @@ describe('Login', () => {
 
     expect(mocks.auth.resetPassword).toHaveBeenCalledWith('sam@example.com')
     expect(await screen.findByText(/if that address has an account, a reset link is on its way/i)).toBeInTheDocument()
+  })
+
+  it('shows why Supabase refused a reset request', async () => {
+    renderLogin({ resetPassword: vi.fn().mockResolvedValue({ error: new Error('For security purposes, you can only request this after 60 seconds.') }) })
+
+    await userEvent.click(screen.getByRole('link', { name: 'Forgot?' }))
+    await userEvent.type(screen.getByLabelText('Email'), 'sam@example.com')
+    await userEvent.click(screen.getByRole('button', { name: /send reset link/i }))
+
+    expect(await screen.findByText(/only request this after 60 seconds/)).toBeInTheDocument()
   })
 
   it('asks for an email before requesting a reset link', async () => {

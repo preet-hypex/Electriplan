@@ -1,7 +1,7 @@
 {
-  "configured": false,
-  "name": "Your App",
-  "accent": "#2563EB",
+  "configured": true,
+  "name": "PlannaSaaS",
+  "accent": "#334155",
   "headline": "Everything your team needs,\none sign-in away.",
   "blurb": "Sign in with the email address you were invited with. Forgotten your password? A reset link is one click away.",
   "highlights": [
@@ -9,5 +9,6 @@
     "Password reset by email",
     "Accounts by invitation"
   ],
-  "footer": ""
+  "footer": "",
+  "slug": "plannasaas"
 }

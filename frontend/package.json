@@ -7,8 +7,8 @@
     "node": ">=22.12.0"
   },
   "scripts": {
-    "setup": "node scripts/setup.mjs",
-    "predev": "node scripts/setup.mjs --if-needed",
+    "setup": "node ../scripts/setup.mjs",
+    "predev": "node ../scripts/setup.mjs --if-needed",
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
