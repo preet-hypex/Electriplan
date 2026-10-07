@@ -11,7 +11,8 @@ accurate, editable floor plan in millimetres; electrical layout, review and quot
 | Floor-plan analyser | `floorplan/` | Python 3.11, FastAPI, OpenCV, Tesseract |
 | Sign-in | Supabase Auth | Hosted by Supabase; nothing to run |
 
-Everything except Supabase runs locally in Docker.
+Everything except Supabase runs locally in Docker. The data model is described in
+[`documents/database-schema.md`](documents/database-schema.md).
 
 ## First-time setup
 
