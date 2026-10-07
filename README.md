@@ -141,6 +141,23 @@ of `/api/*` to the API on 8081.
 | API outside Docker (needs JDK 21: `brew install openjdk@21`, and Maven) | `backend/run.sh` |
 | Analyser outside Docker | `floorplan/run.sh` (port 8082) |
 
+## Continuous integration
+
+Every pull request into `main`, and every push to `main`, runs `.github/workflows/ci.yml` on
+GitHub Actions. Its jobs run in parallel:
+
+| Job | Checks |
+|---|---|
+| Frontend | `npm ci`, typecheck, tests, production build, and the setup script's tests |
+| Floor-plan analyser | the Python tests, with Tesseract installed |
+| API | `mvn verify`, against a real Postgres, so the Postgres tests run too |
+| Docker images | `docker compose build` (the web image with placeholder Supabase settings) |
+| **CI passed** | passes only if every job above passed |
+
+Require **CI passed** before merging: GitHub → Settings → Rules → Rulesets → *New branch ruleset*,
+target `main`, tick *Require a pull request before merging* and *Require status checks to pass*,
+and add **CI passed**. A pull request then cannot be merged until the whole build is green.
+
 ## Troubleshooting
 
 | You see | Cause and fix |
