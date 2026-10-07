@@ -94,12 +94,12 @@ else
   fail '/api/floorplan is proxied' "GET /api/floorplan/health through the web container returned $status"
 fi
 
-echo "DB   app.supabase_user"
+echo "DB   plannasaas.supabase_user"
 
-if copied=$(docker compose -f "$ROOT/docker-compose.yml" exec -T db psql -U plannasaas -d plannasaas -qtA -c 'select count(*) from app.supabase_user' 2>&1); then
+if copied=$(docker compose -f "$ROOT/docker-compose.yml" exec -T db psql -U plannasaas -d plannasaas -qtA -c 'select count(*) from plannasaas.supabase_user' 2>&1); then
   pass "the copy of Supabase's users exists ($copied rows)"
 else
-  fail "app.supabase_user exists" "$copied"
+  fail "plannasaas.supabase_user exists" "$copied"
 fi
 
 if [ "$failures" -gt 0 ]; then

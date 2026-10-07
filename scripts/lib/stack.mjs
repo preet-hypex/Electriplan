@@ -11,7 +11,7 @@ export function psql(root, sql) {
 }
 
 export function copiedUsers(root) {
-  const result = psql(root, 'select count(*) from app.supabase_user;\n')
+  const result = psql(root, 'select count(*) from plannasaas.supabase_user;\n')
   return result.ok ? Number(result.out) : null
 }
 

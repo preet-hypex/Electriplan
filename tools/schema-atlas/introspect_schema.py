@@ -2,7 +2,7 @@
 """Introspect a Postgres schema into schema-model.json for the atlas.
 
 Adapted from the Planna One atlas toolkit (repo/planna/tools) for plannaSaas:
-the schema is configurable (ATLAS_SCHEMA, default "app") and tables can be
+the schema is configurable (ATLAS_SCHEMA, default "plannasaas") and tables can be
 grouped into modules by a JSON map (ATLAS_MODULES), since one migration may
 hold several domains.
 
@@ -19,7 +19,7 @@ Module attribution:
   ATLAS_MIGRATIONS=<dir of Flyway V*.sql>  -> module = migration name suffix
   (default) backend/src/main/resources/db/migration
 
-Schema:   ATLAS_SCHEMA=app (default)
+Schema:   ATLAS_SCHEMA=plannasaas (default)
 Modules:  ATLAS_MODULES=<json file {"table": "module"}> (default modules.json
           next to this script); tables it does not list fall back to the
           migration name.
@@ -29,7 +29,7 @@ import json, os, re, subprocess, sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 DA   = os.environ.get('ATLAS_OUT_DIR') or HERE
-SCHEMA = os.environ.get('ATLAS_SCHEMA', 'app')
+SCHEMA = os.environ.get('ATLAS_SCHEMA', 'plannasaas')
 if not re.fullmatch(r'[a-z_][a-z0-9_]*', SCHEMA):
     sys.exit(f'ATLAS_SCHEMA must be a plain identifier, not {SCHEMA!r}')
 PSQL = os.environ.get('ATLAS_PSQL', '').split() or \
@@ -42,7 +42,7 @@ def psql(sql):
     return r.stdout.strip()
 
 def creates(path):
-    # Accept both "CREATE TABLE t" and schema-qualified "CREATE TABLE app.t".
+    # Accept both "CREATE TABLE t" and schema-qualified "CREATE TABLE plannasaas.t".
     return re.findall(r'^CREATE TABLE (?:IF NOT EXISTS )?(?:\w+\.)?(\w+)', open(path).read(), re.M)
 
 table_module = {}

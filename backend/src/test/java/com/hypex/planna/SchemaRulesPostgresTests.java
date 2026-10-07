@@ -35,7 +35,7 @@ class SchemaRulesPostgresTests {
     @BeforeAll
     static void migrateAndCreateRuntimeRole() throws Exception {
         Flyway.configure().dataSource(System.getenv("APP_TEST_DB_URL"), TestDatabase.user(), TestDatabase.password())
-                .schemas("app").defaultSchema("app").locations("classpath:db/migration").load().migrate();
+                .schemas("plannasaas").defaultSchema("plannasaas").locations("classpath:db/migration").load().migrate();
         try (Connection c = connect(); Statement s = c.createStatement()) {
             s.execute("""
                     DO $$ BEGIN
@@ -43,9 +43,9 @@ class SchemaRulesPostgresTests {
                             CREATE ROLE %1$s NOSUPERUSER NOBYPASSRLS;
                         END IF;
                     END $$;
-                    GRANT USAGE ON SCHEMA app TO %1$s;
-                    GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA app TO %1$s;
-                    GRANT USAGE ON ALL SEQUENCES IN SCHEMA app TO %1$s;
+                    GRANT USAGE ON SCHEMA plannasaas TO %1$s;
+                    GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA plannasaas TO %1$s;
+                    GRANT USAGE ON ALL SEQUENCES IN SCHEMA plannasaas TO %1$s;
                     GRANT %1$s TO CURRENT_USER;
                     """.formatted(RUNTIME_ROLE));
         }

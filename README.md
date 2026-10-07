@@ -137,7 +137,7 @@ TablePlus) connects with:
 | User | `plannasaas` |
 | Password | `plannasaas` |
 
-The tables are in the `app` schema. These are local development credentials; override them with
+The tables are in the `plannasaas` schema. These are local development credentials; override them with
 `DB_NAME`, `DB_USER` and `DB_PASSWORD` before the first `docker compose up` (Postgres only reads
 them when it creates its data volume, so changing them later needs `docker compose down -v`).
 
@@ -216,7 +216,7 @@ password, never sends an email and keeps no roles, permissions or account state 
         ▼
    ┌────────────────────┐
    │ Postgres (local)   │   localhost:5433, in Docker.
-   │ app.supabase_user  │   A read-only copy of Supabase's users.
+   │ plannasaas.supabase_user  │   A read-only copy of Supabase's users.
    └────────────────────┘   The browser has no privileges here.
 ```
 

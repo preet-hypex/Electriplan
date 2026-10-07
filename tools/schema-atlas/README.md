@@ -34,7 +34,7 @@ python3 tools/schema-atlas/build_schema_atlas.py
 
 | File | Role |
 |---|---|
-| `introspect_schema.py` | Reads the `app` schema (`ATLAS_SCHEMA`) from a database into `schema-model.json` |
+| `introspect_schema.py` | Reads the `plannasaas` schema (`ATLAS_SCHEMA`) from a database into `schema-model.json` |
 | `build_schema_atlas.py` | Runs the introspector and injects the model into the template |
 | `schema-atlas-template.html` | The diagram: layout, search, zoom and pan, detail panel |
 | `modules.json` | Which domain each table belongs to |

@@ -29,7 +29,7 @@ class SupabaseUserPostgresTests {
     @BeforeAll
     static void migrate() {
         DataSource source = new DriverManagerDataSource(System.getenv("APP_TEST_DB_URL"), TestDatabase.user(), TestDatabase.password());
-        Flyway.configure().dataSource(source).schemas("app").defaultSchema("app")
+        Flyway.configure().dataSource(source).schemas("plannasaas").defaultSchema("plannasaas")
                 .locations("classpath:db/migration").load().migrate();
         db = JdbcClient.create(source);
         copies = new SupabaseUserRepository(db, new ObjectMapper());
@@ -37,7 +37,7 @@ class SupabaseUserPostgresTests {
 
     @AfterEach
     void leaveNothingBehind() {
-        db.sql("delete from app.supabase_user where id::text like 'aaaaaaaa-%'").update();
+        db.sql("delete from plannasaas.supabase_user where id::text like 'aaaaaaaa-%'").update();
     }
 
     private static AdminUser sam(String name, Instant lastSignIn) {
