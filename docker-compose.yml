@@ -1,18 +1,20 @@
-name: loginpage
+name: plannasaas
 
 services:
   db:
     image: postgres:17-alpine
+    # Local development credentials. Connections from outside the container
+    # (the API, DBeaver) need the password; port 5433 is bound to this machine only.
     environment:
-      POSTGRES_USER: app
-      POSTGRES_DB: app
-      POSTGRES_HOST_AUTH_METHOD: trust
+      POSTGRES_DB: ${DB_NAME:-plannasaas}
+      POSTGRES_USER: ${DB_USER:-plannasaas}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-plannasaas}
     ports:
       - "127.0.0.1:${DB_PORT:-5433}:5432"
     volumes:
       - app-data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U app -d app"]
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
       interval: 5s
       timeout: 3s
       retries: 10
@@ -20,12 +22,14 @@ services:
 
   api:
     build: ./backend
-    image: loginpage-api:local
+    image: plannasaas-api:local
     env_file:
       - path: ./backend/.env
         required: false
     environment:
-      APP_DB_URL: jdbc:postgresql://db:5432/app
+      APP_DB_URL: jdbc:postgresql://db:5432/${DB_NAME:-plannasaas}
+      APP_DB_USER: ${DB_USER:-plannasaas}
+      APP_DB_PASSWORD: ${DB_PASSWORD:-plannasaas}
       PORT: "8080"
     depends_on:
       db:
@@ -43,7 +47,7 @@ services:
 
   floorplan:
     build: ./floorplan
-    image: loginpage-floorplan:local
+    image: plannasaas-floorplan:local
     # Only the public project URL, to verify sign-ins against the project's
     # public keys. The analyser never sees the secret key in backend/.env.
     env_file:
@@ -64,7 +68,7 @@ services:
 
   web:
     build: ./frontend
-    image: loginpage-web:local
+    image: plannasaas-web:local
     depends_on:
       api:
         condition: service_healthy

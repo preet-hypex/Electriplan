@@ -1,7 +1,7 @@
 import { spawnSync } from 'node:child_process'
 
 export function psql(root, sql) {
-  const args = ['compose', 'exec', '-T', 'db', 'psql', '-U', 'app', '-d', 'app', '-v', 'ON_ERROR_STOP=1', '-qtA']
+  const args = ['compose', 'exec', '-T', 'db', 'psql', '-U', 'plannasaas', '-d', 'plannasaas', '-v', 'ON_ERROR_STOP=1', '-qtA']
   const run = spawnSync('docker', args, { cwd: root, input: sql, encoding: 'utf8' })
   return {
     ok: run.status === 0,
@@ -11,7 +11,7 @@ export function psql(root, sql) {
 }
 
 export function copiedUsers(root) {
-  const result = psql(root, 'select count(*) from app.supabase_user;\n')
+  const result = psql(root, 'select count(*) from plannasaas.supabase_user;\n')
   return result.ok ? Number(result.out) : null
 }
 

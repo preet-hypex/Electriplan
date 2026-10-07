@@ -11,7 +11,9 @@ accurate, editable floor plan in millimetres; electrical layout, review and quot
 | Floor-plan analyser | `floorplan/` | Python 3.11, FastAPI, OpenCV, Tesseract |
 | Sign-in | Supabase Auth | Hosted by Supabase; nothing to run |
 
-Everything except Supabase runs locally in Docker.
+Everything except Supabase runs locally in Docker. The data model is described in
+[`documents/database-schema.md`](documents/database-schema.md), and drawn in
+[`documents/schema-atlas.html`](documents/schema-atlas.html) (open it in a browser).
 
 ## First-time setup
 
@@ -122,6 +124,23 @@ Postgres within a few minutes.
 
 The web app's Supabase settings are built into it, so **after re-running setup, rebuild `web`**.
 
+### Connecting to the database
+
+The local Postgres runs in Docker, reachable from this machine only. Any client (DBeaver, psql,
+TablePlus) connects with:
+
+| Setting | Value |
+|---|---|
+| Host | `localhost` |
+| Port | `5433` |
+| Database | `plannasaas` |
+| User | `plannasaas` |
+| Password | `plannasaas` |
+
+The tables are in the `plannasaas` schema. These are local development credentials; override them with
+`DB_NAME`, `DB_USER` and `DB_PASSWORD` before the first `docker compose up` (Postgres only reads
+them when it creates its data volume, so changing them later needs `docker compose down -v`).
+
 ## Working on the code
 
 For hot reload, keep the API, analyser and database in Docker and run the web app with Vite:
@@ -197,7 +216,7 @@ password, never sends an email and keeps no roles, permissions or account state 
         ▼
    ┌────────────────────┐
    │ Postgres (local)   │   localhost:5433, in Docker.
-   │ app.supabase_user  │   A read-only copy of Supabase's users.
+   │ plannasaas.supabase_user  │   A read-only copy of Supabase's users.
    └────────────────────┘   The browser has no privileges here.
 ```
 
