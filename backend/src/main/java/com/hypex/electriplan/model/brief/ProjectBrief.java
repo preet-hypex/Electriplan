@@ -18,7 +18,7 @@ import org.jspecify.annotations.Nullable;
 public record ProjectBrief(
         Integer version,
         AustralianState state,
-        Distributor distributor,
+        DistributorCode distributor,
         Supply supply,
         Construction construction,
         Appliances appliances,

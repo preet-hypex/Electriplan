@@ -9,9 +9,9 @@
  */
 export type AustralianState = 'NSW' | 'VIC' | 'QLD' | 'WA' | 'SA' | 'TAS' | 'ACT' | 'NT'
 /**
- * The electricity distributor (DNSP). Its service rules set the supply limits. Same codes as the database's electricity_distributor table.
+ * The electricity distributor (DNSP), by code: jemena, citipower... Configurable reference data, not a fixed list: the codes are rows of the database table electriplan.electricity_distributor (GET /api/reference/distributors), and the API checks a brief's code exists there and belongs to the brief's state. Same format as that table's code column.
  */
-export type Distributor = 'citipower' | 'powercor' | 'jemena' | 'united_energy' | 'ausnet_services'
+export type DistributorCode = string
 export type CooktopType = 'induction' | 'electric' | 'gas' | 'none'
 export type OvenType = 'electric' | 'gas' | 'none'
 export type HotWaterType = 'heat-pump' | 'electric-storage' | 'electric-instantaneous' | 'gas' | 'solar-boosted'
@@ -102,7 +102,7 @@ export interface Contracts {
 export interface ProjectBrief {
   version: 1
   state: AustralianState
-  distributor: Distributor
+  distributor: DistributorCode
   supply: Supply
   construction: Construction
   appliances: Appliances

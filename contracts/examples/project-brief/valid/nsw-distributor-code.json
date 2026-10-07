@@ -1,7 +1,7 @@
 {
   "version": 1,
-  "state": "VIC",
-  "distributor": "origin",
+  "state": "NSW",
+  "distributor": "ausgrid",
   "supply": {
     "phases": 1,
     "nominalVoltage": 230

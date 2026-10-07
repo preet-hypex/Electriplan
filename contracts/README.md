@@ -11,6 +11,13 @@ follow them.
 | [`electrical-design.schema.json`](electrical-design.schema.json) | The design: points, zones, circuits, switchboard, demand, violations, decisions | `model.design.ElectricalDesign` | `ElectricalDesign` |
 | [`common.schema.json`](common.schema.json) | Shared parts: ids, points, millimetres, wall anchors | `model.common`, `model.units` | `Point`, `WallAnchor`... |
 
+**Fixed lists versus configurable data.** Values the engine has rules for (cooktop and hot-water
+types, fixture, point and zone kinds...) are enums: a new value needs new engine behaviour, so it is a
+code change, made in the schema, the Java model and the rules together. Reference data that grows
+without new logic is configurable: the **distributor** is a code (`jemena`) checked against the
+`electricity_distributor` table, listed by `GET /api/reference/distributors?state=VIC`. Adding a
+distributor is a database row, not a release. The schema only checks such codes are well formed.
+
 Java packages are under `com.hypex.electriplan` in `backend/`; the TypeScript types are generated
 into `frontend/src/electrical/contracts.ts`. Lengths are millimetres unless the property name says
 otherwise (`lengthM` metres, `demandA` amperes, `csaMm2` mm²).

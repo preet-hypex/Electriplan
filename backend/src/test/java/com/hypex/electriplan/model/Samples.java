@@ -6,7 +6,7 @@ import com.hypex.electriplan.model.brief.AirConditioningType;
 import com.hypex.electriplan.model.brief.Appliances;
 import com.hypex.electriplan.model.brief.Construction;
 import com.hypex.electriplan.model.brief.CooktopType;
-import com.hypex.electriplan.model.brief.Distributor;
+import com.hypex.electriplan.model.brief.DistributorCode;
 import com.hypex.electriplan.model.brief.HotWaterType;
 import com.hypex.electriplan.model.brief.OvenType;
 import com.hypex.electriplan.model.brief.Preferences;
@@ -69,7 +69,7 @@ public final class Samples {
     public static ProjectBrief brief() {
         return ProjectBrief.builder()
                 .state(AustralianState.VIC)
-                .distributor(Distributor.JEMENA)
+                .distributor(DistributorCode.of("jemena"))
                 .supply(Supply.builder().phases(1).nominalVoltage(230).consumerMainsLengthM(Metres.of(15)).build())
                 .construction(Construction.builder().storeys(1).defaultCeilingHeight(Millimetres.of(2550))
                         .ceilingInsulated(true).roofSpaceAccessible(true).slab(true).build())

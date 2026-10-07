@@ -10,7 +10,6 @@ import java.util.stream.Stream;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.hypex.electriplan.model.brief.AirConditioningType;
 import com.hypex.electriplan.model.brief.CooktopType;
-import com.hypex.electriplan.model.brief.Distributor;
 import com.hypex.electriplan.model.brief.HotWaterType;
 import com.hypex.electriplan.model.brief.OvenType;
 import com.hypex.electriplan.model.common.AustralianState;
@@ -43,7 +42,6 @@ class EnumParityTest {
                 Arguments.of(AustralianState.class, "common.schema.json", "/$defs/australianState/enum"),
                 Arguments.of(FixtureKind.class, "fixture.schema.json", "/properties/kind/enum"),
                 Arguments.of(FixtureSource.class, "fixture.schema.json", "/properties/source/enum"),
-                Arguments.of(Distributor.class, "project-brief.schema.json", "/properties/distributor/enum"),
                 Arguments.of(CooktopType.class, "project-brief.schema.json", "/properties/appliances/properties/cooktop/enum"),
                 Arguments.of(OvenType.class, "project-brief.schema.json", "/properties/appliances/properties/oven/enum"),
                 Arguments.of(HotWaterType.class, "project-brief.schema.json", "/properties/appliances/properties/hotWater/enum"),
