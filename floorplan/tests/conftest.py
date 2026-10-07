@@ -12,6 +12,21 @@ import cv2
 import numpy as np
 import pytest
 
+from app.auth import TokenVerifier, get_verifier
+from app.main import app
+
+from .tokens import PUBLIC_KEY, SUPABASE_URL
+
+
+@pytest.fixture(autouse=True, scope="session")
+def verify_with_the_test_key():
+    """Every test's tokens are checked against the test signing key, not Supabase."""
+    app.dependency_overrides[get_verifier] = lambda: TokenVerifier(
+        SUPABASE_URL, key_for=lambda _token: PUBLIC_KEY
+    )
+    yield
+    app.dependency_overrides.pop(get_verifier, None)
+
 
 @pytest.fixture(scope="session")
 def synthetic_plan() -> bytes:

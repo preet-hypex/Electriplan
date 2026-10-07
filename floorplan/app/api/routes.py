@@ -5,10 +5,11 @@ from __future__ import annotations
 import json
 import logging
 
-from fastapi import APIRouter, File, Form, HTTPException, UploadFile
+from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
 from fastapi.responses import FileResponse, Response
 
 from .. import models
+from ..auth import User, current_user
 from ..config import DEFAULTS, PipelineConfig
 from ..pipeline import scale as scale_module
 from ..pipeline.orchestrator import AnalysisError, analyse
@@ -17,14 +18,17 @@ from ..storage import ImageStore, UnsupportedImageType
 
 log = logging.getLogger("floorplan.api")
 
-router = APIRouter(prefix="/api/floorplan")
+# Health is public, for container health checks. Everything else needs a
+# signed-in Supabase user (see app/auth.py).
+public_router = APIRouter(prefix="/api/floorplan")
+router = APIRouter(prefix="/api/floorplan", dependencies=[Depends(current_user)])
 store = ImageStore()
 
 #: Refuse anything larger up front rather than spending a minute on it.
 MAX_UPLOAD_BYTES = 25 * 1024 * 1024
 
 
-@router.get("/health")
+@public_router.get("/health")
 def health() -> dict[str, str]:
     return {"status": "ok"}
 
@@ -43,6 +47,7 @@ async def analyse_endpoint(
     mm_per_px: float | None = Form(
         default=None, description="Skip scale estimation and use this instead"
     ),
+    user: User = Depends(current_user),
 ) -> models.FloorPlan:
     """Reconstruct an editable FloorPlan from a floor-plan image."""
     data = await file.read()
@@ -57,7 +62,7 @@ async def analyse_endpoint(
         raise HTTPException(status_code=400, detail="mm_per_px must be greater than zero.")
 
     try:
-        stored = store.save(data, file.content_type, file.filename)
+        stored = store.save(data, file.content_type, file.filename, owner=user.id)
     except UnsupportedImageType as exc:
         raise HTTPException(status_code=415, detail=str(exc)) from exc
 
@@ -109,9 +114,12 @@ def export_endpoint(request: models.ExportRequest) -> Response:
 
 
 @router.get("/images/{image_id}")
-def image_endpoint(image_id: str) -> FileResponse:
-    """Serve an uploaded image back so the editor can show it underneath."""
-    path = store.path_for(image_id)
+def image_endpoint(image_id: str, user: User = Depends(current_user)) -> FileResponse:
+    """Serve one of the caller's uploaded images back, so the editor can show it underneath.
+
+    Another user's image is a 404, not a 403: whether it exists is not theirs to know.
+    """
+    path = store.path_for(image_id, owner=user.id)
     if path is None:
         raise HTTPException(status_code=404, detail="No such image.")
     return FileResponse(path)

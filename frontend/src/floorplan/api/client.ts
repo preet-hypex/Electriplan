@@ -11,6 +11,24 @@ export function apiUrl(path: string): string {
   return `${BASE}${path.startsWith('/') ? path : `/${path}`}`
 }
 
+/**
+ * Where the analyser's access token comes from. Every call except health sends
+ * it as a Bearer token; the analyser refuses anything without a valid one.
+ * The app sets this (FloorPlanApp's getAccessToken) so the editor itself
+ * knows nothing about Supabase.
+ */
+type AccessTokenProvider = () => Promise<string | null>
+let accessToken: AccessTokenProvider = async () => null
+
+export function setAccessTokenProvider(provider: AccessTokenProvider): void {
+  accessToken = provider
+}
+
+async function authHeaders(): Promise<Record<string, string>> {
+  const token = await accessToken()
+  return token ? { Authorization: `Bearer ${token}` } : {}
+}
+
 export class ApiError extends Error {
   constructor(
     message: string,
@@ -45,7 +63,11 @@ export async function analyse(file: File, options: AnalyseOptions = {}): Promise
   form.append('file', file)
   if (options.mmPerPx !== undefined) form.append('mm_per_px', String(options.mmPerPx))
 
-  const res = await fetch(apiUrl('/api/floorplan/analyse'), { method: 'POST', body: form })
+  const res = await fetch(apiUrl('/api/floorplan/analyse'), {
+    method: 'POST',
+    body: form,
+    headers: await authHeaders(),
+  })
   return parseFloorPlan(await unwrap(res))
 }
 
@@ -65,7 +87,7 @@ export interface CalibrateResponse {
 export async function calibrate(req: CalibrateRequest): Promise<CalibrateResponse> {
   const res = await fetch(apiUrl('/api/floorplan/calibrate'), {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', ...(await authHeaders()) },
     body: JSON.stringify({
       pixels: req.pixels,
       millimetres: req.millimetres,
@@ -84,11 +106,22 @@ export async function calibrate(req: CalibrateRequest): Promise<CalibrateRespons
 export async function exportPlan(plan: FloorPlan): Promise<string> {
   const res = await fetch(apiUrl('/api/floorplan/export'), {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', ...(await authHeaders()) },
     body: JSON.stringify({ format: 'json', plan }),
   })
   if (!res.ok) throw new ApiError(await res.text(), res.status)
   return res.text()
+}
+
+/**
+ * An uploaded image, fetched with the access token, as an object URL for an
+ * <img> or SVG <image> (which cannot send headers themselves). The caller
+ * revokes it with URL.revokeObjectURL when done.
+ */
+export async function fetchImageObjectUrl(path: string): Promise<string> {
+  const res = await fetch(apiUrl(path), { headers: await authHeaders() })
+  if (!res.ok) throw new ApiError(`The plan image could not be loaded (${res.status}).`, res.status)
+  return URL.createObjectURL(await res.blob())
 }
 
 export async function health(): Promise<boolean> {

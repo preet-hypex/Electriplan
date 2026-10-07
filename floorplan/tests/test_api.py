@@ -9,7 +9,10 @@ from fastapi.testclient import TestClient
 
 from app.main import app
 
-client = TestClient(app)
+from .tokens import auth
+
+# Signed in as tokens.USER_ID; test_auth.py covers everything about tokens.
+client = TestClient(app, headers=auth())
 
 
 def test_health() -> None:

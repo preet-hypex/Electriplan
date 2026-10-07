@@ -44,6 +44,11 @@ services:
   floorplan:
     build: ./floorplan
     image: loginpage-floorplan:local
+    # Only the public project URL, to verify sign-ins against the project's
+    # public keys. The analyser never sees the secret key in backend/.env.
+    env_file:
+      - path: ./frontend/.env
+        required: false
     volumes:
       - floorplan-uploads:/data/uploads
     ports:

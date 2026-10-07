@@ -1,5 +1,42 @@
+import { useEffect, useState } from 'react'
 import type { PlanSource } from '../../model/types'
-import { apiUrl } from '../../api/client'
+import { fetchImageObjectUrl } from '../../api/client'
+
+/**
+ * The image behind the plan. Uploaded images need the access token, which an
+ * SVG <image> cannot send, so it is fetched here and shown from an object URL.
+ * Images that are not the analyser's (data: or blob: URLs) are used as they are.
+ */
+function useImageHref(imageUrl: string): string | null {
+  const [href, setHref] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (/^(data|blob):/.test(imageUrl)) {
+      setHref(imageUrl)
+      return
+    }
+    let objectUrl: string | null = null
+    let current = true
+    setHref(null)
+    fetchImageObjectUrl(imageUrl)
+      .then((url) => {
+        if (current) {
+          objectUrl = url
+          setHref(url)
+        } else {
+          URL.revokeObjectURL(url)
+        }
+      })
+      // A missing image is not fatal: the plan stands on its own without it.
+      .catch(() => current && setHref(null))
+    return () => {
+      current = false
+      if (objectUrl) URL.revokeObjectURL(objectUrl)
+    }
+  }, [imageUrl])
+
+  return href
+}
 
 /**
  * The untouched upload, positioned so its pixels line up with the plan's
@@ -11,9 +48,11 @@ import { apiUrl } from '../../api/client'
  */
 export function BackgroundLayer({ source, opacity }: { source: PlanSource; opacity: number }) {
   const { mmPerPx, planRegion, imageWidth, imageHeight, imageUrl } = source
+  const href = useImageHref(imageUrl)
+  if (!href) return null
   return (
     <image
-      href={apiUrl(imageUrl)}
+      href={href}
       x={-planRegion.x * mmPerPx}
       y={-planRegion.y * mmPerPx}
       width={imageWidth * mmPerPx}

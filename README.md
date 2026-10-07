@@ -151,6 +151,7 @@ of `/api/*` to the API on 8081.
 | "Invalid login credentials" | The account does not exist or is unconfirmed. In Supabase → Authentication → Users, add the user and tick **Auto confirm** |
 | Sign-in worked yesterday, fails today | Free Supabase projects pause after a week idle. Restore it from the dashboard |
 | "Port is already allocated" | Something else uses 4180, 8081, 8082 or 5433. Stop it, or set `WEB_PORT`, `API_PORT`, `FLOORPLAN_PORT` or `DB_PORT` before `docker compose up` |
+| Analysis fails with "Sign in first" or "not valid" | The analyser could not verify your sign-in. Sign out and in again; if it persists, check `docker compose logs floorplan` and that `frontend/.env` has `VITE_SUPABASE_URL`, then `docker compose up -d --build --wait floorplan` |
 | Floor plans says the analyser is not answering | `docker compose ps floorplan`; restart with `docker compose up -d floorplan` |
 | Rooms come back unnamed | Only outside Docker: install Tesseract (`brew install tesseract`) |
 | Reset or invitation emails link to the wrong place | Add the redirect URLs from step 4 in Supabase → Authentication → URL Configuration |
@@ -206,7 +207,7 @@ It is two parts, brought across from the editor MVP:
 
 | Part | Where | What |
 |---|---|---|
-| Analyser | `floorplan/` | Python 3.11, FastAPI, OpenCV and Tesseract. Every route is under `/api/floorplan`. Its own README-level notes live in the module docstrings; thresholds are in `floorplan/app/config.py` |
+| Analyser | `floorplan/` | Python 3.11, FastAPI, OpenCV and Tesseract. Every route is under `/api/floorplan` and, apart from health, needs a Supabase sign-in, verified like the Java API does (`floorplan/app/auth.py`); uploaded images are private to their uploader. Its own README-level notes live in the module docstrings; thresholds are in `floorplan/app/config.py` |
 | Editor | `frontend/src/floorplan/` | TypeScript, Zustand and Tailwind, loaded only when its page opens. Tailwind's reset is scoped to the editor (`floorplan.css`), so the other pages are untouched |
 
 The web app sends `/api/floorplan/*` to the analyser and the rest of `/api/*` to the Java API, in
