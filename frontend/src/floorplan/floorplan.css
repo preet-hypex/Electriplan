@@ -1,0 +1,71 @@
+/*
+ * Styles for the floor-plan editor. Loaded with the editor's route only.
+ *
+ * Tailwind's preflight is off for the app (see tailwind.config.js), so the
+ * parts of it the editor relies on are applied here, inside .fp-root only.
+ * Each selector is wrapped in :where(.fp-root) so it has exactly the
+ * specificity preflight's own selectors have. Like preflight, it must come
+ * before the utilities: some of its selectors ([type='button']) are as specific
+ * as a utility class, so on a tie the later rule wins.
+ */
+
+:where(.fp-root),
+:where(.fp-root) *,
+:where(.fp-root) ::before,
+:where(.fp-root) ::after {
+  box-sizing: border-box;
+  border-width: 0;
+  border-style: solid;
+  border-color: theme('borderColor.DEFAULT', currentColor);
+}
+
+:where(.fp-root) {
+  /* Same type as the rest of the app (tokens.css). */
+  font-family: var(--font);
+  line-height: 1.5;
+  color: var(--text);
+}
+
+:where(.fp-root) :is(h1, h2, h3, h4, h5, h6) { font-size: inherit; font-weight: inherit; margin: 0; }
+:where(.fp-root) :is(p, blockquote, dl, dd, figure, pre, hr) { margin: 0; }
+:where(.fp-root) :is(ol, ul, menu) { list-style: none; margin: 0; padding: 0; }
+:where(.fp-root) a { color: inherit; text-decoration: inherit; }
+:where(.fp-root) :is(b, strong) { font-weight: bolder; }
+:where(.fp-root) :is(code, kbd, samp, pre) {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 1em;
+}
+:where(.fp-root) small { font-size: 80%; }
+:where(.fp-root) hr { height: 0; color: inherit; border-top-width: 1px; }
+:where(.fp-root) table { text-indent: 0; border-color: inherit; border-collapse: collapse; }
+
+:where(.fp-root) :is(button, input, optgroup, select, textarea) {
+  font-family: inherit;
+  font-feature-settings: inherit;
+  font-size: 100%;
+  font-weight: inherit;
+  line-height: inherit;
+  letter-spacing: inherit;
+  color: inherit;
+  margin: 0;
+  padding: 0;
+}
+:where(.fp-root) :is(button, select) { text-transform: none; }
+:where(.fp-root) :is(button, [type='button'], [type='reset'], [type='submit']) {
+  -webkit-appearance: button;
+  background-color: transparent;
+  background-image: none;
+}
+:where(.fp-root) :is(button, [role='button']) { cursor: pointer; }
+:where(.fp-root) :disabled { cursor: default; }
+:where(.fp-root) :is(input, textarea)::placeholder { opacity: 1; color: theme('colors.gray.400'); }
+:where(.fp-root) textarea { resize: vertical; }
+:where(.fp-root) :is(img, svg, video, canvas, audio, iframe, embed, object) { display: block; vertical-align: middle; }
+:where(.fp-root) :is(img, video) { max-width: 100%; height: auto; }
+:where(.fp-root) [hidden] { display: none; }
+
+/* Keep SVG text from being selected while dragging on the canvas. */
+:where(.fp-root) svg text { user-select: none; }
+
+@tailwind components;
+@tailwind utilities;

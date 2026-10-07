@@ -18,3 +18,19 @@ runs, so `copy` is normally filled in on the first call.
 - `403` the path is outside `/api/**` and the public actuator endpoints.
 
 `id` is always the Supabase user id: the token's `sub` and `app.supabase_user.id`.
+
+## Floor-plan analyser
+
+Served by the Python service in `floorplan/`, reached through the web app's origin. It does not
+check tokens yet: the pages that use it need a signed-in user, but the endpoints themselves are
+open to anyone who can reach the web app.
+
+| Endpoint | Method | Does |
+|---|---|---|
+| `/api/floorplan/health` | GET | `{"status": "ok"}` |
+| `/api/floorplan/analyse` | POST | `multipart/form-data`: `file` (JPG/PNG, ≤ 25 MB), optional `mm_per_px`. Returns a FloorPlan |
+| `/api/floorplan/calibrate` | POST | `{ pixels, millimetres, current_mm_per_px? }` → `{ mm_per_px, factor, confidence }` |
+| `/api/floorplan/export` | POST | `{ format: "json", plan }` → the validated plan as a download |
+| `/api/floorplan/images/{id}` | GET | An uploaded image, for the editor's reference layer |
+
+Interactive docs: http://localhost:8082/docs.

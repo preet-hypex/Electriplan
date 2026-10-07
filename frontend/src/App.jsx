@@ -7,6 +7,8 @@ import Login from './pages/Login'
 import Invite from './pages/Invite'
 import ResetPassword from './pages/ResetPassword'
 import Home from './pages/Home'
+import FloorPlan from './pages/FloorPlan'
+import Account from './pages/Account'
 
 export default function App() {
   if (configError) return <ConfigError reason={configError} />
@@ -19,6 +21,8 @@ export default function App() {
           <Route path="/invite" element={<Invite />} />
           <Route path="/reset-password" element={<ResetPassword />} />
           <Route path="/" element={<ProtectedRoute><Home /></ProtectedRoute>} />
+          <Route path="/floor-plan" element={<ProtectedRoute><FloorPlan /></ProtectedRoute>} />
+          <Route path="/account" element={<ProtectedRoute><Account /></ProtectedRoute>} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </BrowserRouter>

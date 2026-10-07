@@ -41,11 +41,29 @@ services:
       start_interval: 2s
     restart: unless-stopped
 
+  floorplan:
+    build: ./floorplan
+    image: loginpage-floorplan:local
+    volumes:
+      - floorplan-uploads:/data/uploads
+    ports:
+      - "127.0.0.1:${FLOORPLAN_PORT:-8082}:8000"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:8000/api/floorplan/health >/dev/null"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+      start_interval: 2s
+    restart: unless-stopped
+
   web:
     build: ./frontend
     image: loginpage-web:local
     depends_on:
       api:
+        condition: service_healthy
+      floorplan:
         condition: service_healthy
     ports:
       - "127.0.0.1:${WEB_PORT:-4180}:8080"
@@ -60,3 +78,4 @@ services:
 
 volumes:
   app-data:
+  floorplan-uploads:

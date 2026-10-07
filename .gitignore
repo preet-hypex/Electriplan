@@ -15,3 +15,8 @@ target/
 !.vscode/settings.json
 *.log
 .vercel
+
+.venv/
+.uploads/
+__pycache__/
+.pytest_cache/

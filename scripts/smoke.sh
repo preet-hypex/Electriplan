@@ -4,6 +4,7 @@ set -euo pipefail
 ROOT=$(cd "$(dirname "$0")/.." && pwd)
 WEB_URL=${WEB_URL:-http://localhost:4180}
 API_URL=${API_URL:-http://localhost:8081}
+FLOORPLAN_URL=${FLOORPLAN_URL:-http://localhost:8082}
 
 failures=0
 pass() { printf '  ok    %s\n' "$1"; }
@@ -40,6 +41,15 @@ if [ "$status" = 401 ]; then pass '/api/me without a token is 401'; else fail '/
 fetch "$API_URL/api/me" -H 'Authorization: Bearer not-a-real-token'
 if [ "$status" = 401 ]; then pass 'a token that does not verify is 401'; else fail 'bad tokens are refused' "returned $status"; fi
 
+echo "Floor-plan analyser  $FLOORPLAN_URL"
+
+fetch "$FLOORPLAN_URL/api/floorplan/health"
+if [ "$status" = 200 ] && grep -q '"status":"ok"' <<< "$body"; then
+  pass 'reports ok'
+else
+  fail 'reports ok' "GET /api/floorplan/health returned $status: $body"
+fi
+
 echo "Web  $WEB_URL"
 
 fetch "$WEB_URL/healthz"
@@ -69,6 +79,13 @@ if [ "$status" = 401 ] && [ "$(header www-authenticate | cut -c1-6)" = Bearer ];
   pass '/api is proxied to the API on the same origin'
 else
   fail '/api is proxied' "GET /api/me through the web container returned $status"
+fi
+
+fetch "$WEB_URL/api/floorplan/health"
+if [ "$status" = 200 ] && grep -q '"status":"ok"' <<< "$body"; then
+  pass '/api/floorplan is proxied to the analyser, not the API'
+else
+  fail '/api/floorplan is proxied' "GET /api/floorplan/health through the web container returned $status"
 fi
 
 echo "DB   app.supabase_user"

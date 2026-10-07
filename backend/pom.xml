@@ -11,10 +11,10 @@
     <relativePath/>
   </parent>
 
-  <groupId>loginpage</groupId>
-  <artifactId>loginpage-api</artifactId>
+  <groupId>com.hypex</groupId>
+  <artifactId>planna-api</artifactId>
   <version>0.1.0</version>
-  <name>LoginPage - API</name>
+  <name>Planna SaaS - API</name>
   <description>Spring Modulith backend. Verifies Supabase JWTs and keeps a read-only copy of Supabase's users in Postgres.</description>
 
   <properties>

@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs'
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
-import { API_PORT, DEV_PORT, PREVIEW_PORT } from './ports.mjs'
+import { API_PORT, DEV_PORT, FLOORPLAN_PORT, PREVIEW_PORT } from './ports.mjs'
 
 const escapeHtml = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c])
 
@@ -24,6 +24,8 @@ export default defineConfig({
     port: DEV_PORT,
     strictPort: true,
     proxy: {
+      // Listed first: Vite takes the first matching key, and this prefix also matches '/api'.
+      '/api/floorplan': { target: `http://localhost:${process.env.FLOORPLAN_PORT || FLOORPLAN_PORT}`, changeOrigin: true },
       '/api': { target: `http://localhost:${process.env.API_PORT || API_PORT}`, changeOrigin: true },
     },
   },
@@ -32,6 +34,6 @@ export default defineConfig({
     environment: 'jsdom',
     globals: true,
     setupFiles: './src/test/setup.js',
-    include: ['src/**/*.test.{js,jsx}'],
+    include: ['src/**/*.test.{js,jsx,ts,tsx}'],
   },
 })

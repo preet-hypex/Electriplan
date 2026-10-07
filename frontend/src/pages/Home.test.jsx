@@ -1,7 +1,6 @@
-import { render, screen } from '@testing-library/react'
+import { render, screen, within } from '@testing-library/react'
+import { MemoryRouter } from 'react-router-dom'
 import { describe, expect, it, vi } from 'vitest'
-
-const mocks = vi.hoisted(() => ({ api: vi.fn() }))
 
 vi.mock('../context/AuthContext', () => ({
   useAuth: () => ({
@@ -9,33 +8,36 @@ vi.mock('../context/AuthContext', () => ({
     signOut: vi.fn(),
   }),
 }))
-vi.mock('../lib/api', () => ({ api: mocks.api }))
 
 import Home from './Home'
 
+const renderHome = () => render(<MemoryRouter><Home /></MemoryRouter>)
+
 describe('Home', () => {
-  it('shows the copy of this user that the API keeps in Postgres', async () => {
-    mocks.api.mockResolvedValue({
-      id: 'u1',
-      copy: { email: 'sam@example.com', userMetadata: { full_name: 'Sam Lee' }, copiedAt: '2026-10-06T00:00:00Z' },
-    })
-    render(<Home />)
-
-    expect(mocks.api).toHaveBeenCalledWith('/api/me')
-    expect(await screen.findByText('Copied')).toBeInTheDocument()
-    expect(screen.getAllByText('Sam Lee').length).toBeGreaterThan(0)
+  it('greets the user by name', () => {
+    renderHome()
+    expect(screen.getByText(/, Sam Lee$/)).toBeInTheDocument()
   })
 
-  it('says so when the API has not copied the user yet', async () => {
-    mocks.api.mockResolvedValue({ id: 'u1', copy: null })
-    render(<Home />)
-    expect(await screen.findByText(/not copied yet/i)).toBeInTheDocument()
+  it('starts a floor plan from the main call to action', () => {
+    renderHome()
+    expect(screen.getByRole('link', { name: /upload a floor plan/i })).toHaveAttribute('href', '/floor-plan')
   })
 
-  it('still shows the Supabase session when the API is down', async () => {
-    mocks.api.mockRejectedValue(new Error('A service the app depends on did not answer.'))
-    render(<Home />)
-    expect(await screen.findByText(/the api did not answer/i)).toBeInTheDocument()
-    expect(screen.getByText('sam@example.com')).toBeInTheDocument()
+  it('links only the workflow steps that exist today', () => {
+    renderHome()
+    const steps = within(screen.getByRole('region', { name: 'Your workflow' }))
+    expect(steps.getByRole('link', { name: /floor plan/i })).toHaveAttribute('href', '/floor-plan')
+    expect(steps.getAllByRole('link')).toHaveLength(1)
+    expect(screen.getByText('Electrical layout').closest('[aria-disabled="true"]')).not.toBeNull()
+    expect(screen.getByText('Coming next')).toBeInTheDocument()
+  })
+
+  it('shows unbuilt sections in the sidebar as coming soon, not as links', () => {
+    renderHome()
+    const nav = screen.getByRole('navigation', { name: 'Main' })
+    expect(within(nav).getByRole('link', { name: /floor plans/i })).toHaveAttribute('href', '/floor-plan')
+    expect(within(nav).queryByRole('link', { name: /quotes/i })).toBeNull()
+    expect(within(nav).getAllByText('Soon')).toHaveLength(3)
   })
 })
