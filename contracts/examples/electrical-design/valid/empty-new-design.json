@@ -1,0 +1,10 @@
+{
+  "version": 1,
+  "planRef": { "planHash": "sha256:0000000000000000000000000000000000000000000000000000000000000000", "planVersion": 1 },
+  "rulePack": { "id": "au-residential", "version": "2026.1", "standards": [] },
+  "points": [],
+  "zones": [],
+  "circuits": [],
+  "violations": [],
+  "decisionsRequired": []
+}

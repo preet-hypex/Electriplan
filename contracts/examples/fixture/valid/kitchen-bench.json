@@ -1,0 +1,8 @@
+{
+  "id": "bench_01",
+  "kind": "bench-run",
+  "roomId": "room_003",
+  "footprint": { "centre": { "x": 3200, "y": 5300 }, "width": 3600, "depth": 600, "rotationDeg": 90 },
+  "wallAnchor": { "wallId": "wall_012", "position": 1800, "side": "right", "height": 900 },
+  "source": "manual"
+}

@@ -167,7 +167,7 @@ GitHub Actions. Its jobs run in parallel:
 
 | Job | Checks |
 |---|---|
-| Frontend | `npm ci`, typecheck, tests, production build, and the setup script's tests |
+| Frontend | `npm ci`, contract types up to date, typecheck, tests, production build, and the setup script's tests |
 | Floor-plan analyser | the Python tests, with Tesseract installed |
 | API | `mvn verify`, against a real Postgres, so the Postgres tests run too |
 | Docker images | `docker compose build` (the web image with placeholder Supabase settings) |

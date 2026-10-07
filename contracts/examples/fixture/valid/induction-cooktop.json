@@ -1,0 +1,8 @@
+{
+  "id": "cooktop_01",
+  "kind": "cooktop",
+  "roomId": "room_003",
+  "footprint": { "centre": { "x": 3200, "y": 6100 }, "width": 900, "depth": 520, "rotationDeg": 90 },
+  "ratingKw": 7.2,
+  "source": "manual"
+}

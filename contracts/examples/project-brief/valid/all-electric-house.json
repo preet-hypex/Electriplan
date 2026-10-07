@@ -1,0 +1,27 @@
+{
+  "version": 1,
+  "state": "VIC",
+  "distributor": "citipower",
+  "supply": { "phases": 1, "nominalVoltage": 230, "consumerMainsLengthM": 12 },
+  "construction": {
+    "storeys": 1,
+    "defaultCeilingHeight": 2550,
+    "ceilingInsulated": true,
+    "roofSpaceAccessible": true,
+    "slab": true
+  },
+  "appliances": {
+    "cooktop": "induction",
+    "oven": "electric",
+    "hotWater": "heat-pump",
+    "airConditioning": "ducted",
+    "evCharger": true,
+    "pool": false
+  },
+  "preferences": {
+    "downlightItemCode": "DL-IC4-10W-800LM",
+    "switchHeight": 1100,
+    "gpoHeight": 300,
+    "spareSwitchboardPolesPct": 25
+  }
+}

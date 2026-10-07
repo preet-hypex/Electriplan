@@ -1,0 +1,27 @@
+{
+  "version": 1,
+  "state": "VIC",
+  "distributor": "united_energy",
+  "supply": {
+    "phases": 1,
+    "nominalVoltage": 230
+  },
+  "construction": {
+    "storeys": 1,
+    "defaultCeilingHeight": 2400,
+    "ceilingInsulated": true,
+    "roofSpaceAccessible": true,
+    "slab": true
+  },
+  "appliances": {
+    "cooktop": "gas",
+    "oven": "electric",
+    "hotWater": "gas",
+    "airConditioning": "split",
+    "evCharger": false,
+    "pool": false
+  },
+  "preferences": {
+    "switchHeight": 2000
+  }
+}

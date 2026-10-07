@@ -804,7 +804,7 @@ a rule-pack entry where it touches a rule.
 | ID | Story | Acceptance criteria | Size |
 |---|---|---|---|
 | E0-S1 | Add the electrical modules to the Electriplan API | ~~Rename the application package~~ (done: `com.hypex.electriplan`); empty modules from §6.3 beside `security` and `users`; `ApplicationModules.verify()` test passes; health endpoint; Postgres + Flyway via Testcontainers; CI build; `DesignStage` contract and an orchestrator that runs an empty stage list and returns an empty valid design | M |
-| E0-S2 | `ElectricalDesign`, `ProjectBrief`, `Fixture` JSON Schemas + Java records | Schemas in `contracts/`; Java records with unit types; contract tests validate serialised output against the schemas; TS types generated for the editor | M |
+| E0-S2 | ✅ **Done** — `ElectricalDesign`, `ProjectBrief`, `Fixture` JSON Schemas + Java records ([contracts/](../contracts/README.md)) | Schemas in `contracts/`; Java records with unit types; contract tests validate serialised output against the schemas; TS types generated for the editor | M |
 | E0-S2a | FloorPlan schema as the shared contract | `contracts/floor-plan.schema.json`; Python and TS checked against it in CI; engine reads it into Java records and rejects unsupported versions | M |
 | E0-S3 | Rule-pack format, loader and schema validation | Loads YAML packs; rejects a rule without `id`, `tier`, `kind`, `cite`; tier precedence (state overrides national, company overrides policy only — never mandatory) tested | M |
 | E0-S4 | Rationale & decision-required plumbing | Any stage can attach rationale lines and decisions; they appear in the output and in the `validation` module's compliance report | S |
