@@ -6,15 +6,15 @@
 --
 -- Design notes are in documents/database-schema.md. In short:
 --   * Every tenant-owned row carries organisation_id, and row-level security
---     limits every query to plannasaas.current_organisation_id(). The API must
---     SET LOCAL plannasaas.organisation_id (and plannasaas.actor_id) in each transaction;
+--     limits every query to electriplan.current_organisation_id(). The API must
+--     SET LOCAL electriplan.organisation_id (and electriplan.actor_id) in each transaction;
 --     without it these tables return nothing (fail closed).
 --   * References between tenant rows go through (organisation_id, id), so a
 --     row can never point at another organisation's row.
 --   * Floor plans and electrical designs are JSON documents, versioned: one
 --     editable draft, then immutable committed versions.
---   * A plan's stage can only move along plannasaas.plan_stage_transition; every
---     move is recorded in plannasaas.plan_stage_event by trigger.
+--   * A plan's stage can only move along electriplan.plan_stage_transition; every
+--     move is recorded in electriplan.plan_stage_event by trigger.
 --   * Codes are text with CHECK constraints rather than enum types, so values
 --     can be added and retired by migration without ALTER TYPE.
 -- =============================================================================
@@ -23,21 +23,21 @@
 -- Shared functions
 -- -----------------------------------------------------------------------------
 
-CREATE FUNCTION plannasaas.current_organisation_id() RETURNS uuid
+CREATE FUNCTION electriplan.current_organisation_id() RETURNS uuid
     LANGUAGE sql STABLE
-AS $$ SELECT nullif(current_setting('plannasaas.organisation_id', true), '')::uuid $$;
+AS $$ SELECT nullif(current_setting('electriplan.organisation_id', true), '')::uuid $$;
 
-COMMENT ON FUNCTION plannasaas.current_organisation_id() IS
-    'The organisation this transaction acts for, from SET LOCAL plannasaas.organisation_id. NULL when unset, which row-level security treats as no access.';
+COMMENT ON FUNCTION electriplan.current_organisation_id() IS
+    'The organisation this transaction acts for, from SET LOCAL electriplan.organisation_id. NULL when unset, which row-level security treats as no access.';
 
-CREATE FUNCTION plannasaas.current_actor_id() RETURNS uuid
+CREATE FUNCTION electriplan.current_actor_id() RETURNS uuid
     LANGUAGE sql STABLE
-AS $$ SELECT nullif(current_setting('plannasaas.actor_id', true), '')::uuid $$;
+AS $$ SELECT nullif(current_setting('electriplan.actor_id', true), '')::uuid $$;
 
-COMMENT ON FUNCTION plannasaas.current_actor_id() IS
-    'The Supabase user acting in this transaction, from SET LOCAL plannasaas.actor_id. Recorded by triggers in history rows.';
+COMMENT ON FUNCTION electriplan.current_actor_id() IS
+    'The Supabase user acting in this transaction, from SET LOCAL electriplan.actor_id. Recorded by triggers in history rows.';
 
-CREATE FUNCTION plannasaas.touch_updated_at() RETURNS trigger
+CREATE FUNCTION electriplan.touch_updated_at() RETURNS trigger
     LANGUAGE plpgsql
 AS $$
 BEGIN
@@ -50,23 +50,23 @@ $$;
 -- Reference data (shared by all tenants, no row-level security)
 -- -----------------------------------------------------------------------------
 
-CREATE TABLE plannasaas.electricity_distributor (
+CREATE TABLE electriplan.electricity_distributor (
     code  text PRIMARY KEY CHECK (code ~ '^[a-z0-9_]+$'),
     name  text NOT NULL,
     state text NOT NULL CHECK (state IN ('NSW', 'VIC', 'QLD', 'WA', 'SA', 'TAS', 'ACT', 'NT'))
 );
 
-COMMENT ON TABLE plannasaas.electricity_distributor IS
+COMMENT ON TABLE electriplan.electricity_distributor IS
     'Distribution network service providers (DNSPs). Their service rules decide supply limits and consumer mains.';
 
-INSERT INTO plannasaas.electricity_distributor (code, name, state) VALUES
+INSERT INTO electriplan.electricity_distributor (code, name, state) VALUES
     ('citipower',       'CitiPower',        'VIC'),
     ('powercor',        'Powercor',         'VIC'),
     ('jemena',          'Jemena',           'VIC'),
     ('united_energy',   'United Energy',    'VIC'),
     ('ausnet_services', 'AusNet Services',  'VIC');
 
-CREATE TABLE plannasaas.plan_stage (
+CREATE TABLE electriplan.plan_stage (
     code        text PRIMARY KEY,
     ordinal     smallint NOT NULL UNIQUE,
     label       text NOT NULL,
@@ -74,9 +74,9 @@ CREATE TABLE plannasaas.plan_stage (
     is_terminal boolean NOT NULL DEFAULT false
 );
 
-COMMENT ON TABLE plannasaas.plan_stage IS 'The stages a house plan moves through, in display order.';
+COMMENT ON TABLE electriplan.plan_stage IS 'The stages a house plan moves through, in display order.';
 
-INSERT INTO plannasaas.plan_stage (code, ordinal, label, phase, is_terminal) VALUES
+INSERT INTO electriplan.plan_stage (code, ordinal, label, phase, is_terminal) VALUES
     ('awaiting_upload',      10, 'Awaiting floor plan',      'floor_plan', false),
     ('analysing',            20, 'Analysing floor plan',     'floor_plan', false),
     ('floor_plan_review',    30, 'Checking floor plan',      'floor_plan', false),
@@ -92,17 +92,17 @@ INSERT INTO plannasaas.plan_stage (code, ordinal, label, phase, is_terminal) VAL
     ('on_hold',             130, 'On hold',                  'paused',     false),
     ('archived',            140, 'Archived',                 'closed',     true);
 
-CREATE TABLE plannasaas.plan_stage_transition (
-    from_stage text NOT NULL REFERENCES plannasaas.plan_stage (code),
-    to_stage   text NOT NULL REFERENCES plannasaas.plan_stage (code),
+CREATE TABLE electriplan.plan_stage_transition (
+    from_stage text NOT NULL REFERENCES electriplan.plan_stage (code),
+    to_stage   text NOT NULL REFERENCES electriplan.plan_stage (code),
     PRIMARY KEY (from_stage, to_stage),
     CHECK (from_stage <> to_stage)
 );
 
-COMMENT ON TABLE plannasaas.plan_stage_transition IS
-    'Every move a plan may make. A trigger on plannasaas.plan refuses any other. Change the workflow by changing these rows.';
+COMMENT ON TABLE electriplan.plan_stage_transition IS
+    'Every move a plan may make. A trigger on electriplan.plan refuses any other. Change the workflow by changing these rows.';
 
-INSERT INTO plannasaas.plan_stage_transition (from_stage, to_stage) VALUES
+INSERT INTO electriplan.plan_stage_transition (from_stage, to_stage) VALUES
     -- floor plan
     ('awaiting_upload',     'analysing'),
     ('awaiting_upload',     'floor_plan_review'),   -- traced by hand or imported, no analysis
@@ -132,19 +132,19 @@ INSERT INTO plannasaas.plan_stage_transition (from_stage, to_stage) VALUES
 
 -- Any working stage can be paused or archived; a paused plan resumes where it
 -- makes sense. Generated rather than listed so no stage is forgotten.
-INSERT INTO plannasaas.plan_stage_transition (from_stage, to_stage)
-SELECT code, 'on_hold' FROM plannasaas.plan_stage WHERE NOT is_terminal AND code <> 'on_hold'
+INSERT INTO electriplan.plan_stage_transition (from_stage, to_stage)
+SELECT code, 'on_hold' FROM electriplan.plan_stage WHERE NOT is_terminal AND code <> 'on_hold'
 UNION ALL
-SELECT code, 'archived' FROM plannasaas.plan_stage WHERE code <> 'archived'
+SELECT code, 'archived' FROM electriplan.plan_stage WHERE code <> 'archived'
 UNION ALL
-SELECT 'on_hold', code FROM plannasaas.plan_stage
+SELECT 'on_hold', code FROM electriplan.plan_stage
  WHERE code IN ('awaiting_upload', 'floor_plan_review', 'floor_plan_approved', 'electrical_design', 'quoting');
 
 -- -----------------------------------------------------------------------------
 -- Organisations and people
 -- -----------------------------------------------------------------------------
 
-CREATE TABLE plannasaas.organisation (
+CREATE TABLE electriplan.organisation (
     id                uuid PRIMARY KEY DEFAULT gen_random_uuid(),
     name              text NOT NULL CHECK (length(btrim(name)) BETWEEN 1 AND 200),
     slug              text NOT NULL UNIQUE CHECK (slug ~ '^[a-z0-9]+(-[a-z0-9]+)*$' AND length(slug) <= 60),
@@ -161,12 +161,12 @@ CREATE TABLE plannasaas.organisation (
     updated_at        timestamptz NOT NULL DEFAULT now()
 );
 
-COMMENT ON TABLE plannasaas.organisation IS 'A customer of the SaaS: the tenant. Everything a business creates belongs to one.';
-COMMENT ON COLUMN plannasaas.organisation.abn IS 'Australian Business Number, 11 digits, no spaces.';
+COMMENT ON TABLE electriplan.organisation IS 'A customer of the SaaS: the tenant. Everything a business creates belongs to one.';
+COMMENT ON COLUMN electriplan.organisation.abn IS 'Australian Business Number, 11 digits, no spaces.';
 
-CREATE TABLE plannasaas.organisation_member (
-    organisation_id uuid NOT NULL REFERENCES plannasaas.organisation (id) ON DELETE CASCADE,
-    user_id         uuid NOT NULL REFERENCES plannasaas.supabase_user (id) ON DELETE CASCADE,
+CREATE TABLE electriplan.organisation_member (
+    organisation_id uuid NOT NULL REFERENCES electriplan.organisation (id) ON DELETE CASCADE,
+    user_id         uuid NOT NULL REFERENCES electriplan.supabase_user (id) ON DELETE CASCADE,
     role            text NOT NULL CHECK (role IN ('owner', 'admin', 'builder', 'electrician', 'viewer')),
     status          text NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'suspended')),
     invited_by      uuid,
@@ -175,48 +175,48 @@ CREATE TABLE plannasaas.organisation_member (
     PRIMARY KEY (organisation_id, user_id)
 );
 
-CREATE INDEX ix_organisation_member_user ON plannasaas.organisation_member (user_id);
+CREATE INDEX ix_organisation_member_user ON electriplan.organisation_member (user_id);
 
-COMMENT ON TABLE plannasaas.organisation_member IS
+COMMENT ON TABLE electriplan.organisation_member IS
     'Who belongs to which organisation, and as what. The role decides what the API lets them do.';
 
-CREATE TABLE plannasaas.organisation_invitation (
+CREATE TABLE electriplan.organisation_invitation (
     id               uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-    organisation_id  uuid NOT NULL REFERENCES plannasaas.organisation (id) ON DELETE CASCADE,
+    organisation_id  uuid NOT NULL REFERENCES electriplan.organisation (id) ON DELETE CASCADE,
     email            text NOT NULL CHECK (position('@' IN email) > 1),
     role             text NOT NULL CHECK (role IN ('admin', 'builder', 'electrician', 'viewer')),
     token_sha256     bytea NOT NULL UNIQUE CHECK (length(token_sha256) = 32),
     invited_by       uuid NOT NULL,
     expires_at       timestamptz NOT NULL,
     accepted_at      timestamptz,
-    accepted_user_id uuid REFERENCES plannasaas.supabase_user (id) ON DELETE SET NULL,
+    accepted_user_id uuid REFERENCES electriplan.supabase_user (id) ON DELETE SET NULL,
     revoked_at       timestamptz,
     created_at       timestamptz NOT NULL DEFAULT now(),
     CHECK (accepted_at IS NULL OR revoked_at IS NULL)
 );
 
-CREATE UNIQUE INDEX ux_invitation_pending_email ON plannasaas.organisation_invitation (organisation_id, lower(email))
+CREATE UNIQUE INDEX ux_invitation_pending_email ON electriplan.organisation_invitation (organisation_id, lower(email))
     WHERE accepted_at IS NULL AND revoked_at IS NULL;
 
-COMMENT ON COLUMN plannasaas.organisation_invitation.token_sha256 IS
+COMMENT ON COLUMN electriplan.organisation_invitation.token_sha256 IS
     'SHA-256 of the invitation token. The token itself is only ever in the email.';
 
-CREATE TABLE plannasaas.user_profile (
-    user_id                 uuid PRIMARY KEY REFERENCES plannasaas.supabase_user (id) ON DELETE CASCADE,
+CREATE TABLE electriplan.user_profile (
+    user_id                 uuid PRIMARY KEY REFERENCES electriplan.supabase_user (id) ON DELETE CASCADE,
     display_name            text CHECK (length(btrim(display_name)) BETWEEN 1 AND 120),
     phone                   text,
-    default_organisation_id uuid REFERENCES plannasaas.organisation (id) ON DELETE SET NULL,
+    default_organisation_id uuid REFERENCES electriplan.organisation (id) ON DELETE SET NULL,
     preferences             jsonb NOT NULL DEFAULT '{}' CHECK (jsonb_typeof(preferences) = 'object'),
     created_at              timestamptz NOT NULL DEFAULT now(),
     updated_at              timestamptz NOT NULL DEFAULT now()
 );
 
-COMMENT ON TABLE plannasaas.user_profile IS
+COMMENT ON TABLE electriplan.user_profile IS
     'What this app keeps about a person beyond Supabase: display name, the organisation they land in, preferences.';
 
-CREATE TABLE plannasaas.electrical_licence (
+CREATE TABLE electriplan.electrical_licence (
     id            uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-    user_id       uuid NOT NULL REFERENCES plannasaas.supabase_user (id) ON DELETE CASCADE,
+    user_id       uuid NOT NULL REFERENCES electriplan.supabase_user (id) ON DELETE CASCADE,
     state         text NOT NULL CHECK (state IN ('NSW', 'VIC', 'QLD', 'WA', 'SA', 'TAS', 'ACT', 'NT')),
     licence_class text NOT NULL
                   CHECK (licence_class IN ('registered_electrical_contractor', 'licensed_electrician', 'electrical_inspector')),
@@ -229,42 +229,42 @@ CREATE TABLE plannasaas.electrical_licence (
     UNIQUE (state, licence_class, number)
 );
 
-COMMENT ON TABLE plannasaas.electrical_licence IS
+COMMENT ON TABLE electriplan.electrical_licence IS
     'A person''s electrical licence. A review is signed off under one, recorded on the review as it stood then.';
 
 -- Human-readable references (PRJ-000042, Q-000107), gapless per organisation.
-CREATE TABLE plannasaas.organisation_counter (
-    organisation_id uuid NOT NULL REFERENCES plannasaas.organisation (id) ON DELETE CASCADE,
+CREATE TABLE electriplan.organisation_counter (
+    organisation_id uuid NOT NULL REFERENCES electriplan.organisation (id) ON DELETE CASCADE,
     counter         text NOT NULL CHECK (counter IN ('project', 'quote')),
     next_value      bigint NOT NULL DEFAULT 1 CHECK (next_value > 0),
     PRIMARY KEY (organisation_id, counter)
 );
 
-CREATE FUNCTION plannasaas.next_reference(p_organisation uuid, p_counter text, p_prefix text) RETURNS text
+CREATE FUNCTION electriplan.next_reference(p_organisation uuid, p_counter text, p_prefix text) RETURNS text
     LANGUAGE plpgsql
 AS $$
 DECLARE
     v_value bigint;
 BEGIN
-    INSERT INTO plannasaas.organisation_counter (organisation_id, counter, next_value)
+    INSERT INTO electriplan.organisation_counter (organisation_id, counter, next_value)
     VALUES (p_organisation, p_counter, 2)
     ON CONFLICT (organisation_id, counter)
-        DO UPDATE SET next_value = plannasaas.organisation_counter.next_value + 1
+        DO UPDATE SET next_value = electriplan.organisation_counter.next_value + 1
     RETURNING next_value - 1 INTO v_value;
     RETURN p_prefix || '-' || lpad(v_value::text, 6, '0');
 END
 $$;
 
-COMMENT ON FUNCTION plannasaas.next_reference(uuid, text, text) IS
+COMMENT ON FUNCTION electriplan.next_reference(uuid, text, text) IS
     'The next reference for an organisation, e.g. next_reference(org, ''project'', ''PRJ'') -> PRJ-000001. Row-locked, so gapless unless the transaction rolls back.';
 
 -- -----------------------------------------------------------------------------
 -- Clients and projects
 -- -----------------------------------------------------------------------------
 
-CREATE TABLE plannasaas.client (
+CREATE TABLE electriplan.client (
     id               uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-    organisation_id  uuid NOT NULL REFERENCES plannasaas.organisation (id) ON DELETE CASCADE,
+    organisation_id  uuid NOT NULL REFERENCES electriplan.organisation (id) ON DELETE CASCADE,
     kind             text NOT NULL DEFAULT 'person' CHECK (kind IN ('person', 'company')),
     name             text NOT NULL CHECK (length(btrim(name)) BETWEEN 1 AND 200),
     email            text,
@@ -282,13 +282,13 @@ CREATE TABLE plannasaas.client (
     UNIQUE (organisation_id, id)
 );
 
-CREATE INDEX ix_client_org_name ON plannasaas.client (organisation_id, lower(name)) WHERE archived_at IS NULL;
+CREATE INDEX ix_client_org_name ON electriplan.client (organisation_id, lower(name)) WHERE archived_at IS NULL;
 
-COMMENT ON TABLE plannasaas.client IS 'Who the work is for: the homeowner or builder''s customer a quote goes to.';
+COMMENT ON TABLE electriplan.client IS 'Who the work is for: the homeowner or builder''s customer a quote goes to.';
 
-CREATE TABLE plannasaas.project (
+CREATE TABLE electriplan.project (
     id                uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-    organisation_id   uuid NOT NULL REFERENCES plannasaas.organisation (id) ON DELETE CASCADE,
+    organisation_id   uuid NOT NULL REFERENCES electriplan.organisation (id) ON DELETE CASCADE,
     reference         text NOT NULL,
     name              text NOT NULL CHECK (length(btrim(name)) BETWEEN 1 AND 200),
     description       text,
@@ -301,7 +301,7 @@ CREATE TABLE plannasaas.project (
     site_state        text NOT NULL DEFAULT 'VIC'
                       CHECK (site_state IN ('NSW', 'VIC', 'QLD', 'WA', 'SA', 'TAS', 'ACT', 'NT')),
     site_postcode     text CHECK (site_postcode ~ '^[0-9]{4}$'),
-    distributor_code  text REFERENCES plannasaas.electricity_distributor (code),
+    distributor_code  text REFERENCES electriplan.electricity_distributor (code),
     supply_phases     smallint NOT NULL DEFAULT 1 CHECK (supply_phases IN (1, 3)),
     due_on            date,
     created_by        uuid,
@@ -310,37 +310,37 @@ CREATE TABLE plannasaas.project (
     archived_at       timestamptz,
     UNIQUE (organisation_id, id),
     UNIQUE (organisation_id, reference),
-    FOREIGN KEY (organisation_id, client_id) REFERENCES plannasaas.client (organisation_id, id)
+    FOREIGN KEY (organisation_id, client_id) REFERENCES electriplan.client (organisation_id, id)
 );
 
-CREATE INDEX ix_project_org_status ON plannasaas.project (organisation_id, status, updated_at DESC) WHERE archived_at IS NULL;
-CREATE INDEX ix_project_client ON plannasaas.project (organisation_id, client_id) WHERE client_id IS NOT NULL;
+CREATE INDEX ix_project_org_status ON electriplan.project (organisation_id, status, updated_at DESC) WHERE archived_at IS NULL;
+CREATE INDEX ix_project_client ON electriplan.project (organisation_id, client_id) WHERE client_id IS NOT NULL;
 
-COMMENT ON TABLE plannasaas.project IS 'A job at one site, for one client. Holds one or more house plans.';
-COMMENT ON COLUMN plannasaas.project.reference IS 'Human-readable, unique per organisation: PRJ-000042. From plannasaas.next_reference.';
+COMMENT ON TABLE electriplan.project IS 'A job at one site, for one client. Holds one or more house plans.';
+COMMENT ON COLUMN electriplan.project.reference IS 'Human-readable, unique per organisation: PRJ-000042. From electriplan.next_reference.';
 
-CREATE TABLE plannasaas.project_assignee (
+CREATE TABLE electriplan.project_assignee (
     organisation_id uuid NOT NULL,
     project_id      uuid NOT NULL,
-    user_id         uuid NOT NULL REFERENCES plannasaas.supabase_user (id) ON DELETE CASCADE,
+    user_id         uuid NOT NULL REFERENCES electriplan.supabase_user (id) ON DELETE CASCADE,
     responsibility  text NOT NULL CHECK (responsibility IN ('lead', 'designer', 'electrician', 'estimator')),
     assigned_at     timestamptz NOT NULL DEFAULT now(),
     assigned_by     uuid,
     PRIMARY KEY (project_id, user_id, responsibility),
-    FOREIGN KEY (organisation_id, project_id) REFERENCES plannasaas.project (organisation_id, id) ON DELETE CASCADE,
-    FOREIGN KEY (organisation_id, user_id) REFERENCES plannasaas.organisation_member (organisation_id, user_id) ON DELETE CASCADE
+    FOREIGN KEY (organisation_id, project_id) REFERENCES electriplan.project (organisation_id, id) ON DELETE CASCADE,
+    FOREIGN KEY (organisation_id, user_id) REFERENCES electriplan.organisation_member (organisation_id, user_id) ON DELETE CASCADE
 );
 
-CREATE INDEX ix_project_assignee_user ON plannasaas.project_assignee (organisation_id, user_id);
+CREATE INDEX ix_project_assignee_user ON electriplan.project_assignee (organisation_id, user_id);
 
-COMMENT ON TABLE plannasaas.project_assignee IS
+COMMENT ON TABLE electriplan.project_assignee IS
     'Who is working on a project and in what capacity. Every member of the organisation can still see it.';
 
 -- -----------------------------------------------------------------------------
 -- House plans, their levels and their lifecycle
 -- -----------------------------------------------------------------------------
 
-CREATE TABLE plannasaas.plan (
+CREATE TABLE electriplan.plan (
     id                           uuid PRIMARY KEY DEFAULT gen_random_uuid(),
     organisation_id              uuid NOT NULL,
     project_id                   uuid NOT NULL,
@@ -348,7 +348,7 @@ CREATE TABLE plannasaas.plan (
     dwelling_type                text NOT NULL DEFAULT 'house'
                                  CHECK (dwelling_type IN ('house', 'townhouse', 'unit', 'granny_flat', 'extension', 'other')),
     storeys                      smallint NOT NULL DEFAULT 1 CHECK (storeys BETWEEN 1 AND 4),
-    stage                        text NOT NULL DEFAULT 'awaiting_upload' REFERENCES plannasaas.plan_stage (code),
+    stage                        text NOT NULL DEFAULT 'awaiting_upload' REFERENCES electriplan.plan_stage (code),
     stage_changed_at             timestamptz NOT NULL DEFAULT now(),
     current_electrical_design_id uuid,
     lock_version                 integer NOT NULL DEFAULT 0,
@@ -357,44 +357,44 @@ CREATE TABLE plannasaas.plan (
     updated_at                   timestamptz NOT NULL DEFAULT now(),
     archived_at                  timestamptz,
     UNIQUE (organisation_id, id),
-    FOREIGN KEY (organisation_id, project_id) REFERENCES plannasaas.project (organisation_id, id) ON DELETE CASCADE
+    FOREIGN KEY (organisation_id, project_id) REFERENCES electriplan.project (organisation_id, id) ON DELETE CASCADE
 );
 
-CREATE UNIQUE INDEX ux_plan_project_name ON plannasaas.plan (project_id, lower(name)) WHERE archived_at IS NULL;
-CREATE INDEX ix_plan_org_stage ON plannasaas.plan (organisation_id, stage, stage_changed_at DESC) WHERE archived_at IS NULL;
+CREATE UNIQUE INDEX ux_plan_project_name ON electriplan.plan (project_id, lower(name)) WHERE archived_at IS NULL;
+CREATE INDEX ix_plan_org_stage ON electriplan.plan (organisation_id, stage, stage_changed_at DESC) WHERE archived_at IS NULL;
 
-COMMENT ON TABLE plannasaas.plan IS
+COMMENT ON TABLE electriplan.plan IS
     'One house design within a project (a project may have several: Lot 12 Type A, Lot 13 Type B). Carries the lifecycle stage.';
-COMMENT ON COLUMN plannasaas.plan.lock_version IS
+COMMENT ON COLUMN electriplan.plan.lock_version IS
     'Optimistic locking: the API updates WHERE lock_version = :seen and increments it, so two editors cannot silently overwrite each other.';
 
-CREATE TABLE plannasaas.plan_stage_event (
+CREATE TABLE electriplan.plan_stage_event (
     id              bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     organisation_id uuid NOT NULL,
     plan_id         uuid NOT NULL,
-    from_stage      text REFERENCES plannasaas.plan_stage (code),
-    to_stage        text NOT NULL REFERENCES plannasaas.plan_stage (code),
+    from_stage      text REFERENCES electriplan.plan_stage (code),
+    to_stage        text NOT NULL REFERENCES electriplan.plan_stage (code),
     actor_id        uuid,
     note            text,
     occurred_at     timestamptz NOT NULL DEFAULT now(),
-    FOREIGN KEY (organisation_id, plan_id) REFERENCES plannasaas.plan (organisation_id, id) ON DELETE CASCADE
+    FOREIGN KEY (organisation_id, plan_id) REFERENCES electriplan.plan (organisation_id, id) ON DELETE CASCADE
 );
 
-CREATE INDEX ix_plan_stage_event_plan ON plannasaas.plan_stage_event (plan_id, occurred_at);
+CREATE INDEX ix_plan_stage_event_plan ON electriplan.plan_stage_event (plan_id, occurred_at);
 
-COMMENT ON TABLE plannasaas.plan_stage_event IS
-    'Every stage a plan has been in, who moved it and why. Written only by the triggers on plannasaas.plan.';
+COMMENT ON TABLE electriplan.plan_stage_event IS
+    'Every stage a plan has been in, who moved it and why. Written only by the triggers on electriplan.plan.';
 
--- Validates every stage change against plannasaas.plan_stage_transition.
-CREATE FUNCTION plannasaas.plan_check_stage() RETURNS trigger
+-- Validates every stage change against electriplan.plan_stage_transition.
+CREATE FUNCTION electriplan.plan_check_stage() RETURNS trigger
     LANGUAGE plpgsql
 AS $$
 BEGIN
     IF NEW.stage IS DISTINCT FROM OLD.stage THEN
-        IF NOT EXISTS (SELECT 1 FROM plannasaas.plan_stage_transition
+        IF NOT EXISTS (SELECT 1 FROM electriplan.plan_stage_transition
                         WHERE from_stage = OLD.stage AND to_stage = NEW.stage) THEN
             RAISE EXCEPTION 'A plan cannot move from % to %', OLD.stage, NEW.stage
-                USING ERRCODE = 'check_violation', HINT = 'See plannasaas.plan_stage_transition.';
+                USING ERRCODE = 'check_violation', HINT = 'See electriplan.plan_stage_transition.';
         END IF;
         NEW.stage_changed_at := now();
     END IF;
@@ -403,28 +403,28 @@ END
 $$;
 
 -- Records the stage a plan starts in, and every change after.
-CREATE FUNCTION plannasaas.plan_record_stage() RETURNS trigger
+CREATE FUNCTION electriplan.plan_record_stage() RETURNS trigger
     LANGUAGE plpgsql
 AS $$
 BEGIN
     IF TG_OP = 'INSERT' OR NEW.stage IS DISTINCT FROM OLD.stage THEN
-        INSERT INTO plannasaas.plan_stage_event (organisation_id, plan_id, from_stage, to_stage, actor_id, note)
+        INSERT INTO electriplan.plan_stage_event (organisation_id, plan_id, from_stage, to_stage, actor_id, note)
         VALUES (NEW.organisation_id, NEW.id,
                 CASE WHEN TG_OP = 'UPDATE' THEN OLD.stage END,
                 NEW.stage,
-                plannasaas.current_actor_id(),
-                nullif(current_setting('plannasaas.stage_note', true), ''));
+                electriplan.current_actor_id(),
+                nullif(current_setting('electriplan.stage_note', true), ''));
     END IF;
     RETURN NULL;
 END
 $$;
 
-CREATE TRIGGER plan_check_stage BEFORE UPDATE OF stage ON plannasaas.plan
-    FOR EACH ROW EXECUTE FUNCTION plannasaas.plan_check_stage();
-CREATE TRIGGER plan_record_stage AFTER INSERT OR UPDATE OF stage ON plannasaas.plan
-    FOR EACH ROW EXECUTE FUNCTION plannasaas.plan_record_stage();
+CREATE TRIGGER plan_check_stage BEFORE UPDATE OF stage ON electriplan.plan
+    FOR EACH ROW EXECUTE FUNCTION electriplan.plan_check_stage();
+CREATE TRIGGER plan_record_stage AFTER INSERT OR UPDATE OF stage ON electriplan.plan
+    FOR EACH ROW EXECUTE FUNCTION electriplan.plan_record_stage();
 
-CREATE TABLE plannasaas.plan_level (
+CREATE TABLE electriplan.plan_level (
     id                            uuid PRIMARY KEY DEFAULT gen_random_uuid(),
     organisation_id               uuid NOT NULL,
     plan_id                       uuid NOT NULL,
@@ -436,19 +436,19 @@ CREATE TABLE plannasaas.plan_level (
     updated_at                    timestamptz NOT NULL DEFAULT now(),
     UNIQUE (organisation_id, id),
     UNIQUE (plan_id, ordinal),
-    FOREIGN KEY (organisation_id, plan_id) REFERENCES plannasaas.plan (organisation_id, id) ON DELETE CASCADE
+    FOREIGN KEY (organisation_id, plan_id) REFERENCES electriplan.plan (organisation_id, id) ON DELETE CASCADE
 );
 
-COMMENT ON TABLE plannasaas.plan_level IS
+COMMENT ON TABLE electriplan.plan_level IS
     'A storey of a plan, each with its own floor plan. Ordinal 0 is ground, 1 first floor, -1 basement.';
 
 -- -----------------------------------------------------------------------------
 -- Files
 -- -----------------------------------------------------------------------------
 
-CREATE TABLE plannasaas.stored_file (
+CREATE TABLE electriplan.stored_file (
     id              uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-    organisation_id uuid NOT NULL REFERENCES plannasaas.organisation (id) ON DELETE CASCADE,
+    organisation_id uuid NOT NULL REFERENCES electriplan.organisation (id) ON DELETE CASCADE,
     purpose         text NOT NULL CHECK (purpose IN (
                         'floor_plan_source', 'floor_plan_export', 'electrical_drawing',
                         'quote_document', 'licence_document', 'attachment')),
@@ -467,17 +467,17 @@ CREATE TABLE plannasaas.stored_file (
     UNIQUE (storage_backend, storage_key)
 );
 
-CREATE INDEX ix_stored_file_org_hash ON plannasaas.stored_file (organisation_id, sha256) WHERE deleted_at IS NULL;
+CREATE INDEX ix_stored_file_org_hash ON electriplan.stored_file (organisation_id, sha256) WHERE deleted_at IS NULL;
 
-COMMENT ON TABLE plannasaas.stored_file IS
+COMMENT ON TABLE electriplan.stored_file IS
     'Metadata for every file the app keeps. The bytes live in object storage (or on disk in development) under storage_key.';
-COMMENT ON COLUMN plannasaas.stored_file.sha256 IS 'Content hash: finds a plan uploaded twice, and proves a file has not changed.';
+COMMENT ON COLUMN electriplan.stored_file.sha256 IS 'Content hash: finds a plan uploaded twice, and proves a file has not changed.';
 
 -- -----------------------------------------------------------------------------
 -- Floor plans: analysis runs and versions
 -- -----------------------------------------------------------------------------
 
-CREATE TABLE plannasaas.analysis_run (
+CREATE TABLE electriplan.analysis_run (
     id                uuid PRIMARY KEY DEFAULT gen_random_uuid(),
     organisation_id   uuid NOT NULL,
     plan_level_id     uuid NOT NULL,
@@ -494,19 +494,19 @@ CREATE TABLE plannasaas.analysis_run (
     started_at        timestamptz,
     finished_at       timestamptz,
     UNIQUE (organisation_id, id),
-    FOREIGN KEY (organisation_id, plan_level_id) REFERENCES plannasaas.plan_level (organisation_id, id) ON DELETE CASCADE,
-    FOREIGN KEY (organisation_id, source_file_id) REFERENCES plannasaas.stored_file (organisation_id, id),
+    FOREIGN KEY (organisation_id, plan_level_id) REFERENCES electriplan.plan_level (organisation_id, id) ON DELETE CASCADE,
+    FOREIGN KEY (organisation_id, source_file_id) REFERENCES electriplan.stored_file (organisation_id, id),
     CHECK (finished_at IS NULL OR started_at IS NULL OR finished_at >= started_at),
     CHECK (status <> 'failed' OR error_message IS NOT NULL)
 );
 
-CREATE INDEX ix_analysis_run_level ON plannasaas.analysis_run (plan_level_id, queued_at DESC);
-CREATE INDEX ix_analysis_run_pending ON plannasaas.analysis_run (queued_at) WHERE status IN ('queued', 'running');
+CREATE INDEX ix_analysis_run_level ON electriplan.analysis_run (plan_level_id, queued_at DESC);
+CREATE INDEX ix_analysis_run_pending ON electriplan.analysis_run (queued_at) WHERE status IN ('queued', 'running');
 
-COMMENT ON TABLE plannasaas.analysis_run IS
+COMMENT ON TABLE electriplan.analysis_run IS
     'One run of the floor-plan analyser over an uploaded image: what it was asked, what each step reported, how it ended.';
 
-CREATE TABLE plannasaas.floor_plan_version (
+CREATE TABLE electriplan.floor_plan_version (
     id                    uuid PRIMARY KEY DEFAULT gen_random_uuid(),
     organisation_id       uuid NOT NULL,
     plan_level_id         uuid NOT NULL,
@@ -536,31 +536,31 @@ CREATE TABLE plannasaas.floor_plan_version (
     committed_at          timestamptz,
     UNIQUE (organisation_id, id),
     UNIQUE (plan_level_id, version_no),
-    FOREIGN KEY (organisation_id, plan_level_id) REFERENCES plannasaas.plan_level (organisation_id, id) ON DELETE CASCADE,
-    FOREIGN KEY (organisation_id, based_on_version_id) REFERENCES plannasaas.floor_plan_version (organisation_id, id),
-    FOREIGN KEY (organisation_id, analysis_run_id) REFERENCES plannasaas.analysis_run (organisation_id, id),
-    FOREIGN KEY (organisation_id, source_file_id) REFERENCES plannasaas.stored_file (organisation_id, id),
+    FOREIGN KEY (organisation_id, plan_level_id) REFERENCES electriplan.plan_level (organisation_id, id) ON DELETE CASCADE,
+    FOREIGN KEY (organisation_id, based_on_version_id) REFERENCES electriplan.floor_plan_version (organisation_id, id),
+    FOREIGN KEY (organisation_id, analysis_run_id) REFERENCES electriplan.analysis_run (organisation_id, id),
+    FOREIGN KEY (organisation_id, source_file_id) REFERENCES electriplan.stored_file (organisation_id, id),
     CHECK ((state = 'committed') = (committed_at IS NOT NULL)),
     CHECK (origin <> 'analysis' OR analysis_run_id IS NOT NULL)
 );
 
 -- One draft at a time per level: the one the editor is working on.
-CREATE UNIQUE INDEX ux_floor_plan_one_draft ON plannasaas.floor_plan_version (plan_level_id) WHERE state = 'draft';
+CREATE UNIQUE INDEX ux_floor_plan_one_draft ON electriplan.floor_plan_version (plan_level_id) WHERE state = 'draft';
 
-COMMENT ON TABLE plannasaas.floor_plan_version IS
+COMMENT ON TABLE electriplan.floor_plan_version IS
     'A floor plan (the FloorPlan JSON the editor works on), versioned. The editor saves into the one draft; committing freezes it.';
-COMMENT ON COLUMN plannasaas.floor_plan_version.document IS
+COMMENT ON COLUMN electriplan.floor_plan_version.document IS
     'The FloorPlan document in millimetres, as defined by contracts/floor-plan.schema.json. The source of truth for geometry.';
-COMMENT ON COLUMN plannasaas.floor_plan_version.floor_area_m2 IS
+COMMENT ON COLUMN electriplan.floor_plan_version.floor_area_m2 IS
     'Derived from document when saved, so lists and reports need not open the JSON.';
 
-ALTER TABLE plannasaas.plan_level
+ALTER TABLE electriplan.plan_level
     ADD FOREIGN KEY (organisation_id, current_floor_plan_version_id)
-        REFERENCES plannasaas.floor_plan_version (organisation_id, id) DEFERRABLE INITIALLY DEFERRED;
+        REFERENCES electriplan.floor_plan_version (organisation_id, id) DEFERRABLE INITIALLY DEFERRED;
 
 -- Committed versions are history: they may not change or disappear (except
 -- with the level they belong to).
-CREATE FUNCTION plannasaas.protect_committed_version() RETURNS trigger
+CREATE FUNCTION electriplan.protect_committed_version() RETURNS trigger
     LANGUAGE plpgsql
 AS $$
 BEGIN
@@ -570,10 +570,10 @@ BEGIN
             -- parent row is already gone when this fires. The parent column
             -- differs by table, so it is read dynamically.
             IF EXISTS (SELECT 1 WHERE (TG_TABLE_NAME = 'floor_plan_version'
-                                       AND EXISTS (SELECT 1 FROM plannasaas.plan_level
+                                       AND EXISTS (SELECT 1 FROM electriplan.plan_level
                                                     WHERE id = (to_jsonb(OLD) ->> 'plan_level_id')::uuid))
                                    OR (TG_TABLE_NAME = 'electrical_design_version'
-                                       AND EXISTS (SELECT 1 FROM plannasaas.plan
+                                       AND EXISTS (SELECT 1 FROM electriplan.plan
                                                     WHERE id = (to_jsonb(OLD) ->> 'plan_id')::uuid))) THEN
                 RAISE EXCEPTION 'Committed version % cannot be deleted', OLD.id USING ERRCODE = 'check_violation';
             END IF;
@@ -586,21 +586,21 @@ BEGIN
 END
 $$;
 
-CREATE TRIGGER floor_plan_version_protect BEFORE UPDATE OR DELETE ON plannasaas.floor_plan_version
-    FOR EACH ROW EXECUTE FUNCTION plannasaas.protect_committed_version();
+CREATE TRIGGER floor_plan_version_protect BEFORE UPDATE OR DELETE ON electriplan.floor_plan_version
+    FOR EACH ROW EXECUTE FUNCTION electriplan.protect_committed_version();
 
 -- -----------------------------------------------------------------------------
 -- Electrical: rule packs, policies, briefs, design versions, bill of materials
 -- -----------------------------------------------------------------------------
 
-CREATE TABLE plannasaas.rule_pack (
+CREATE TABLE electriplan.rule_pack (
     id             uuid PRIMARY KEY DEFAULT gen_random_uuid(),
     code           text NOT NULL CHECK (code ~ '^[a-z0-9-]+$'),
     version        text NOT NULL,
     status         text NOT NULL DEFAULT 'draft' CHECK (status IN ('draft', 'released', 'retired')),
     standards      jsonb NOT NULL DEFAULT '{}' CHECK (jsonb_typeof(standards) = 'object'),
     content_sha256 bytea NOT NULL CHECK (length(content_sha256) = 32),
-    signed_off_by  uuid REFERENCES plannasaas.electrical_licence (id),
+    signed_off_by  uuid REFERENCES electriplan.electrical_licence (id),
     signed_off_at  timestamptz,
     released_at    timestamptz,
     notes          text,
@@ -609,13 +609,13 @@ CREATE TABLE plannasaas.rule_pack (
     CHECK (status <> 'released' OR (signed_off_by IS NOT NULL AND released_at IS NOT NULL))
 );
 
-COMMENT ON TABLE plannasaas.rule_pack IS
+COMMENT ON TABLE electriplan.rule_pack IS
     'A version of the rules the electrical engine applies (shipped with the API). Released only once a licensed electrician has signed it off.';
-COMMENT ON COLUMN plannasaas.rule_pack.standards IS 'The editions it encodes, e.g. {"AS/NZS 3000": "2018+A3", "VIC SIR": "2024"}.';
+COMMENT ON COLUMN electriplan.rule_pack.standards IS 'The editions it encodes, e.g. {"AS/NZS 3000": "2018+A3", "VIC SIR": "2024"}.';
 
-CREATE TABLE plannasaas.organisation_policy (
+CREATE TABLE electriplan.organisation_policy (
     id              uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-    organisation_id uuid NOT NULL REFERENCES plannasaas.organisation (id) ON DELETE CASCADE,
+    organisation_id uuid NOT NULL REFERENCES electriplan.organisation (id) ON DELETE CASCADE,
     version         integer NOT NULL CHECK (version > 0),
     policy          jsonb NOT NULL CHECK (jsonb_typeof(policy) = 'object'),
     is_active       boolean NOT NULL DEFAULT false,
@@ -625,17 +625,17 @@ CREATE TABLE plannasaas.organisation_policy (
     UNIQUE (organisation_id, version)
 );
 
-CREATE UNIQUE INDEX ux_organisation_policy_active ON plannasaas.organisation_policy (organisation_id) WHERE is_active;
+CREATE UNIQUE INDEX ux_organisation_policy_active ON electriplan.organisation_policy (organisation_id) WHERE is_active;
 
-COMMENT ON TABLE plannasaas.organisation_policy IS
+COMMENT ON TABLE electriplan.organisation_policy IS
     'An organisation''s overrides of design-policy rules (switch heights, outlets per room...). Never mandatory rules.';
 
-CREATE TABLE plannasaas.electrical_brief (
+CREATE TABLE electriplan.electrical_brief (
     plan_id                  uuid PRIMARY KEY,
     organisation_id          uuid NOT NULL,
     state                    text NOT NULL DEFAULT 'VIC'
                              CHECK (state IN ('NSW', 'VIC', 'QLD', 'WA', 'SA', 'TAS', 'ACT', 'NT')),
-    distributor_code         text REFERENCES plannasaas.electricity_distributor (code),
+    distributor_code         text REFERENCES electriplan.electricity_distributor (code),
     supply_phases            smallint NOT NULL DEFAULT 1 CHECK (supply_phases IN (1, 3)),
     consumer_mains_length_m  numeric(6, 1) CHECK (consumer_mains_length_m > 0),
     construction             jsonb NOT NULL DEFAULT '{}' CHECK (jsonb_typeof(construction) = 'object'),
@@ -645,13 +645,13 @@ CREATE TABLE plannasaas.electrical_brief (
     updated_by               uuid,
     created_at               timestamptz NOT NULL DEFAULT now(),
     updated_at               timestamptz NOT NULL DEFAULT now(),
-    FOREIGN KEY (organisation_id, plan_id) REFERENCES plannasaas.plan (organisation_id, id) ON DELETE CASCADE
+    FOREIGN KEY (organisation_id, plan_id) REFERENCES electriplan.plan (organisation_id, id) ON DELETE CASCADE
 );
 
-COMMENT ON TABLE plannasaas.electrical_brief IS
+COMMENT ON TABLE electriplan.electrical_brief IS
     'The project brief for a plan''s electrical design: supply, construction, appliances, preferences. Each design version keeps a snapshot.';
 
-CREATE TABLE plannasaas.electrical_design_version (
+CREATE TABLE electriplan.electrical_design_version (
     id                        uuid PRIMARY KEY DEFAULT gen_random_uuid(),
     organisation_id           uuid NOT NULL,
     plan_id                   uuid NOT NULL,
@@ -659,7 +659,7 @@ CREATE TABLE plannasaas.electrical_design_version (
     state                     text NOT NULL DEFAULT 'draft' CHECK (state IN ('draft', 'committed')),
     origin                    text NOT NULL CHECK (origin IN ('engine', 'editor')),
     based_on_version_id       uuid,
-    rule_pack_id              uuid NOT NULL REFERENCES plannasaas.rule_pack (id),
+    rule_pack_id              uuid NOT NULL REFERENCES electriplan.rule_pack (id),
     organisation_policy_id    uuid,
     engine_version            text NOT NULL,
     brief                     jsonb NOT NULL CHECK (jsonb_typeof(brief) = 'object'),
@@ -682,40 +682,40 @@ CREATE TABLE plannasaas.electrical_design_version (
     UNIQUE (organisation_id, id),
     UNIQUE (organisation_id, plan_id, id),
     UNIQUE (plan_id, version_no),
-    FOREIGN KEY (organisation_id, plan_id) REFERENCES plannasaas.plan (organisation_id, id) ON DELETE CASCADE,
-    FOREIGN KEY (organisation_id, based_on_version_id) REFERENCES plannasaas.electrical_design_version (organisation_id, id),
-    FOREIGN KEY (organisation_id, organisation_policy_id) REFERENCES plannasaas.organisation_policy (organisation_id, id),
+    FOREIGN KEY (organisation_id, plan_id) REFERENCES electriplan.plan (organisation_id, id) ON DELETE CASCADE,
+    FOREIGN KEY (organisation_id, based_on_version_id) REFERENCES electriplan.electrical_design_version (organisation_id, id),
+    FOREIGN KEY (organisation_id, organisation_policy_id) REFERENCES electriplan.organisation_policy (organisation_id, id),
     CHECK ((state = 'committed') = (committed_at IS NOT NULL)),
     -- A design that breaks a mandatory rule can be worked on, never committed.
     CHECK (state <> 'committed' OR mandatory_violation_count = 0)
 );
 
-CREATE UNIQUE INDEX ux_electrical_design_one_draft ON plannasaas.electrical_design_version (plan_id) WHERE state = 'draft';
+CREATE UNIQUE INDEX ux_electrical_design_one_draft ON electriplan.electrical_design_version (plan_id) WHERE state = 'draft';
 
-COMMENT ON TABLE plannasaas.electrical_design_version IS
+COMMENT ON TABLE electriplan.electrical_design_version IS
     'An electrical design (the ElectricalDesign JSON), versioned like floor plans. Records the rule pack, policy and engine that made it, so it can be reproduced.';
 
-CREATE TRIGGER electrical_design_version_protect BEFORE UPDATE OR DELETE ON plannasaas.electrical_design_version
-    FOR EACH ROW EXECUTE FUNCTION plannasaas.protect_committed_version();
+CREATE TRIGGER electrical_design_version_protect BEFORE UPDATE OR DELETE ON electriplan.electrical_design_version
+    FOR EACH ROW EXECUTE FUNCTION electriplan.protect_committed_version();
 
-ALTER TABLE plannasaas.plan
+ALTER TABLE electriplan.plan
     ADD FOREIGN KEY (organisation_id, current_electrical_design_id)
-        REFERENCES plannasaas.electrical_design_version (organisation_id, id) DEFERRABLE INITIALLY DEFERRED;
+        REFERENCES electriplan.electrical_design_version (organisation_id, id) DEFERRABLE INITIALLY DEFERRED;
 
-CREATE TABLE plannasaas.electrical_design_input (
+CREATE TABLE electriplan.electrical_design_input (
     organisation_id       uuid NOT NULL,
     design_version_id     uuid NOT NULL,
     floor_plan_version_id uuid NOT NULL,
     PRIMARY KEY (design_version_id, floor_plan_version_id),
     FOREIGN KEY (organisation_id, design_version_id)
-        REFERENCES plannasaas.electrical_design_version (organisation_id, id) ON DELETE CASCADE,
-    FOREIGN KEY (organisation_id, floor_plan_version_id) REFERENCES plannasaas.floor_plan_version (organisation_id, id)
+        REFERENCES electriplan.electrical_design_version (organisation_id, id) ON DELETE CASCADE,
+    FOREIGN KEY (organisation_id, floor_plan_version_id) REFERENCES electriplan.floor_plan_version (organisation_id, id)
 );
 
-COMMENT ON TABLE plannasaas.electrical_design_input IS
+COMMENT ON TABLE electriplan.electrical_design_input IS
     'The exact floor-plan versions (one per level) an electrical design was made from.';
 
-CREATE TABLE plannasaas.bom_line (
+CREATE TABLE electriplan.bom_line (
     id                uuid PRIMARY KEY DEFAULT gen_random_uuid(),
     organisation_id   uuid NOT NULL,
     design_version_id uuid NOT NULL,
@@ -727,17 +727,17 @@ CREATE TABLE plannasaas.bom_line (
     spec              jsonb NOT NULL DEFAULT '{}' CHECK (jsonb_typeof(spec) = 'object'),
     UNIQUE (design_version_id, item_code),
     FOREIGN KEY (organisation_id, design_version_id)
-        REFERENCES plannasaas.electrical_design_version (organisation_id, id) ON DELETE CASCADE
+        REFERENCES electriplan.electrical_design_version (organisation_id, id) ON DELETE CASCADE
 );
 
-COMMENT ON TABLE plannasaas.bom_line IS
+COMMENT ON TABLE electriplan.bom_line IS
     'The bill of materials of a design version: what to buy, in what quantity. Derived from the design; the basis of quotes and stock checks.';
 
 -- -----------------------------------------------------------------------------
 -- Review by a licensed electrician
 -- -----------------------------------------------------------------------------
 
-CREATE TABLE plannasaas.review (
+CREATE TABLE electriplan.review (
     id                  uuid PRIMARY KEY DEFAULT gen_random_uuid(),
     organisation_id     uuid NOT NULL,
     plan_id             uuid NOT NULL,
@@ -746,7 +746,7 @@ CREATE TABLE plannasaas.review (
                         CHECK (status IN ('requested', 'in_progress', 'approved', 'changes_requested', 'cancelled')),
     requested_by        uuid NOT NULL,
     reviewer_id         uuid,
-    reviewer_licence_id uuid REFERENCES plannasaas.electrical_licence (id),
+    reviewer_licence_id uuid REFERENCES electriplan.electrical_licence (id),
     licence_snapshot    jsonb CHECK (licence_snapshot IS NULL OR jsonb_typeof(licence_snapshot) = 'object'),
     due_on              date,
     decision_note       text,
@@ -754,27 +754,27 @@ CREATE TABLE plannasaas.review (
     created_at          timestamptz NOT NULL DEFAULT now(),
     updated_at          timestamptz NOT NULL DEFAULT now(),
     UNIQUE (organisation_id, id),
-    FOREIGN KEY (organisation_id, plan_id) REFERENCES plannasaas.plan (organisation_id, id) ON DELETE CASCADE,
-    FOREIGN KEY (organisation_id, design_version_id) REFERENCES plannasaas.electrical_design_version (organisation_id, id),
-    FOREIGN KEY (organisation_id, reviewer_id) REFERENCES plannasaas.organisation_member (organisation_id, user_id),
+    FOREIGN KEY (organisation_id, plan_id) REFERENCES electriplan.plan (organisation_id, id) ON DELETE CASCADE,
+    FOREIGN KEY (organisation_id, design_version_id) REFERENCES electriplan.electrical_design_version (organisation_id, id),
+    FOREIGN KEY (organisation_id, reviewer_id) REFERENCES electriplan.organisation_member (organisation_id, user_id),
     CHECK ((status IN ('approved', 'changes_requested')) = (decided_at IS NOT NULL)),
     -- An approval is always signed under a licence, recorded as it stood.
     CHECK (status <> 'approved'
            OR (reviewer_id IS NOT NULL AND reviewer_licence_id IS NOT NULL AND licence_snapshot IS NOT NULL))
 );
 
-CREATE UNIQUE INDEX ux_review_one_open ON plannasaas.review (design_version_id) WHERE status IN ('requested', 'in_progress');
-CREATE INDEX ix_review_reviewer_open ON plannasaas.review (organisation_id, reviewer_id) WHERE status IN ('requested', 'in_progress');
+CREATE UNIQUE INDEX ux_review_one_open ON electriplan.review (design_version_id) WHERE status IN ('requested', 'in_progress');
+CREATE INDEX ix_review_reviewer_open ON electriplan.review (organisation_id, reviewer_id) WHERE status IN ('requested', 'in_progress');
 
-COMMENT ON TABLE plannasaas.review IS
+COMMENT ON TABLE electriplan.review IS
     'A licensed electrician''s review of one committed design version. Approval is the sign-off the plan''s lifecycle waits for.';
 
 -- Reviews are only of committed designs: a draft can change under the reviewer.
-CREATE FUNCTION plannasaas.review_requires_committed_design() RETURNS trigger
+CREATE FUNCTION electriplan.review_requires_committed_design() RETURNS trigger
     LANGUAGE plpgsql
 AS $$
 BEGIN
-    IF NOT EXISTS (SELECT 1 FROM plannasaas.electrical_design_version
+    IF NOT EXISTS (SELECT 1 FROM electriplan.electrical_design_version
                     WHERE id = NEW.design_version_id AND state = 'committed') THEN
         RAISE EXCEPTION 'Only a committed design version can be reviewed' USING ERRCODE = 'check_violation';
     END IF;
@@ -782,10 +782,10 @@ BEGIN
 END
 $$;
 
-CREATE TRIGGER review_requires_committed_design BEFORE INSERT OR UPDATE OF design_version_id ON plannasaas.review
-    FOR EACH ROW EXECUTE FUNCTION plannasaas.review_requires_committed_design();
+CREATE TRIGGER review_requires_committed_design BEFORE INSERT OR UPDATE OF design_version_id ON electriplan.review
+    FOR EACH ROW EXECUTE FUNCTION electriplan.review_requires_committed_design();
 
-CREATE TABLE plannasaas.review_finding (
+CREATE TABLE electriplan.review_finding (
     id              uuid PRIMARY KEY DEFAULT gen_random_uuid(),
     organisation_id uuid NOT NULL,
     review_id       uuid NOT NULL,
@@ -797,22 +797,22 @@ CREATE TABLE plannasaas.review_finding (
     resolved_at     timestamptz,
     created_by      uuid NOT NULL,
     created_at      timestamptz NOT NULL DEFAULT now(),
-    FOREIGN KEY (organisation_id, review_id) REFERENCES plannasaas.review (organisation_id, id) ON DELETE CASCADE
+    FOREIGN KEY (organisation_id, review_id) REFERENCES electriplan.review (organisation_id, id) ON DELETE CASCADE
 );
 
-CREATE INDEX ix_review_finding_review ON plannasaas.review_finding (review_id, created_at);
+CREATE INDEX ix_review_finding_review ON electriplan.review_finding (review_id, created_at);
 
-COMMENT ON TABLE plannasaas.review_finding IS
+COMMENT ON TABLE electriplan.review_finding IS
     'What the reviewer did with each item (kept, moved, removed, added) and any comment. Feeds the "90% accepted unchanged" measure.';
-COMMENT ON COLUMN plannasaas.review_finding.item_ref IS 'The id of a point or circuit in the design document, e.g. lt_001 or c_L1.';
+COMMENT ON COLUMN electriplan.review_finding.item_ref IS 'The id of a point or circuit in the design document, e.g. lt_001 or c_L1.';
 
 -- -----------------------------------------------------------------------------
 -- Catalogue, prices and quotes
 -- -----------------------------------------------------------------------------
 
-CREATE TABLE plannasaas.catalogue_item (
+CREATE TABLE electriplan.catalogue_item (
     id              uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-    organisation_id uuid REFERENCES plannasaas.organisation (id) ON DELETE CASCADE,
+    organisation_id uuid REFERENCES electriplan.organisation (id) ON DELETE CASCADE,
     item_code       text NOT NULL CHECK (item_code ~ '^[A-Z0-9][A-Z0-9.-]*$'),
     name            text NOT NULL,
     category        text NOT NULL CHECK (category IN (
@@ -826,12 +826,12 @@ CREATE TABLE plannasaas.catalogue_item (
     UNIQUE NULLS NOT DISTINCT (organisation_id, item_code)
 );
 
-COMMENT ON TABLE plannasaas.catalogue_item IS
+COMMENT ON TABLE electriplan.catalogue_item IS
     'Items a design can use and a quote can price. organisation_id NULL is the platform catalogue; an organisation may add its own.';
 
-CREATE TABLE plannasaas.price_list (
+CREATE TABLE electriplan.price_list (
     id              uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-    organisation_id uuid NOT NULL REFERENCES plannasaas.organisation (id) ON DELETE CASCADE,
+    organisation_id uuid NOT NULL REFERENCES electriplan.organisation (id) ON DELETE CASCADE,
     name            text NOT NULL,
     currency        char(3) NOT NULL DEFAULT 'AUD' CHECK (currency ~ '^[A-Z]{3}$'),
     valid_from      date,
@@ -843,9 +843,9 @@ CREATE TABLE plannasaas.price_list (
     CHECK (valid_to IS NULL OR valid_from IS NULL OR valid_to >= valid_from)
 );
 
-CREATE UNIQUE INDEX ux_price_list_default ON plannasaas.price_list (organisation_id) WHERE is_default;
+CREATE UNIQUE INDEX ux_price_list_default ON electriplan.price_list (organisation_id) WHERE is_default;
 
-CREATE TABLE plannasaas.price_list_item (
+CREATE TABLE electriplan.price_list_item (
     organisation_id   uuid NOT NULL,
     price_list_id     uuid NOT NULL,
     item_code         text NOT NULL,
@@ -853,13 +853,13 @@ CREATE TABLE plannasaas.price_list_item (
     unit_price_ex_gst numeric(12, 2) NOT NULL CHECK (unit_price_ex_gst >= 0),
     labour_minutes    numeric(8, 2) CHECK (labour_minutes >= 0),
     PRIMARY KEY (price_list_id, item_code),
-    FOREIGN KEY (organisation_id, price_list_id) REFERENCES plannasaas.price_list (organisation_id, id) ON DELETE CASCADE
+    FOREIGN KEY (organisation_id, price_list_id) REFERENCES electriplan.price_list (organisation_id, id) ON DELETE CASCADE
 );
 
-COMMENT ON TABLE plannasaas.price_list_item IS
+COMMENT ON TABLE electriplan.price_list_item IS
     'What an organisation pays (cost) and charges (price) for an item, and the labour it takes to install.';
 
-CREATE TABLE plannasaas.quote (
+CREATE TABLE electriplan.quote (
     id                  uuid PRIMARY KEY DEFAULT gen_random_uuid(),
     organisation_id     uuid NOT NULL,
     plan_id             uuid NOT NULL,
@@ -887,33 +887,33 @@ CREATE TABLE plannasaas.quote (
     updated_at          timestamptz NOT NULL DEFAULT now(),
     UNIQUE (organisation_id, id),
     UNIQUE (organisation_id, reference, revision),
-    FOREIGN KEY (organisation_id, plan_id) REFERENCES plannasaas.plan (organisation_id, id),
+    FOREIGN KEY (organisation_id, plan_id) REFERENCES electriplan.plan (organisation_id, id),
     -- The design priced must be one of this plan's designs.
     FOREIGN KEY (organisation_id, plan_id, design_version_id)
-        REFERENCES plannasaas.electrical_design_version (organisation_id, plan_id, id),
-    FOREIGN KEY (organisation_id, client_id) REFERENCES plannasaas.client (organisation_id, id),
-    FOREIGN KEY (organisation_id, price_list_id) REFERENCES plannasaas.price_list (organisation_id, id),
-    FOREIGN KEY (organisation_id, supersedes_quote_id) REFERENCES plannasaas.quote (organisation_id, id),
+        REFERENCES electriplan.electrical_design_version (organisation_id, plan_id, id),
+    FOREIGN KEY (organisation_id, client_id) REFERENCES electriplan.client (organisation_id, id),
+    FOREIGN KEY (organisation_id, price_list_id) REFERENCES electriplan.price_list (organisation_id, id),
+    FOREIGN KEY (organisation_id, supersedes_quote_id) REFERENCES electriplan.quote (organisation_id, id),
     CHECK (total_inc_gst = subtotal_ex_gst + gst_amount),
     CHECK (status NOT IN ('sent', 'accepted', 'declined', 'expired') OR sent_at IS NOT NULL),
     CHECK ((status IN ('accepted', 'declined')) = (decided_at IS NOT NULL))
 );
 
-CREATE INDEX ix_quote_org_status ON plannasaas.quote (organisation_id, status, updated_at DESC);
-CREATE INDEX ix_quote_plan ON plannasaas.quote (plan_id, created_at DESC);
+CREATE INDEX ix_quote_org_status ON electriplan.quote (organisation_id, status, updated_at DESC);
+CREATE INDEX ix_quote_plan ON electriplan.quote (plan_id, created_at DESC);
 
 -- One live quote per house: a revision supersedes the one before it.
-CREATE UNIQUE INDEX ux_quote_one_live_per_plan ON plannasaas.quote (plan_id) WHERE status IN ('draft', 'sent');
+CREATE UNIQUE INDEX ux_quote_one_live_per_plan ON electriplan.quote (plan_id) WHERE status IN ('draft', 'sent');
 
-COMMENT ON TABLE plannasaas.quote IS
+COMMENT ON TABLE electriplan.quote IS
     'A priced offer to a client for one house plan, pricing one committed design version of it. Revisions keep the reference (Q-000107 rev 2) and supersede the one before. Totals are kept by trigger from the lines.';
 
 -- Only a committed design is priced: a draft can change under the quote.
-CREATE FUNCTION plannasaas.quote_requires_committed_design() RETURNS trigger
+CREATE FUNCTION electriplan.quote_requires_committed_design() RETURNS trigger
     LANGUAGE plpgsql
 AS $$
 BEGIN
-    IF NOT EXISTS (SELECT 1 FROM plannasaas.electrical_design_version
+    IF NOT EXISTS (SELECT 1 FROM electriplan.electrical_design_version
                     WHERE id = NEW.design_version_id AND state = 'committed') THEN
         RAISE EXCEPTION 'Only a committed design version can be quoted' USING ERRCODE = 'check_violation';
     END IF;
@@ -921,10 +921,10 @@ BEGIN
 END
 $$;
 
-CREATE TRIGGER quote_requires_committed_design BEFORE INSERT OR UPDATE OF design_version_id ON plannasaas.quote
-    FOR EACH ROW EXECUTE FUNCTION plannasaas.quote_requires_committed_design();
+CREATE TRIGGER quote_requires_committed_design BEFORE INSERT OR UPDATE OF design_version_id ON electriplan.quote
+    FOR EACH ROW EXECUTE FUNCTION electriplan.quote_requires_committed_design();
 
-CREATE TABLE plannasaas.quote_line (
+CREATE TABLE electriplan.quote_line (
     id                uuid PRIMARY KEY DEFAULT gen_random_uuid(),
     organisation_id   uuid NOT NULL,
     quote_id          uuid NOT NULL,
@@ -938,20 +938,20 @@ CREATE TABLE plannasaas.quote_line (
     line_total_ex_gst numeric(12, 2) GENERATED ALWAYS AS (round(quantity * unit_price_ex_gst, 2)) STORED,
     source            text NOT NULL DEFAULT 'manual' CHECK (source IN ('bom', 'manual')),
     UNIQUE (quote_id, line_no),
-    FOREIGN KEY (organisation_id, quote_id) REFERENCES plannasaas.quote (organisation_id, id) ON DELETE CASCADE,
+    FOREIGN KEY (organisation_id, quote_id) REFERENCES electriplan.quote (organisation_id, id) ON DELETE CASCADE,
     CHECK ((kind = 'discount') = (unit_price_ex_gst < 0) OR unit_price_ex_gst = 0)
 );
 
-CREATE INDEX ix_quote_line_quote ON plannasaas.quote_line (quote_id, line_no);
+CREATE INDEX ix_quote_line_quote ON electriplan.quote_line (quote_id, line_no);
 
 -- Lines change only while a quote is a draft; totals always follow the lines.
-CREATE FUNCTION plannasaas.quote_line_guard() RETURNS trigger
+CREATE FUNCTION electriplan.quote_line_guard() RETURNS trigger
     LANGUAGE plpgsql
 AS $$
 DECLARE
     v_status text;
 BEGIN
-    SELECT status INTO v_status FROM plannasaas.quote WHERE id = COALESCE(NEW.quote_id, OLD.quote_id);
+    SELECT status INTO v_status FROM electriplan.quote WHERE id = COALESCE(NEW.quote_id, OLD.quote_id);
     -- No quote row: it is being deleted, and its lines with it.
     IF v_status IS NOT NULL AND v_status <> 'draft' THEN
         RAISE EXCEPTION 'Quote lines can only change while the quote is a draft (it is %)', v_status
@@ -961,31 +961,31 @@ BEGIN
 END
 $$;
 
-CREATE FUNCTION plannasaas.quote_recalculate() RETURNS trigger
+CREATE FUNCTION electriplan.quote_recalculate() RETURNS trigger
     LANGUAGE plpgsql
 AS $$
 DECLARE
     v_quote uuid := COALESCE(NEW.quote_id, OLD.quote_id);
 BEGIN
-    UPDATE plannasaas.quote q
+    UPDATE electriplan.quote q
        SET subtotal_ex_gst = t.subtotal,
            gst_amount      = round(t.subtotal * q.gst_rate, 2),
            total_inc_gst   = t.subtotal + round(t.subtotal * q.gst_rate, 2)
       FROM (SELECT COALESCE(sum(line_total_ex_gst), 0) AS subtotal
-              FROM plannasaas.quote_line WHERE quote_id = v_quote) t
+              FROM electriplan.quote_line WHERE quote_id = v_quote) t
      WHERE q.id = v_quote;
     RETURN NULL;
 END
 $$;
 
-CREATE TRIGGER quote_line_guard BEFORE INSERT OR UPDATE OR DELETE ON plannasaas.quote_line
-    FOR EACH ROW EXECUTE FUNCTION plannasaas.quote_line_guard();
-CREATE TRIGGER quote_line_recalculate AFTER INSERT OR UPDATE OR DELETE ON plannasaas.quote_line
-    FOR EACH ROW EXECUTE FUNCTION plannasaas.quote_recalculate();
+CREATE TRIGGER quote_line_guard BEFORE INSERT OR UPDATE OR DELETE ON electriplan.quote_line
+    FOR EACH ROW EXECUTE FUNCTION electriplan.quote_line_guard();
+CREATE TRIGGER quote_line_recalculate AFTER INSERT OR UPDATE OR DELETE ON electriplan.quote_line
+    FOR EACH ROW EXECUTE FUNCTION electriplan.quote_recalculate();
 
 -- A changed GST rate re-derives the totals; a quote that has gone to a client
 -- is a record and is never deleted (withdraw or supersede it instead).
-CREATE FUNCTION plannasaas.quote_guard() RETURNS trigger
+CREATE FUNCTION electriplan.quote_guard() RETURNS trigger
     LANGUAGE plpgsql
 AS $$
 BEGIN
@@ -1004,16 +1004,16 @@ BEGIN
 END
 $$;
 
-CREATE TRIGGER quote_guard BEFORE UPDATE OR DELETE ON plannasaas.quote
-    FOR EACH ROW EXECUTE FUNCTION plannasaas.quote_guard();
+CREATE TRIGGER quote_guard BEFORE UPDATE OR DELETE ON electriplan.quote
+    FOR EACH ROW EXECUTE FUNCTION electriplan.quote_guard();
 
 -- -----------------------------------------------------------------------------
 -- Links to other systems (Planna One ERP) and the audit trail
 -- -----------------------------------------------------------------------------
 
-CREATE TABLE plannasaas.external_reference (
+CREATE TABLE electriplan.external_reference (
     id              uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-    organisation_id uuid NOT NULL REFERENCES plannasaas.organisation (id) ON DELETE CASCADE,
+    organisation_id uuid NOT NULL REFERENCES electriplan.organisation (id) ON DELETE CASCADE,
     system          text NOT NULL CHECK (system IN ('planna_one')),
     entity_type     text NOT NULL CHECK (entity_type IN ('client', 'project', 'quote', 'catalogue_item')),
     entity_id       uuid NOT NULL,
@@ -1025,10 +1025,10 @@ CREATE TABLE plannasaas.external_reference (
     UNIQUE (organisation_id, system, entity_type, external_id)
 );
 
-COMMENT ON TABLE plannasaas.external_reference IS
+COMMENT ON TABLE electriplan.external_reference IS
     'This app''s row <-> the same thing in another system, e.g. a quote and its Planna One sales quote, a catalogue item and its SKU.';
 
-CREATE TABLE plannasaas.audit_event (
+CREATE TABLE electriplan.audit_event (
     id              bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     organisation_id uuid NOT NULL,
     actor_id        uuid,
@@ -1040,10 +1040,10 @@ CREATE TABLE plannasaas.audit_event (
     occurred_at     timestamptz NOT NULL DEFAULT now()
 );
 
-CREATE INDEX ix_audit_event_org_time ON plannasaas.audit_event (organisation_id, occurred_at DESC);
-CREATE INDEX ix_audit_event_entity ON plannasaas.audit_event (entity_type, entity_id, occurred_at DESC);
+CREATE INDEX ix_audit_event_org_time ON electriplan.audit_event (organisation_id, occurred_at DESC);
+CREATE INDEX ix_audit_event_entity ON electriplan.audit_event (entity_type, entity_id, occurred_at DESC);
 
-COMMENT ON TABLE plannasaas.audit_event IS
+COMMENT ON TABLE electriplan.audit_event IS
     'Append-only record of who did what. Written by the API. Partition by month (on occurred_at) when it grows.';
 
 -- -----------------------------------------------------------------------------
@@ -1059,7 +1059,7 @@ BEGIN
         'plan', 'plan_level', 'floor_plan_version', 'electrical_brief', 'electrical_design_version',
         'review', 'catalogue_item', 'price_list', 'quote']
     LOOP
-        EXECUTE format('CREATE TRIGGER %I BEFORE UPDATE ON plannasaas.%I FOR EACH ROW EXECUTE FUNCTION plannasaas.touch_updated_at()',
+        EXECUTE format('CREATE TRIGGER %I BEFORE UPDATE ON electriplan.%I FOR EACH ROW EXECUTE FUNCTION electriplan.touch_updated_at()',
                        t || '_touch_updated_at', t);
     END LOOP;
 END
@@ -1083,11 +1083,11 @@ BEGIN
         'electrical_design_input', 'bom_line', 'review', 'review_finding', 'price_list', 'price_list_item',
         'quote', 'quote_line', 'external_reference', 'audit_event']
     LOOP
-        EXECUTE format('ALTER TABLE plannasaas.%I ENABLE ROW LEVEL SECURITY', t);
-        EXECUTE format('ALTER TABLE plannasaas.%I FORCE ROW LEVEL SECURITY', t);
+        EXECUTE format('ALTER TABLE electriplan.%I ENABLE ROW LEVEL SECURITY', t);
+        EXECUTE format('ALTER TABLE electriplan.%I FORCE ROW LEVEL SECURITY', t);
         EXECUTE format(
-            'CREATE POLICY tenant_isolation ON plannasaas.%I USING (organisation_id = plannasaas.current_organisation_id()) '
-            'WITH CHECK (organisation_id = plannasaas.current_organisation_id())', t);
+            'CREATE POLICY tenant_isolation ON electriplan.%I USING (organisation_id = electriplan.current_organisation_id()) '
+            'WITH CHECK (organisation_id = electriplan.current_organisation_id())', t);
     END LOOP;
 END
 $$;
@@ -1095,29 +1095,29 @@ $$;
 -- People can always read their own memberships, in every organisation, so the
 -- app can list the organisations someone may switch to. Writing still needs
 -- the organisation to be the current one.
-CREATE POLICY own_memberships ON plannasaas.organisation_member FOR SELECT
-    USING (user_id = plannasaas.current_actor_id());
+CREATE POLICY own_memberships ON electriplan.organisation_member FOR SELECT
+    USING (user_id = electriplan.current_actor_id());
 
 -- An organisation is visible to itself, and to its members for the switcher.
-ALTER TABLE plannasaas.organisation ENABLE ROW LEVEL SECURITY;
-ALTER TABLE plannasaas.organisation FORCE ROW LEVEL SECURITY;
-CREATE POLICY tenant_isolation ON plannasaas.organisation
-    USING (id = plannasaas.current_organisation_id())
-    WITH CHECK (id = plannasaas.current_organisation_id());
-CREATE POLICY member_organisations ON plannasaas.organisation FOR SELECT
-    USING (EXISTS (SELECT 1 FROM plannasaas.organisation_member m
-                    WHERE m.organisation_id = organisation.id AND m.user_id = plannasaas.current_actor_id()));
+ALTER TABLE electriplan.organisation ENABLE ROW LEVEL SECURITY;
+ALTER TABLE electriplan.organisation FORCE ROW LEVEL SECURITY;
+CREATE POLICY tenant_isolation ON electriplan.organisation
+    USING (id = electriplan.current_organisation_id())
+    WITH CHECK (id = electriplan.current_organisation_id());
+CREATE POLICY member_organisations ON electriplan.organisation FOR SELECT
+    USING (EXISTS (SELECT 1 FROM electriplan.organisation_member m
+                    WHERE m.organisation_id = organisation.id AND m.user_id = electriplan.current_actor_id()));
 
 -- The platform catalogue (organisation_id NULL) is shared and read-only to
--- organisations; only a transaction that sets plannasaas.platform_admin = 'on' (a
+-- organisations; only a transaction that sets electriplan.platform_admin = 'on' (a
 -- migration, an operator tool) may write it.
-CREATE FUNCTION plannasaas.is_platform_admin() RETURNS boolean
+CREATE FUNCTION electriplan.is_platform_admin() RETURNS boolean
     LANGUAGE sql STABLE
-AS $$ SELECT coalesce(current_setting('plannasaas.platform_admin', true), '') = 'on' $$;
+AS $$ SELECT coalesce(current_setting('electriplan.platform_admin', true), '') = 'on' $$;
 
-ALTER TABLE plannasaas.catalogue_item ENABLE ROW LEVEL SECURITY;
-ALTER TABLE plannasaas.catalogue_item FORCE ROW LEVEL SECURITY;
-CREATE POLICY tenant_isolation ON plannasaas.catalogue_item
-    USING (organisation_id IS NULL OR organisation_id = plannasaas.current_organisation_id() OR plannasaas.is_platform_admin())
-    WITH CHECK (organisation_id = plannasaas.current_organisation_id()
-                OR (organisation_id IS NULL AND plannasaas.is_platform_admin()));
+ALTER TABLE electriplan.catalogue_item ENABLE ROW LEVEL SECURITY;
+ALTER TABLE electriplan.catalogue_item FORCE ROW LEVEL SECURITY;
+CREATE POLICY tenant_isolation ON electriplan.catalogue_item
+    USING (organisation_id IS NULL OR organisation_id = electriplan.current_organisation_id() OR electriplan.is_platform_admin())
+    WITH CHECK (organisation_id = electriplan.current_organisation_id()
+                OR (organisation_id IS NULL AND electriplan.is_platform_admin()));

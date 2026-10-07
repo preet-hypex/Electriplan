@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """Introspect a Postgres schema into schema-model.json for the atlas.
 
-Adapted from the Planna One atlas toolkit (repo/planna/tools) for plannaSaas:
-the schema is configurable (ATLAS_SCHEMA, default "plannasaas") and tables can be
+Adapted from the Planna One atlas toolkit (repo/planna/tools) for Electriplan:
+the schema is configurable (ATLAS_SCHEMA, default "electriplan") and tables can be
 grouped into modules by a JSON map (ATLAS_MODULES), since one migration may
 hold several domains.
 
@@ -12,14 +12,14 @@ so the atlas shows exactly what Postgres enforces: columns+types, PKs, FKs
 partial unique indexes, checks, comments, and live dev-data row counts.
 
 Connection (in priority order):
-  ATLAS_PSQL="psql -h 127.0.0.1 -p 5433 -U plannasaas -d plannasaas"   # any psql command
-  (default) the local Docker database: docker compose exec -T db psql -U plannasaas -d plannasaas
+  ATLAS_PSQL="psql -h 127.0.0.1 -p 5433 -U electriplan -d electriplan"   # any psql command
+  (default) the local Docker database: docker compose exec -T db psql -U electriplan -d electriplan
 
 Module attribution:
   ATLAS_MIGRATIONS=<dir of Flyway V*.sql>  -> module = migration name suffix
   (default) backend/src/main/resources/db/migration
 
-Schema:   ATLAS_SCHEMA=plannasaas (default)
+Schema:   ATLAS_SCHEMA=electriplan (default)
 Modules:  ATLAS_MODULES=<json file {"table": "module"}> (default modules.json
           next to this script); tables it does not list fall back to the
           migration name.
@@ -29,11 +29,11 @@ import json, os, re, subprocess, sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 DA   = os.environ.get('ATLAS_OUT_DIR') or HERE
-SCHEMA = os.environ.get('ATLAS_SCHEMA', 'plannasaas')
+SCHEMA = os.environ.get('ATLAS_SCHEMA', 'electriplan')
 if not re.fullmatch(r'[a-z_][a-z0-9_]*', SCHEMA):
     sys.exit(f'ATLAS_SCHEMA must be a plain identifier, not {SCHEMA!r}')
 PSQL = os.environ.get('ATLAS_PSQL', '').split() or \
-       ['docker', 'compose', 'exec', '-T', 'db', 'psql', '-U', 'plannasaas', '-d', 'plannasaas']
+       ['docker', 'compose', 'exec', '-T', 'db', 'psql', '-U', 'electriplan', '-d', 'electriplan']
 
 def psql(sql):
     r = subprocess.run(PSQL + ['-X', '-Atc', sql], capture_output=True, text=True)
@@ -42,7 +42,7 @@ def psql(sql):
     return r.stdout.strip()
 
 def creates(path):
-    # Accept both "CREATE TABLE t" and schema-qualified "CREATE TABLE plannasaas.t".
+    # Accept both "CREATE TABLE t" and schema-qualified "CREATE TABLE electriplan.t".
     return re.findall(r'^CREATE TABLE (?:IF NOT EXISTS )?(?:\w+\.)?(\w+)', open(path).read(), re.M)
 
 table_module = {}

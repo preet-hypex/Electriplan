@@ -1,4 +1,4 @@
-# Planna SaaS
+# Electriplan
 
 From a floor-plan image to an electrician-ready electrical design. Sign in, upload a plan, and get an
 accurate, editable floor plan in millimetres; electrical layout, review and quoting follow (see
@@ -34,13 +34,13 @@ Docker, see [Working on the code](#working-on-the-code).)
 ### 2. Get the code
 
 ```bash
-git clone <repository-url> plannaSaas
-cd plannaSaas
+git clone <repository-url> Electriplan
+cd Electriplan
 ```
 
 ### 3. Create a Supabase project
 
-1. At https://supabase.com/dashboard, click **New project**. Name it (e.g. `plannasaas`), pick the
+1. At https://supabase.com/dashboard, click **New project**. Name it (e.g. `electriplan`), pick the
    **Sydney** region, and set a database password (keep it in your password manager; this app does
    not use it). Wait until the project shows as healthy.
 2. Open **Project Settings → API Keys** and check the project has a **publishable key**
@@ -64,7 +64,7 @@ It asks, in order:
 
 | Prompt | What to answer |
 |---|---|
-| App name and colour | Enter to keep **PlannaSaaS** and its blue, or choose your own |
+| App name and colour | Enter to keep **Electriplan** and its blue, or choose your own |
 | Access token | Paste the `sbp_…` token. Leave blank to paste the project URL and both keys by hand instead |
 | Project | The number of your project |
 | Production URL | Blank, for local use |
@@ -133,11 +133,11 @@ TablePlus) connects with:
 |---|---|
 | Host | `localhost` |
 | Port | `5433` |
-| Database | `plannasaas` |
-| User | `plannasaas` |
-| Password | `plannasaas` |
+| Database | `electriplan` |
+| User | `electriplan` |
+| Password | `electriplan` |
 
-The tables are in the `plannasaas` schema. These are local development credentials; override them with
+The tables are in the `electriplan` schema. These are local development credentials; override them with
 `DB_NAME`, `DB_USER` and `DB_PASSWORD` before the first `docker compose up` (Postgres only reads
 them when it creates its data volume, so changing them later needs `docker compose down -v`).
 
@@ -216,7 +216,7 @@ password, never sends an email and keeps no roles, permissions or account state 
         ▼
    ┌────────────────────┐
    │ Postgres (local)   │   localhost:5433, in Docker.
-   │ plannasaas.supabase_user  │   A read-only copy of Supabase's users.
+   │ electriplan.supabase_user  │   A read-only copy of Supabase's users.
    └────────────────────┘   The browser has no privileges here.
 ```
 

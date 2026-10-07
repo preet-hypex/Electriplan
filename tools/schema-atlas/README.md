@@ -27,14 +27,14 @@ in `KNOWN` in `schema-atlas-template.html`.
 To draw the atlas from another database instead (e.g. your running local one):
 
 ```bash
-ATLAS_PSQL="docker compose exec -T db psql -U plannasaas -d plannasaas" \
+ATLAS_PSQL="docker compose exec -T db psql -U electriplan -d electriplan" \
 ATLAS_CONTEXT="the local database" \
 python3 tools/schema-atlas/build_schema_atlas.py
 ```
 
 | File | Role |
 |---|---|
-| `introspect_schema.py` | Reads the `plannasaas` schema (`ATLAS_SCHEMA`) from a database into `schema-model.json` |
+| `introspect_schema.py` | Reads the `electriplan` schema (`ATLAS_SCHEMA`) from a database into `schema-model.json` |
 | `build_schema_atlas.py` | Runs the introspector and injects the model into the template |
 | `schema-atlas-template.html` | The diagram: layout, search, zoom and pan, detail panel |
 | `modules.json` | Which domain each table belongs to |

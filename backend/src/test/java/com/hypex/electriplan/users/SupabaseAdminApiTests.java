@@ -1,4 +1,4 @@
-package com.hypex.planna.users;
+package com.hypex.electriplan.users;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -11,7 +11,7 @@ import static org.springframework.test.web.client.response.MockRestResponseCreat
 import java.time.Instant;
 import java.util.Map;
 import java.util.UUID;
-import com.hypex.planna.security.SupabaseSettings;
+import com.hypex.electriplan.security.SupabaseSettings;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpStatus;

@@ -1,4 +1,4 @@
-package com.hypex.planna.users;
+package com.hypex.electriplan.users;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;

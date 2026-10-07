@@ -420,7 +420,7 @@ function runStatus() {
   const copied = copiedUsers(ROOT)
   say(copied === null
     ? `  ${mark(false)} database not up yet ${style.dim('(docker compose up -d --build --wait)')}`
-    : `  ${mark(true)} ${copied} Supabase user${copied === 1 ? '' : 's'} copied into plannasaas.supabase_user ${style.dim(`(API on http://localhost:${API_PORT})`)}`)
+    : `  ${mark(true)} ${copied} Supabase user${copied === 1 ? '' : 's'} copied into electriplan.supabase_user ${style.dim(`(API on http://localhost:${API_PORT})`)}`)
 
   heading('Keychain')
   if (!keychainAvailable) return say('  not in use (needs macOS; SETUP_NO_KEYCHAIN turns it off)')

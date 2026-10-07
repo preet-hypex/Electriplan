@@ -1,9 +1,9 @@
-package com.hypex.planna.users;
+package com.hypex.electriplan.users;
 
 import java.time.Instant;
 import java.util.UUID;
-import com.hypex.planna.security.AuthenticatedUser;
-import com.hypex.planna.security.AuthenticatedUsers;
+import com.hypex.electriplan.security.AuthenticatedUser;
+import com.hypex.electriplan.security.AuthenticatedUsers;
 import org.jspecify.annotations.Nullable;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;

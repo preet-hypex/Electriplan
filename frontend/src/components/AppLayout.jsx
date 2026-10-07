@@ -24,7 +24,7 @@ export function initials(user) {
   return name.split(/[\s@.]+/).filter(Boolean).slice(0, 2).map(p => p[0].toUpperCase()).join('')
 }
 
-const SIDEBAR_KEY = 'planna.sidebar'
+const SIDEBAR_KEY = 'electriplan.sidebar'
 
 // Remembered per browser. Storage can be unavailable (private windows, blocked
 // site data), so every read and write is allowed to fail.

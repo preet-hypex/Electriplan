@@ -1,6 +1,6 @@
 # Database schema
 
-The Postgres schema behind Planna SaaS: who the customers are, what they work on, and where every
+The Postgres schema behind Electriplan: who the customers are, what they work on, and where every
 house plan is in its journey from an uploaded image to a quote.
 
 - **DDL:** [`backend/src/main/resources/db/migration/V2__core_domain.sql`](../backend/src/main/resources/db/migration/V2__core_domain.sql) (Flyway, applied when the API starts)
@@ -64,8 +64,8 @@ and **row-level security** limits every query to the organisation set for the tr
 
 ```sql
 BEGIN;
-SET LOCAL plannasaas.organisation_id = '…';   -- the organisation the request is for
-SET LOCAL plannasaas.actor_id        = '…';   -- the signed-in Supabase user
+SET LOCAL electriplan.organisation_id = '…';   -- the organisation the request is for
+SET LOCAL electriplan.actor_id        = '…';   -- the signed-in Supabase user
 -- queries…
 COMMIT;
 ```
@@ -83,10 +83,10 @@ Two deliberate exceptions to "only the current organisation":
 - people can always **read** their own memberships, and the organisations they belong to, so the app
   can offer an organisation switcher;
 - the **platform catalogue** (`catalogue_item` with no organisation) is readable by everyone and
-  writable only in a transaction that sets `plannasaas.platform_admin = 'on'`.
+  writable only in a transaction that sets `electriplan.platform_admin = 'on'`.
 
 > **Required before the API uses these tables: connect as an ordinary role.** Superusers bypass
-> row-level security, and the local and CI databases connect as `plannasaas`, which Docker creates as
+> row-level security, and the local and CI databases connect as `electriplan`, which Docker creates as
 > a superuser. The API's runtime connection must use a role with `NOSUPERUSER NOBYPASSRLS` that owns
 > nothing (Flyway keeps the owner role). `SchemaRulesPostgresTests` shows the grants it needs. Until
 > then the policies exist but do not bind the API.
@@ -97,7 +97,7 @@ Every table referenced by tenant data has `UNIQUE (organisation_id, id)`, and re
 **both** columns:
 
 ```sql
-FOREIGN KEY (organisation_id, project_id) REFERENCES plannasaas.project (organisation_id, id)
+FOREIGN KEY (organisation_id, project_id) REFERENCES electriplan.project (organisation_id, id)
 ```
 
 So a plan in organisation B can never point at a project in organisation A, even if the application
@@ -134,7 +134,7 @@ overwrite each other.
 `plan.stage` says where a house plan is. The stages are rows in `plan_stage`; the moves allowed
 between them are rows in `plan_stage_transition`. A trigger refuses any other move, and every move
 (including the first stage) is written to `plan_stage_event` with who made it
-(`plannasaas.actor_id`) and an optional note (`SET LOCAL plannasaas.stage_note = '…'`).
+(`electriplan.actor_id`) and an optional note (`SET LOCAL electriplan.stage_note = '…'`).
 
 ```
 awaiting_upload ─► analysing ─► floor_plan_review ─► floor_plan_approved ─► electrical_design
@@ -186,7 +186,7 @@ Every one of these is exercised by `schema-rules.sql` in CI.
 |---|---|---|
 | Primary keys | `uuid DEFAULT gen_random_uuid()` | Safe to expose, generated anywhere, no enumeration. Move to `uuidv7()` (Postgres 18) for better index locality when upgrading |
 | History tables | `bigint GENERATED ALWAYS AS IDENTITY` | Append-only, ordered, compact |
-| Human references | `PRJ-000042`, `Q-000107` from `plannasaas.next_reference()` | Gapless per organisation; people quote these on the phone |
+| Human references | `PRJ-000042`, `Q-000107` from `electriplan.next_reference()` | Gapless per organisation; people quote these on the phone |
 | Codes | `text` + `CHECK`, or a lookup table | Values can be added or retired by migration; Postgres enums cannot drop a value |
 | Money | `numeric(12,2)`, ex-GST and GST stored separately, `gst_rate` per quote | No floating point; the rate a quote was issued at never changes under it |
 | Quantities, lengths | `numeric`; geometry in millimetres inside the documents | Exact |
@@ -270,31 +270,31 @@ Every one of these is exercised by `schema-rules.sql` in CI.
 ```sql
 -- The project list, with how many plans are at each phase
 SELECT p.reference, p.name, s.phase, count(*)
-  FROM plannasaas.project p
-  JOIN plannasaas.plan pl ON pl.project_id = p.id AND pl.archived_at IS NULL
-  JOIN plannasaas.plan_stage s ON s.code = pl.stage
+  FROM electriplan.project p
+  JOIN electriplan.plan pl ON pl.project_id = p.id AND pl.archived_at IS NULL
+  JOIN electriplan.plan_stage s ON s.code = pl.stage
  WHERE p.archived_at IS NULL
  GROUP BY p.reference, p.name, s.phase;
 
 -- A plan's timeline
 SELECT occurred_at, from_stage, to_stage, actor_id, note
-  FROM plannasaas.plan_stage_event WHERE plan_id = :plan ORDER BY occurred_at;
+  FROM electriplan.plan_stage_event WHERE plan_id = :plan ORDER BY occurred_at;
 
 -- The floor plan the editor should open for a level
-SELECT document FROM plannasaas.floor_plan_version
+SELECT document FROM electriplan.floor_plan_version
  WHERE plan_level_id = :level
  ORDER BY (state = 'draft') DESC, version_no DESC LIMIT 1;
 
 -- A house's quotes, newest first: the live one and the revisions before it
 SELECT reference, revision, status, total_inc_gst
-  FROM plannasaas.quote WHERE plan_id = :plan ORDER BY revision DESC;
+  FROM electriplan.quote WHERE plan_id = :plan ORDER BY revision DESC;
 
 -- An electrician's open reviews
-SELECT r.* FROM plannasaas.review r
+SELECT r.* FROM electriplan.review r
  WHERE r.reviewer_id = :me AND r.status IN ('requested', 'in_progress');
 ```
 
-(Each runs inside a transaction that set `plannasaas.organisation_id`.)
+(Each runs inside a transaction that set `electriplan.organisation_id`.)
 
 ## 5. Later, when needed
 

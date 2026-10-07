@@ -4,7 +4,7 @@
 Steps: introspect_schema.py (real catalog + row counts) -> inject the model
 JSON and the subtitle into schema-atlas-template.html.
 
-Usage: ATLAS_PSQL="docker exec <container> psql -U plannasaas -d plannasaas" python3 build_schema_atlas.py
+Usage: ATLAS_PSQL="docker exec <container> psql -U electriplan -d electriplan" python3 build_schema_atlas.py
 Output: ATLAS_OUTPUT (default documents/schema-atlas.html in the repository)
 """
 import json, os, subprocess, sys, datetime

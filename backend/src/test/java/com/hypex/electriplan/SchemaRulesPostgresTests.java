@@ -1,4 +1,4 @@
-package com.hypex.planna;
+package com.hypex.electriplan;
 
 import static org.assertj.core.api.Assertions.assertThatCode;
 
@@ -26,7 +26,7 @@ import org.springframework.core.io.ClassPathResource;
 @EnabledIfEnvironmentVariable(named = "APP_TEST_DB_URL", matches = "jdbc:postgresql:.+")
 class SchemaRulesPostgresTests {
 
-    private static final String RUNTIME_ROLE = "planna_runtime";
+    private static final String RUNTIME_ROLE = "electriplan_runtime";
 
     private static Connection connect() throws Exception {
         return DriverManager.getConnection(System.getenv("APP_TEST_DB_URL"), TestDatabase.user(), TestDatabase.password());
@@ -35,7 +35,7 @@ class SchemaRulesPostgresTests {
     @BeforeAll
     static void migrateAndCreateRuntimeRole() throws Exception {
         Flyway.configure().dataSource(System.getenv("APP_TEST_DB_URL"), TestDatabase.user(), TestDatabase.password())
-                .schemas("plannasaas").defaultSchema("plannasaas").locations("classpath:db/migration").load().migrate();
+                .schemas("electriplan").defaultSchema("electriplan").locations("classpath:db/migration").load().migrate();
         try (Connection c = connect(); Statement s = c.createStatement()) {
             s.execute("""
                     DO $$ BEGIN
@@ -43,9 +43,9 @@ class SchemaRulesPostgresTests {
                             CREATE ROLE %1$s NOSUPERUSER NOBYPASSRLS;
                         END IF;
                     END $$;
-                    GRANT USAGE ON SCHEMA plannasaas TO %1$s;
-                    GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA plannasaas TO %1$s;
-                    GRANT USAGE ON ALL SEQUENCES IN SCHEMA plannasaas TO %1$s;
+                    GRANT USAGE ON SCHEMA electriplan TO %1$s;
+                    GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA electriplan TO %1$s;
+                    GRANT USAGE ON ALL SEQUENCES IN SCHEMA electriplan TO %1$s;
                     GRANT %1$s TO CURRENT_USER;
                     """.formatted(RUNTIME_ROLE));
         }

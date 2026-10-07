@@ -1,11 +1,11 @@
-package com.hypex.planna.users;
+package com.hypex.electriplan.users;
 
 import java.io.IOException;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
-import com.hypex.planna.security.SupabaseSettings;
+import com.hypex.electriplan.security.SupabaseSettings;
 import org.jspecify.annotations.Nullable;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatusCode;

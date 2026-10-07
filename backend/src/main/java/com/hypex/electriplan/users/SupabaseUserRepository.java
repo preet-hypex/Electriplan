@@ -1,4 +1,4 @@
-package com.hypex.planna.users;
+package com.hypex.electriplan.users;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
@@ -30,7 +30,7 @@ class SupabaseUserRepository {
     private static final String COLUMNS = "id, " + COPIED;
 
     private static final String UPSERT = """
-            insert into plannasaas.supabase_user (%1$s)
+            insert into electriplan.supabase_user (%1$s)
             values (?, ?, ?, cast(? as jsonb), cast(? as jsonb), ?, ?, ?, ?, ?, ?)
             on conflict (id) do update
                set (%2$s, copied_at) = (%3$s, now())
@@ -56,25 +56,25 @@ class SupabaseUserRepository {
     }
 
     boolean exists(UUID id) {
-        return db.sql("select exists (select 1 from plannasaas.supabase_user where id = ?)")
+        return db.sql("select exists (select 1 from electriplan.supabase_user where id = ?)")
                 .param(id)
                 .query(Boolean.class)
                 .single();
     }
 
     Optional<SupabaseUser> find(UUID id) {
-        return db.sql("select " + COLUMNS + ", copied_at from plannasaas.supabase_user where id = ?")
+        return db.sql("select " + COLUMNS + ", copied_at from electriplan.supabase_user where id = ?")
                 .param(id)
                 .query(this::toUser)
                 .optional();
     }
 
     List<UUID> ids() {
-        return db.sql("select id from plannasaas.supabase_user").query(UUID.class).list();
+        return db.sql("select id from electriplan.supabase_user").query(UUID.class).list();
     }
 
     boolean delete(UUID id) {
-        return db.sql("delete from plannasaas.supabase_user where id = ?").param(id).update() > 0;
+        return db.sql("delete from electriplan.supabase_user where id = ?").param(id).update() > 0;
     }
 
     private SupabaseUser toUser(ResultSet rs, int rowNum) throws SQLException {
@@ -111,7 +111,7 @@ class SupabaseUserRepository {
         try {
             return value == null ? Map.of() : json.readValue(value, JSON_OBJECT);
         } catch (JsonProcessingException e) {
-            throw new IllegalStateException("plannasaas.supabase_user holds metadata that is not a JSON object", e);
+            throw new IllegalStateException("electriplan.supabase_user holds metadata that is not a JSON object", e);
         }
     }
 
@@ -126,7 +126,7 @@ class SupabaseUserRepository {
 
     private static Instant required(@Nullable Instant value) {
         if (value == null) {
-            throw new IllegalStateException("plannasaas.supabase_user has a row without a timestamp it requires");
+            throw new IllegalStateException("electriplan.supabase_user has a row without a timestamp it requires");
         }
         return value;
     }
