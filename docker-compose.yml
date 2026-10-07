@@ -1,4 +1,4 @@
-name: plannasaas
+name: electriplan
 
 services:
   db:
@@ -6,9 +6,9 @@ services:
     # Local development credentials. Connections from outside the container
     # (the API, DBeaver) need the password; port 5433 is bound to this machine only.
     environment:
-      POSTGRES_DB: ${DB_NAME:-plannasaas}
-      POSTGRES_USER: ${DB_USER:-plannasaas}
-      POSTGRES_PASSWORD: ${DB_PASSWORD:-plannasaas}
+      POSTGRES_DB: ${DB_NAME:-electriplan}
+      POSTGRES_USER: ${DB_USER:-electriplan}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-electriplan}
     ports:
       - "127.0.0.1:${DB_PORT:-5433}:5432"
     volumes:
@@ -22,14 +22,14 @@ services:
 
   api:
     build: ./backend
-    image: plannasaas-api:local
+    image: electriplan-api:local
     env_file:
       - path: ./backend/.env
         required: false
     environment:
-      APP_DB_URL: jdbc:postgresql://db:5432/${DB_NAME:-plannasaas}
-      APP_DB_USER: ${DB_USER:-plannasaas}
-      APP_DB_PASSWORD: ${DB_PASSWORD:-plannasaas}
+      APP_DB_URL: jdbc:postgresql://db:5432/${DB_NAME:-electriplan}
+      APP_DB_USER: ${DB_USER:-electriplan}
+      APP_DB_PASSWORD: ${DB_PASSWORD:-electriplan}
       PORT: "8080"
     depends_on:
       db:
@@ -47,7 +47,7 @@ services:
 
   floorplan:
     build: ./floorplan
-    image: plannasaas-floorplan:local
+    image: electriplan-floorplan:local
     # Only the public project URL, to verify sign-ins against the project's
     # public keys. The analyser never sees the secret key in backend/.env.
     env_file:
@@ -68,7 +68,7 @@ services:
 
   web:
     build: ./frontend
-    image: plannasaas-web:local
+    image: electriplan-web:local
     depends_on:
       api:
         condition: service_healthy

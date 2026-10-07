@@ -1,6 +1,6 @@
 {
   "configured": true,
-  "name": "PlannaSaaS",
+  "name": "Electriplan",
   "accent": "#2563EB",
   "headline": "Everything your team needs,\none sign-in away.",
   "blurb": "Sign in with the email address you were invited with. Forgotten your password? A reset link is one click away.",
@@ -10,5 +10,5 @@
     "Accounts by invitation"
   ],
   "footer": "",
-  "slug": "plannasaas"
+  "slug": "electriplan"
 }

@@ -1,4 +1,4 @@
-package com.hypex.planna.security;
+package com.hypex.electriplan.security;
 
 import java.util.UUID;
 import org.springframework.context.annotation.Bean;

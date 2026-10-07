@@ -1,4 +1,4 @@
-package com.hypex.planna;
+package com.hypex.electriplan;
 
 import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.willThrow;
@@ -14,8 +14,8 @@ import java.time.Instant;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
-import com.hypex.planna.users.SupabaseUser;
-import com.hypex.planna.users.SupabaseUsers;
+import com.hypex.electriplan.users.SupabaseUser;
+import com.hypex.electriplan.users.SupabaseUsers;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;

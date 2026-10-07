@@ -1,4 +1,4 @@
-package com.hypex.planna.security;
+package com.hypex.electriplan.security;
 
 import org.springframework.boot.context.properties.ConfigurationProperties;
 

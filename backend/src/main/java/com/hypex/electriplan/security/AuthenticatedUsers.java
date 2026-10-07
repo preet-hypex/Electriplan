@@ -1,4 +1,4 @@
-package com.hypex.planna.security;
+package com.hypex.electriplan.security;
 
 import java.util.Optional;
 import java.util.UUID;

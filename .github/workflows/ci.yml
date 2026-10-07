@@ -70,20 +70,20 @@ jobs:
       postgres:
         image: postgres:17-alpine
         env:
-          POSTGRES_DB: plannasaas
-          POSTGRES_USER: plannasaas
-          POSTGRES_PASSWORD: plannasaas
+          POSTGRES_DB: electriplan
+          POSTGRES_USER: electriplan
+          POSTGRES_PASSWORD: electriplan
         ports:
           - 5432:5432
         options: >-
-          --health-cmd "pg_isready -U plannasaas -d plannasaas"
+          --health-cmd "pg_isready -U electriplan -d electriplan"
           --health-interval 5s
           --health-timeout 3s
           --health-retries 10
     env:
-      APP_TEST_DB_URL: jdbc:postgresql://localhost:5432/plannasaas
-      APP_TEST_DB_USER: plannasaas
-      APP_TEST_DB_PASSWORD: plannasaas
+      APP_TEST_DB_URL: jdbc:postgresql://localhost:5432/electriplan
+      APP_TEST_DB_USER: electriplan
+      APP_TEST_DB_PASSWORD: electriplan
     defaults:
       run:
         working-directory: backend

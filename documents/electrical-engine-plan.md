@@ -12,7 +12,7 @@ FloorPlan JSON ─► enrich (room types, fixtures, brief) ─► wet-area zones
 ```
 
 Status: **plan, not yet started.** The engine is a **separate Java 21 / Spring
-Boot service built with Spring Modulith** (§6): modules of the plannaSaas Java API
+Boot service built with Spring Modulith** (§6): modules of the Electriplan Java API
 (`backend/`). The floor-plan analyser (`floorplan/`, Python) stays as it is; the
 engine is a new consumer of the `FloorPlan` it produces. Planna One is not involved in
 v1; stock checks and real quotations against Planna are the next iteration (§6.7).
@@ -25,7 +25,7 @@ v1; stock checks and real quotations against Planna are the next iteration (§6.
 | Reviewers | **A panel of licensed electricians** | The reference designs (E0-S5) are drawn by two or more electricians independently, so the benchmark measures agreement with practice, not with one person's habits. At least one Victorian licensed electrician signs off each mandatory rule value (E16-S4) |
 | Users | **Builders and electricians** | Two roles with different powers (E14-S7). Electricians can override a rule with a recorded reason. Builders cannot override mandatory rules; their edits to an electrician-reviewed design are flagged for re-review. Every output says the design must be reviewed and certified by a licensed electrician |
 | Quoting | **Later, but design for it now** | v1 produces a complete, priced-ready BOM: item counts, device list, cable metres by type and size, each with a stable item code (E15-S3). Stock checks and real quotations come from Planna One ERP in the next iteration (E17, §6.7). The BOM format is fixed early so quoting can attach to it without rework |
-| Platform | **plannaSaas, a Spring Modulith service separate from Planna One** (Java 21, Spring Boot 3, Spring Modulith 1.4 — same line as Planna One) | The engine is modules of the plannaSaas API, with plannaSaas's own database and release cycle (§6). Vision stays in Python. Integrates with Planna One ERP in the next iteration for stock and quotations (§6.7) |
+| Platform | **Electriplan, a Spring Modulith service separate from Planna One** (Java 21, Spring Boot 3, Spring Modulith 1.4 — same line as Planna One) | The engine is modules of the Electriplan API, with Electriplan's own database and release cycle (§6). Vision stays in Python. Integrates with Planna One ERP in the next iteration for stock and quotations (§6.7) |
 | Supply | **Single-phase only** | Brief `supply.phases` is fixed at 1. No phase balancing in v1 (moved to E17). If maximum demand exceeds what the distributor allows on a single phase, the engine raises a decision-required item recommending three-phase, rather than designing it |
 
 ---
@@ -275,15 +275,15 @@ Item `source` is `engine` or `manual`; as in the plan, a user edit makes an item
 
 ### 6.1 Shape of the system
 
-The engine lives in the **plannaSaas repository, as Spring Modulith modules of its
+The engine lives in the **Electriplan repository, as Spring Modulith modules of its
 Java API** (`backend/`) — the service that already verifies Supabase sign-ins. It is
 separate from the floor-plan analyser and separate from Planna One, with
-plannaSaas's own database, release cycle and rule-pack sign-off.
+Electriplan's own database, release cycle and rule-pack sign-off.
 
 ```
                     FloorPlan JSON                       ElectricalDesign JSON
  ┌──────────────┐  ───────────────►  ┌────────────────────────┐  ◄────────  ┌──────────────┐
- │ Floor-plan   │                    │  plannaSaas API         │            │ plannaSaas   │
+ │ Floor-plan   │                    │  Electriplan API         │            │ Electriplan   │
  │ analyser     │                    │  electrical modules     │  ────────► │ web (React)  │
  │ Python ·     │                    │  Java 21 · Spring       │  design,   │ (electrical  │
  │ FastAPI      │                    │  Modulith · Postgres    │  validate  │  layer)      │
@@ -330,7 +330,7 @@ Matched to Planna One's backend so the two share skills, tooling and deployment.
 ### 6.3 Modules
 
 Modules are direct sub-packages of the API's application package,
-`com.hypex.planna` (renamed from the scaffold's `loginpage`). Each top-level package is a
+`com.hypex.electriplan` (renamed from the scaffold's `loginpage`). Each top-level package is a
 Spring Modulith application module, beside the existing `security` and `users`; other modules may only use what it exposes in its root
 package (or a named interface), and `ApplicationModules.of(…).verify()` runs in CI.
 
@@ -338,7 +338,7 @@ package (or a named interface), and `ApplicationModules.of(…).verify()` runs i
 contracts/                       JSON Schemas: floor-plan, electrical-design, project-brief, fixture (§6.6)
 backend/
   pom.xml
-  src/main/java/com/hypex/planna/
+  src/main/java/com/hypex/electriplan/
     security/      (exists) Supabase JWT verification
     users/         (exists) Copy of Supabase's users
     plan/          FloorPlan intake & validation, fixtures, room types, readiness check   (E1)
@@ -803,7 +803,7 @@ a rule-pack entry where it touches a rule.
 
 | ID | Story | Acceptance criteria | Size |
 |---|---|---|---|
-| E0-S1 | Add the electrical modules to the plannaSaas API | ~~Rename the application package~~ (done: `com.hypex.planna`); empty modules from §6.3 beside `security` and `users`; `ApplicationModules.verify()` test passes; health endpoint; Postgres + Flyway via Testcontainers; CI build; `DesignStage` contract and an orchestrator that runs an empty stage list and returns an empty valid design | M |
+| E0-S1 | Add the electrical modules to the Electriplan API | ~~Rename the application package~~ (done: `com.hypex.electriplan`); empty modules from §6.3 beside `security` and `users`; `ApplicationModules.verify()` test passes; health endpoint; Postgres + Flyway via Testcontainers; CI build; `DesignStage` contract and an orchestrator that runs an empty stage list and returns an empty valid design | M |
 | E0-S2 | `ElectricalDesign`, `ProjectBrief`, `Fixture` JSON Schemas + Java records | Schemas in `contracts/`; Java records with unit types; contract tests validate serialised output against the schemas; TS types generated for the editor | M |
 | E0-S2a | FloorPlan schema as the shared contract | `contracts/floor-plan.schema.json`; Python and TS checked against it in CI; engine reads it into Java records and rejects unsupported versions | M |
 | E0-S3 | Rule-pack format, loader and schema validation | Loads YAML packs; rejects a rule without `id`, `tier`, `kind`, `cite`; tier precedence (state overrides national, company overrides policy only — never mandatory) tested | M |

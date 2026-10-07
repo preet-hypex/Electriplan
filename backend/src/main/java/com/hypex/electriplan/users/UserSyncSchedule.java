@@ -1,4 +1,4 @@
-package com.hypex.planna.users;
+package com.hypex.electriplan.users;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -23,10 +23,10 @@ class UserSyncSchedule {
         try {
             SupabaseUsers.Sync sync = users.copyAll();
             if (sync.changed() > 0 || sync.removed() > 0) {
-                log.info("Copied {} Supabase users into plannasaas.supabase_user: {} changed, {} removed",
+                log.info("Copied {} Supabase users into electriplan.supabase_user: {} changed, {} removed",
                         sync.listed(), sync.changed(), sync.removed());
             } else {
-                log.debug("plannasaas.supabase_user already matches Supabase's {} users", sync.listed());
+                log.debug("electriplan.supabase_user already matches Supabase's {} users", sync.listed());
             }
         } catch (RuntimeException e) {
             log.warn("Could not copy users from Supabase; the copy is unchanged until the next run: {}", e.getMessage());

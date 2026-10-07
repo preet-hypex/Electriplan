@@ -1,4 +1,4 @@
-package com.hypex.planna;
+package com.hypex.electriplan;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.modulith.core.ApplicationModules;

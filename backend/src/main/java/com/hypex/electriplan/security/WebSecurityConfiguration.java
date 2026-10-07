@@ -1,4 +1,4 @@
-package com.hypex.planna.security;
+package com.hypex.electriplan.security;
 
 import jakarta.servlet.DispatcherType;
 import java.util.List;

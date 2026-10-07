@@ -1,4 +1,4 @@
-package com.hypex.planna;
+package com.hypex.electriplan;
 
 /**
  * Credentials for the Postgres tests, which run when APP_TEST_DB_URL is set.
@@ -10,11 +10,11 @@ public final class TestDatabase {
     }
 
     public static String user() {
-        return env("APP_TEST_DB_USER", "plannasaas");
+        return env("APP_TEST_DB_USER", "electriplan");
     }
 
     public static String password() {
-        return env("APP_TEST_DB_PASSWORD", "plannasaas");
+        return env("APP_TEST_DB_PASSWORD", "electriplan");
     }
 
     private static String env(String name, String fallback) {

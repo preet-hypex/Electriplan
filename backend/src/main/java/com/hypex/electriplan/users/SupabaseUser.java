@@ -1,4 +1,4 @@
-package com.hypex.planna.users;
+package com.hypex.electriplan.users;
 
 import java.time.Instant;
 import java.util.Map;

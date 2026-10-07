@@ -12,9 +12,9 @@
   </parent>
 
   <groupId>com.hypex</groupId>
-  <artifactId>planna-api</artifactId>
+  <artifactId>electriplan-api</artifactId>
   <version>0.1.0</version>
-  <name>Planna SaaS - API</name>
+  <name>Electriplan - API</name>
   <description>Spring Modulith backend. Verifies Supabase JWTs and keeps a read-only copy of Supabase's users in Postgres.</description>
 
   <properties>
