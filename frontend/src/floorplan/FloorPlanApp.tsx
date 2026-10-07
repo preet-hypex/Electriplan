@@ -11,7 +11,7 @@ import { CalibrationDialog } from './components/dialogs/CalibrationDialog'
 import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts'
 import { useEditor } from './state/store'
 import { sampleFloorPlan } from './model/sample'
-import { analyse, health } from './api/client'
+import { analyse, health, setAccessTokenProvider } from './api/client'
 import type { FloorPlan } from './model/types'
 import { parseFloorPlanJson } from './model/serialise'
 import './floorplan.css'
@@ -23,7 +23,13 @@ type Screen = 'upload' | 'analysing' | 'editor'
  * given (the app shell's content area), and everything it renders sits inside
  * .fp-root, the scope its styles (floorplan.css) apply to.
  */
-export default function FloorPlanApp() {
+export default function FloorPlanApp({
+  getAccessToken,
+}: {
+  /** The signed-in user's access token, sent with every call to the analyser. */
+  getAccessToken: () => Promise<string | null>
+}) {
+  setAccessTokenProvider(getAccessToken)
   return (
     <div className="fp-root relative h-full">
       <FloorPlanScreens />

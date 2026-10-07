@@ -27,6 +27,13 @@ if [ ! -f .venv/.installed ] || [ requirements.txt -nt .venv/.installed ]; then
   touch .venv/.installed
 fi
 
+# Sign-ins are verified against the Supabase project in the web app's public .env.
+if [ -z "${SUPABASE_URL:-}" ] && [ -f ../frontend/.env ]; then
+  set -a; . ../frontend/.env; set +a
+fi
+[ -n "${SUPABASE_URL:-}${VITE_SUPABASE_URL:-}" ] \
+  || echo "run.sh: no SUPABASE_URL; every request but health will be refused. Run node scripts/setup.mjs" >&2
+
 case "${1:-serve}" in
   test) shift; exec .venv/bin/python -m pytest "$@" ;;
   serve) exec .venv/bin/python -m uvicorn app.main:app --reload --port "$PORT" ;;

@@ -50,6 +50,12 @@ else
   fail 'reports ok' "GET /api/floorplan/health returned $status: $body"
 fi
 
+fetch "$FLOORPLAN_URL/api/floorplan/calibrate" -X POST -H 'Content-Type: application/json' -d '{"pixels":1,"millimetres":1}'
+if [ "$status" = 401 ]; then pass 'analysing without a token is 401'; else fail 'the analyser needs a token' "returned $status"; fi
+
+fetch "$FLOORPLAN_URL/api/floorplan/calibrate" -X POST -H 'Authorization: Bearer not-a-real-token' -H 'Content-Type: application/json' -d '{"pixels":1,"millimetres":1}'
+if [ "$status" = 401 ]; then pass 'a token that does not verify is 401'; else fail 'bad tokens are refused by the analyser' "returned $status"; fi
+
 echo "Web  $WEB_URL"
 
 fetch "$WEB_URL/healthz"
