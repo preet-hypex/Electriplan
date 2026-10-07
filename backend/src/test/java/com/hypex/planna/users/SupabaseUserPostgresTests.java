@@ -1,5 +1,7 @@
 package com.hypex.planna.users;
 
+import com.hypex.planna.TestDatabase;
+
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -26,7 +28,7 @@ class SupabaseUserPostgresTests {
 
     @BeforeAll
     static void migrate() {
-        DataSource source = new DriverManagerDataSource(System.getenv("APP_TEST_DB_URL"), "app", "");
+        DataSource source = new DriverManagerDataSource(System.getenv("APP_TEST_DB_URL"), TestDatabase.user(), TestDatabase.password());
         Flyway.configure().dataSource(source).schemas("app").defaultSchema("app")
                 .locations("classpath:db/migration").load().migrate();
         db = JdbcClient.create(source);

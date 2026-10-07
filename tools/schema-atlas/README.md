@@ -27,7 +27,7 @@ in `KNOWN` in `schema-atlas-template.html`.
 To draw the atlas from another database instead (e.g. your running local one):
 
 ```bash
-ATLAS_PSQL="docker compose exec -T db psql -U app -d app" \
+ATLAS_PSQL="docker compose exec -T db psql -U plannasaas -d plannasaas" \
 ATLAS_CONTEXT="the local database" \
 python3 tools/schema-atlas/build_schema_atlas.py
 ```

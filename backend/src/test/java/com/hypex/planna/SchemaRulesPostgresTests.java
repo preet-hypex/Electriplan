@@ -29,12 +29,12 @@ class SchemaRulesPostgresTests {
     private static final String RUNTIME_ROLE = "planna_runtime";
 
     private static Connection connect() throws Exception {
-        return DriverManager.getConnection(System.getenv("APP_TEST_DB_URL"), "app", "");
+        return DriverManager.getConnection(System.getenv("APP_TEST_DB_URL"), TestDatabase.user(), TestDatabase.password());
     }
 
     @BeforeAll
     static void migrateAndCreateRuntimeRole() throws Exception {
-        Flyway.configure().dataSource(System.getenv("APP_TEST_DB_URL"), "app", "")
+        Flyway.configure().dataSource(System.getenv("APP_TEST_DB_URL"), TestDatabase.user(), TestDatabase.password())
                 .schemas("app").defaultSchema("app").locations("classpath:db/migration").load().migrate();
         try (Connection c = connect(); Statement s = c.createStatement()) {
             s.execute("""

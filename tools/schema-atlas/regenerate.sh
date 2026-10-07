@@ -20,10 +20,10 @@ trap cleanup EXIT
 
 echo "1/4  Starting a throwaway Postgres 17 ($CTR)…"
 cleanup
-docker run -d --name "$CTR" -e POSTGRES_USER=app -e POSTGRES_DB=app -e POSTGRES_HOST_AUTH_METHOD=trust \
+docker run -d --name "$CTR" -e POSTGRES_USER=plannasaas -e POSTGRES_DB=plannasaas -e POSTGRES_HOST_AUTH_METHOD=trust \
   postgres:17-alpine >/dev/null
 for _ in $(seq 1 60); do
-  docker exec "$CTR" pg_isready -U app -d app >/dev/null 2>&1 && break
+  docker exec "$CTR" pg_isready -U plannasaas -d plannasaas >/dev/null 2>&1 && break
   sleep 1
 done
 
@@ -31,22 +31,22 @@ echo "2/4  Applying the migrations…"
 {
   echo 'CREATE SCHEMA app;'
   for f in $(ls "$MIGRATIONS"/V*__*.sql | sort -t V -k2 -n); do cat "$f"; echo; done
-} | docker exec -i "$CTR" psql -U app -d app -q -v ON_ERROR_STOP=1 >/dev/null
+} | docker exec -i "$CTR" psql -U plannasaas -d plannasaas -q -v ON_ERROR_STOP=1 >/dev/null
 
 echo "3/4  Loading sample data…"
 # The rules script runs as an ordinary role (row-level security applies) and,
 # unlike in the test, is committed here so the atlas has rows to count.
-docker exec -i "$CTR" psql -U app -d app -q -v ON_ERROR_STOP=1 >/dev/null 2>&1 <<SQL
+docker exec -i "$CTR" psql -U plannasaas -d plannasaas -q -v ON_ERROR_STOP=1 >/dev/null 2>&1 <<SQL
 CREATE ROLE planna_runtime NOSUPERUSER NOBYPASSRLS;
 GRANT USAGE ON SCHEMA app TO planna_runtime;
 GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA app TO planna_runtime;
 GRANT USAGE ON ALL SEQUENCES IN SCHEMA app TO planna_runtime;
 SQL
 { echo 'SET ROLE planna_runtime;'; cat "$SAMPLE"; } \
-  | docker exec -i "$CTR" psql -U app -d app -q -v ON_ERROR_STOP=1 >/dev/null 2>&1
+  | docker exec -i "$CTR" psql -U plannasaas -d plannasaas -q -v ON_ERROR_STOP=1 >/dev/null 2>&1
 
 echo "4/4  Building the atlas…"
-export ATLAS_PSQL="docker exec $CTR psql -U app -d app"
+export ATLAS_PSQL="docker exec $CTR psql -U plannasaas -d plannasaas"
 export ATLAS_SCHEMA=app
 export ATLAS_OUT_DIR="$HERE"
 export ATLAS_CONTEXT="the Flyway migrations, with the schema-rules sample data"

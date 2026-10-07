@@ -124,6 +124,23 @@ Postgres within a few minutes.
 
 The web app's Supabase settings are built into it, so **after re-running setup, rebuild `web`**.
 
+### Connecting to the database
+
+The local Postgres runs in Docker, reachable from this machine only. Any client (DBeaver, psql,
+TablePlus) connects with:
+
+| Setting | Value |
+|---|---|
+| Host | `localhost` |
+| Port | `5433` |
+| Database | `plannasaas` |
+| User | `plannasaas` |
+| Password | `plannasaas` |
+
+The tables are in the `app` schema. These are local development credentials; override them with
+`DB_NAME`, `DB_USER` and `DB_PASSWORD` before the first `docker compose up` (Postgres only reads
+them when it creates its data volume, so changing them later needs `docker compose down -v`).
+
 ## Working on the code
 
 For hot reload, keep the API, analyser and database in Docker and run the web app with Vite:

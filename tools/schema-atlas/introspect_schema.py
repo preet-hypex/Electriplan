@@ -12,8 +12,8 @@ so the atlas shows exactly what Postgres enforces: columns+types, PKs, FKs
 partial unique indexes, checks, comments, and live dev-data row counts.
 
 Connection (in priority order):
-  ATLAS_PSQL="psql -h 127.0.0.1 -p 5433 -U app -d app"   # any psql command
-  (default) the local Docker database: docker compose exec -T db psql -U app -d app
+  ATLAS_PSQL="psql -h 127.0.0.1 -p 5433 -U plannasaas -d plannasaas"   # any psql command
+  (default) the local Docker database: docker compose exec -T db psql -U plannasaas -d plannasaas
 
 Module attribution:
   ATLAS_MIGRATIONS=<dir of Flyway V*.sql>  -> module = migration name suffix
@@ -33,7 +33,7 @@ SCHEMA = os.environ.get('ATLAS_SCHEMA', 'app')
 if not re.fullmatch(r'[a-z_][a-z0-9_]*', SCHEMA):
     sys.exit(f'ATLAS_SCHEMA must be a plain identifier, not {SCHEMA!r}')
 PSQL = os.environ.get('ATLAS_PSQL', '').split() or \
-       ['docker', 'compose', 'exec', '-T', 'db', 'psql', '-U', 'app', '-d', 'app']
+       ['docker', 'compose', 'exec', '-T', 'db', 'psql', '-U', 'plannasaas', '-d', 'plannasaas']
 
 def psql(sql):
     r = subprocess.run(PSQL + ['-X', '-Atc', sql], capture_output=True, text=True)

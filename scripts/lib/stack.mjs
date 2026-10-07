@@ -1,7 +1,7 @@
 import { spawnSync } from 'node:child_process'
 
 export function psql(root, sql) {
-  const args = ['compose', 'exec', '-T', 'db', 'psql', '-U', 'app', '-d', 'app', '-v', 'ON_ERROR_STOP=1', '-qtA']
+  const args = ['compose', 'exec', '-T', 'db', 'psql', '-U', 'plannasaas', '-d', 'plannasaas', '-v', 'ON_ERROR_STOP=1', '-qtA']
   const run = spawnSync('docker', args, { cwd: root, input: sql, encoding: 'utf8' })
   return {
     ok: run.status === 0,

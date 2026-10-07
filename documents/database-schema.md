@@ -86,8 +86,8 @@ Two deliberate exceptions to "only the current organisation":
   writable only in a transaction that sets `app.platform_admin = 'on'`.
 
 > **Required before the API uses these tables: connect as an ordinary role.** Superusers bypass
-> row-level security, and the local and CI databases connect as `app`, which Docker creates as a
-> superuser. The API's runtime connection must use a role with `NOSUPERUSER NOBYPASSRLS` that owns
+> row-level security, and the local and CI databases connect as `plannasaas`, which Docker creates as
+> a superuser. The API's runtime connection must use a role with `NOSUPERUSER NOBYPASSRLS` that owns
 > nothing (Flyway keeps the owner role). `SchemaRulesPostgresTests` shows the grants it needs. Until
 > then the policies exist but do not bind the API.
 
