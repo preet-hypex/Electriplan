@@ -85,10 +85,21 @@ UPDATE app.review SET status = 'approved', decided_at = now(), reviewer_licence_
 SELECT pg_temp.ok(true, 'approval under a licence is accepted');
 
 -- Quote
-INSERT INTO app.quote (id, organisation_id, project_id, client_id, reference)
-  VALUES ('a6000000-0000-4000-8000-000000000001', 'aaaaaaaa-0000-4000-8000-000000000001', 'b0000000-0000-4000-8000-000000000001', 'c0000000-0000-4000-8000-000000000001',
+INSERT INTO app.quote (id, organisation_id, plan_id, design_version_id, client_id, reference)
+  VALUES ('a6000000-0000-4000-8000-000000000001', 'aaaaaaaa-0000-4000-8000-000000000001', 'd0000000-0000-4000-8000-000000000001',
+          'a4000000-0000-4000-8000-000000000001', 'c0000000-0000-4000-8000-000000000001',
           app.next_reference('aaaaaaaa-0000-4000-8000-000000000001', 'quote', 'Q'));
-INSERT INTO app.quote_design VALUES ('aaaaaaaa-0000-4000-8000-000000000001', 'a6000000-0000-4000-8000-000000000001', 'a4000000-0000-4000-8000-000000000001');
+SELECT pg_temp.must_fail($$INSERT INTO app.quote (organisation_id, plan_id, design_version_id, reference)
+  VALUES ('aaaaaaaa-0000-4000-8000-000000000001', 'd0000000-0000-4000-8000-000000000001', 'a4000000-0000-4000-8000-000000000001', 'Q-X')$$, 'a second live quote for the same house');
+-- A second house in the same project, with a design of its own
+INSERT INTO app.plan (id, organisation_id, project_id, name) VALUES
+  ('d0000000-0000-4000-8000-000000000002', 'aaaaaaaa-0000-4000-8000-000000000001', 'b0000000-0000-4000-8000-000000000001', 'Lot 13 Type B');
+INSERT INTO app.electrical_design_version (id, organisation_id, plan_id, version_no, origin, rule_pack_id, engine_version, brief, document)
+  VALUES ('a4000000-0000-4000-8000-000000000002', 'aaaaaaaa-0000-4000-8000-000000000001', 'd0000000-0000-4000-8000-000000000002', 1, 'engine', 'a3000000-0000-4000-8000-000000000001', '0.1.0', '{}', '{}');
+SELECT pg_temp.must_fail($$INSERT INTO app.quote (organisation_id, plan_id, design_version_id, reference)
+  VALUES ('aaaaaaaa-0000-4000-8000-000000000001', 'd0000000-0000-4000-8000-000000000002', 'a4000000-0000-4000-8000-000000000001', 'Q-Y')$$, 'quoting one house with another house''s design');
+SELECT pg_temp.must_fail($$INSERT INTO app.quote (organisation_id, plan_id, design_version_id, reference)
+  VALUES ('aaaaaaaa-0000-4000-8000-000000000001', 'd0000000-0000-4000-8000-000000000002', 'a4000000-0000-4000-8000-000000000002', 'Q-Z')$$, 'quoting a draft design');
 INSERT INTO app.quote_line (organisation_id, quote_id, line_no, kind, item_code, description, quantity, unit, unit_price_ex_gst, source) VALUES
   ('aaaaaaaa-0000-4000-8000-000000000001', 'a6000000-0000-4000-8000-000000000001', 1, 'material', 'DL-IC4-10W', 'Downlights', 12, 'each', 24.50, 'bom'),
   ('aaaaaaaa-0000-4000-8000-000000000001', 'a6000000-0000-4000-8000-000000000001', 2, 'labour', NULL, 'Installation', 6.5, 'hour', 95.00, 'manual'),
@@ -100,7 +111,13 @@ SELECT pg_temp.must_fail($$INSERT INTO app.quote_line (organisation_id, quote_id
 UPDATE app.quote SET status = 'sent', sent_at = now();
 SELECT pg_temp.must_fail($$UPDATE app.quote_line SET quantity = 20 WHERE line_no = 1$$, 'changing a line on a sent quote');
 SELECT pg_temp.must_fail($$DELETE FROM app.quote$$, 'deleting a sent quote');
-SELECT pg_temp.must_fail($$DELETE FROM app.plan$$, 'deleting a plan whose design has been quoted');
+SELECT pg_temp.must_fail($$DELETE FROM app.plan WHERE id = 'd0000000-0000-4000-8000-000000000001'$$, 'deleting a house that has been quoted');
+-- Revising: the sent quote is superseded, and a new revision becomes the live one
+UPDATE app.quote SET status = 'superseded' WHERE id = 'a6000000-0000-4000-8000-000000000001';
+INSERT INTO app.quote (organisation_id, plan_id, design_version_id, reference, revision, supersedes_quote_id)
+  VALUES ('aaaaaaaa-0000-4000-8000-000000000001', 'd0000000-0000-4000-8000-000000000001', 'a4000000-0000-4000-8000-000000000001',
+          'Q-000001', 2, 'a6000000-0000-4000-8000-000000000001');
+SELECT pg_temp.ok((SELECT count(*) FROM app.quote WHERE plan_id = 'd0000000-0000-4000-8000-000000000001') = 2, 'a revision supersedes the quote before it, which stays as history');
 
 -- Organisation B
 SELECT set_config('app.organisation_id', 'bbbbbbbb-0000-4000-8000-000000000002', false),

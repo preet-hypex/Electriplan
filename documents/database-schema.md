@@ -20,8 +20,9 @@ organisation ─┬─ organisation_member ── supabase_user (copy of Supabas
               │                      ├─ electrical_brief
               │                      ├─ electrical_design_version ── bom_line
               │                      │       (ElectricalDesign JSON, versioned)
-              │                      └─ review ── review_finding
-              └─ quote ── quote_line, quote_design (which design versions it prices)
+              │                      ├─ review ── review_finding
+              │                      └─ quote ── quote_line  (one house, one committed design version)
+              └─ catalogue_item, price_list
 ```
 
 ```mermaid
@@ -48,10 +49,9 @@ erDiagram
     electrical_design_version ||--o{ review : "reviewed in"
     electrical_licence |o--o{ review : "signed under"
     review ||--o{ review_finding : has
-    project ||--o{ quote : "quoted in"
+    plan ||--o{ quote : "quoted in"
+    electrical_design_version ||--o{ quote : "priced by"
     quote ||--o{ quote_line : lines
-    quote ||--o{ quote_design : prices
-    electrical_design_version ||--o{ quote_design : "priced by"
 ```
 
 ## 2. Decisions, and why
@@ -119,7 +119,7 @@ version: it is history. Editing after a commit starts a new draft based on it
 (`based_on_version_id`). So:
 
 - a review always reviews an exact, frozen design (only committed designs can be reviewed);
-- a quote prices exact design versions (`quote_design`);
+- a quote prices one exact, committed design version of its house (`quote.design_version_id`);
 - an electrical design records the exact floor-plan versions it was made from
   (`electrical_design_input`), plus the brief, rule pack, organisation policy and engine version —
   everything needed to reproduce it.
@@ -170,9 +170,11 @@ Things that must never be wrong are constraints or triggers, so no code path can
 | One open review per design version | partial unique index |
 | An approval is signed under a licence, recorded as it stood | `CHECK` on `review` |
 | A rule pack is only released once a licensed electrician signed it off | `CHECK` on `rule_pack` |
+| A quote is for one house and prices a committed design **of that house** | foreign key `(organisation_id, plan_id, design_version_id)`, trigger `quote_requires_committed_design` |
+| One live (draft or sent) quote per house; revisions supersede | partial unique index `ux_quote_one_live_per_plan` |
 | Quote totals = sum of lines, GST at the quote's rate | trigger `quote_recalculate`, `CHECK (total = subtotal + gst)` |
 | A sent quote's lines never change; a sent quote is never deleted | triggers `quote_line_guard`, `quote_guard` |
-| Plans whose designs were quoted cannot be deleted | foreign keys from `quote_design`, `quote_line` |
+| A house that has been quoted cannot be deleted (archive it) | foreign keys from `quote` |
 | References between tenant rows stay within one organisation | composite foreign keys |
 
 Every one of these is exercised by `schema-rules.sql` in CI.
@@ -252,8 +254,7 @@ Every one of these is exercised by `schema-rules.sql` in CI.
 |---|---|
 | `catalogue_item` | Items designs use and quotes price: platform-wide or per organisation |
 | `price_list`, `price_list_item` | An organisation's costs, prices and labour times |
-| `quote` | A priced offer: reference and revision, status, totals, validity, client snapshot |
-| `quote_design` | The design versions a quote prices |
+| `quote` | A priced offer for **one house plan**, pricing one committed design version: reference and revision, status, totals, validity, client snapshot |
 | `quote_line` | Lines: material, labour, other, discount; line total computed |
 
 ### Integration and audit
@@ -283,6 +284,10 @@ SELECT document FROM app.floor_plan_version
  WHERE plan_level_id = :level
  ORDER BY (state = 'draft') DESC, version_no DESC LIMIT 1;
 
+-- A house's quotes, newest first: the live one and the revisions before it
+SELECT reference, revision, status, total_inc_gst
+  FROM app.quote WHERE plan_id = :plan ORDER BY revision DESC;
+
 -- An electrician's open reviews
 SELECT r.* FROM app.review r
  WHERE r.reviewer_id = :me AND r.status IN ('requested', 'in_progress');
@@ -305,5 +310,7 @@ SELECT r.* FROM app.review r
    the first endpoint uses these tables.
 2. **Who creates organisations?** Self-service sign-up creates an organisation with the person as owner;
    or invitation-only, as now. The schema supports both.
-3. **Quote per project or per plan?** Designed per project, with lines optionally tied to a plan, so one
-   quote can cover several houses. Confirm with how builders actually quote.
+3. ~~Quote per project or per plan?~~ **Decided: per house plan.** Each quote prices one committed
+   design version of one house, matching the plan lifecycle (quoting → quote sent → won / lost is per
+   house). A project with three houses gets three quotes. If a combined quote is ever needed, it can
+   be a document that bundles several per-house quotes, without changing these tables.

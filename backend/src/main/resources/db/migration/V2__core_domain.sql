@@ -680,6 +680,7 @@ CREATE TABLE app.electrical_design_version (
     committed_by              uuid,
     committed_at              timestamptz,
     UNIQUE (organisation_id, id),
+    UNIQUE (organisation_id, plan_id, id),
     UNIQUE (plan_id, version_no),
     FOREIGN KEY (organisation_id, plan_id) REFERENCES app.plan (organisation_id, id) ON DELETE CASCADE,
     FOREIGN KEY (organisation_id, based_on_version_id) REFERENCES app.electrical_design_version (organisation_id, id),
@@ -861,7 +862,8 @@ COMMENT ON TABLE app.price_list_item IS
 CREATE TABLE app.quote (
     id                  uuid PRIMARY KEY DEFAULT gen_random_uuid(),
     organisation_id     uuid NOT NULL,
-    project_id          uuid NOT NULL,
+    plan_id             uuid NOT NULL,
+    design_version_id   uuid NOT NULL,
     client_id           uuid,
     reference           text NOT NULL,
     revision            smallint NOT NULL DEFAULT 1 CHECK (revision > 0),
@@ -885,7 +887,10 @@ CREATE TABLE app.quote (
     updated_at          timestamptz NOT NULL DEFAULT now(),
     UNIQUE (organisation_id, id),
     UNIQUE (organisation_id, reference, revision),
-    FOREIGN KEY (organisation_id, project_id) REFERENCES app.project (organisation_id, id),
+    FOREIGN KEY (organisation_id, plan_id) REFERENCES app.plan (organisation_id, id),
+    -- The design priced must be one of this plan's designs.
+    FOREIGN KEY (organisation_id, plan_id, design_version_id)
+        REFERENCES app.electrical_design_version (organisation_id, plan_id, id),
     FOREIGN KEY (organisation_id, client_id) REFERENCES app.client (organisation_id, id),
     FOREIGN KEY (organisation_id, price_list_id) REFERENCES app.price_list (organisation_id, id),
     FOREIGN KEY (organisation_id, supersedes_quote_id) REFERENCES app.quote (organisation_id, id),
@@ -895,28 +900,35 @@ CREATE TABLE app.quote (
 );
 
 CREATE INDEX ix_quote_org_status ON app.quote (organisation_id, status, updated_at DESC);
-CREATE INDEX ix_quote_project ON app.quote (organisation_id, project_id);
+CREATE INDEX ix_quote_plan ON app.quote (plan_id, created_at DESC);
+
+-- One live quote per house: a revision supersedes the one before it.
+CREATE UNIQUE INDEX ux_quote_one_live_per_plan ON app.quote (plan_id) WHERE status IN ('draft', 'sent');
 
 COMMENT ON TABLE app.quote IS
-    'A priced offer to a client for a project. Revisions keep the reference (Q-000107 rev 2). Totals are kept by trigger from the lines.';
+    'A priced offer to a client for one house plan, pricing one committed design version of it. Revisions keep the reference (Q-000107 rev 2) and supersede the one before. Totals are kept by trigger from the lines.';
 
-CREATE TABLE app.quote_design (
-    organisation_id   uuid NOT NULL,
-    quote_id          uuid NOT NULL,
-    design_version_id uuid NOT NULL,
-    PRIMARY KEY (quote_id, design_version_id),
-    FOREIGN KEY (organisation_id, quote_id) REFERENCES app.quote (organisation_id, id) ON DELETE CASCADE,
-    FOREIGN KEY (organisation_id, design_version_id) REFERENCES app.electrical_design_version (organisation_id, id)
-);
+-- Only a committed design is priced: a draft can change under the quote.
+CREATE FUNCTION app.quote_requires_committed_design() RETURNS trigger
+    LANGUAGE plpgsql
+AS $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM app.electrical_design_version
+                    WHERE id = NEW.design_version_id AND state = 'committed') THEN
+        RAISE EXCEPTION 'Only a committed design version can be quoted' USING ERRCODE = 'check_violation';
+    END IF;
+    RETURN NEW;
+END
+$$;
 
-COMMENT ON TABLE app.quote_design IS 'The exact design versions a quote prices: one per house plan it covers.';
+CREATE TRIGGER quote_requires_committed_design BEFORE INSERT OR UPDATE OF design_version_id ON app.quote
+    FOR EACH ROW EXECUTE FUNCTION app.quote_requires_committed_design();
 
 CREATE TABLE app.quote_line (
     id                uuid PRIMARY KEY DEFAULT gen_random_uuid(),
     organisation_id   uuid NOT NULL,
     quote_id          uuid NOT NULL,
     line_no           integer NOT NULL CHECK (line_no > 0),
-    plan_id           uuid,
     kind              text NOT NULL CHECK (kind IN ('material', 'labour', 'other', 'discount')),
     item_code         text,
     description       text NOT NULL,
@@ -927,7 +939,6 @@ CREATE TABLE app.quote_line (
     source            text NOT NULL DEFAULT 'manual' CHECK (source IN ('bom', 'manual')),
     UNIQUE (quote_id, line_no),
     FOREIGN KEY (organisation_id, quote_id) REFERENCES app.quote (organisation_id, id) ON DELETE CASCADE,
-    FOREIGN KEY (organisation_id, plan_id) REFERENCES app.plan (organisation_id, id),
     CHECK ((kind = 'discount') = (unit_price_ex_gst < 0) OR unit_price_ex_gst = 0)
 );
 
@@ -1070,7 +1081,7 @@ BEGIN
         'project_assignee', 'plan', 'plan_stage_event', 'plan_level', 'stored_file', 'analysis_run',
         'floor_plan_version', 'organisation_policy', 'electrical_brief', 'electrical_design_version',
         'electrical_design_input', 'bom_line', 'review', 'review_finding', 'price_list', 'price_list_item',
-        'quote', 'quote_design', 'quote_line', 'external_reference', 'audit_event']
+        'quote', 'quote_line', 'external_reference', 'audit_event']
     LOOP
         EXECUTE format('ALTER TABLE app.%I ENABLE ROW LEVEL SECURITY', t);
         EXECUTE format('ALTER TABLE app.%I FORCE ROW LEVEL SECURITY', t);
