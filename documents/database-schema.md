@@ -4,6 +4,7 @@ The Postgres schema behind Planna SaaS: who the customers are, what they work on
 house plan is in its journey from an uploaded image to a quote.
 
 - **DDL:** [`backend/src/main/resources/db/migration/V2__core_domain.sql`](../backend/src/main/resources/db/migration/V2__core_domain.sql) (Flyway, applied when the API starts)
+- **Visual atlas:** [`documents/schema-atlas.html`](schema-atlas.html) — open it in a browser for an interactive diagram of every table, key and constraint ([how to rebuild it](../tools/schema-atlas/README.md))
 - **Executable rules:** [`backend/src/test/resources/db/schema-rules.sql`](../backend/src/test/resources/db/schema-rules.sql), run in CI by `SchemaRulesPostgresTests`
 - **Postgres:** 17 (uses `UNIQUE NULLS NOT DISTINCT`, so 15 or later)
 

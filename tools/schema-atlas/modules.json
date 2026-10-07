@@ -1,0 +1,42 @@
+{
+  "supabase_user": "platform",
+  "organisation": "platform",
+  "organisation_member": "platform",
+  "organisation_invitation": "platform",
+  "organisation_counter": "platform",
+  "user_profile": "platform",
+  "electrical_licence": "platform",
+
+  "client": "projects",
+  "project": "projects",
+  "project_assignee": "projects",
+  "plan": "projects",
+  "plan_level": "projects",
+  "plan_stage": "projects",
+  "plan_stage_transition": "projects",
+  "plan_stage_event": "projects",
+
+  "stored_file": "floor_plans",
+  "analysis_run": "floor_plans",
+  "floor_plan_version": "floor_plans",
+
+  "electricity_distributor": "electrical",
+  "rule_pack": "electrical",
+  "organisation_policy": "electrical",
+  "electrical_brief": "electrical",
+  "electrical_design_version": "electrical",
+  "electrical_design_input": "electrical",
+  "bom_line": "electrical",
+
+  "review": "review",
+  "review_finding": "review",
+
+  "catalogue_item": "quotes",
+  "price_list": "quotes",
+  "price_list_item": "quotes",
+  "quote": "quotes",
+  "quote_line": "quotes",
+
+  "external_reference": "audit",
+  "audit_event": "audit"
+}

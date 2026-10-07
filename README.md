@@ -12,7 +12,8 @@ accurate, editable floor plan in millimetres; electrical layout, review and quot
 | Sign-in | Supabase Auth | Hosted by Supabase; nothing to run |
 
 Everything except Supabase runs locally in Docker. The data model is described in
-[`documents/database-schema.md`](documents/database-schema.md).
+[`documents/database-schema.md`](documents/database-schema.md), and drawn in
+[`documents/schema-atlas.html`](documents/schema-atlas.html) (open it in a browser).
 
 ## First-time setup
 
