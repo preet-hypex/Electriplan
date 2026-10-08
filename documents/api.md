@@ -90,6 +90,7 @@ Errors are `{"message": "..."}`.
 | `/api/organisations/current` | GET | **yes** | The company the request acts in, the caller's role and what it may do: `{id, name, slug, role, licence, permissions: ["company.view", ...]}`. The web app shows only actions in `permissions` |
 | `/api/organisations/current/licence` | GET | **yes**, needs `licence.view` | The licence and seat use: `{status, seatLimit, seatsInUse, licenceStartsOn, licenceEndsOn}` |
 | `/api/reference/distributors?state=VIC` | GET | no | Electricity distributors: `[{code, name, state}]` |
+| `/api/reference/addresses?q=12 glenlyon` | GET | no | Address suggestions while typing a site address (3+ characters): `[{label, street, suburb, state, postcode, latitude, longitude}]`, at most 8. From a Photon geocoder (OpenStreetMap data); `503` with a message when it is off or does not answer, and the address is typed instead |
 
 ## Projects and houses
 

@@ -137,6 +137,21 @@ scripts/dev-company.sh you@example.com "Hypex"
 That creates the company (active, 10 seats) and makes you its owner; running it again changes nothing.
 Add `builder`, `electrician` or `viewer` as a third argument to try another role with a second account.
 
+### Address finder
+
+The project form's "Find the address" suggests Australian addresses as you type, from
+[Photon](https://github.com/komoot/photon), an open-source geocoder over OpenStreetMap data. The API
+asks it on the browser's behalf (`GET /api/reference/addresses`).
+
+| Setting | Default | |
+|---|---|---|
+| `ADDRESS_FINDER_URL` | `https://photon.komoot.io` | The public server: fine for development, under a fair-use policy. Production should run its own Photon (Docker image, Australia extract) and point this at it |
+| `ADDRESS_FINDER_ENABLED` | `true` | `false` turns suggestions off; people type the address |
+
+OpenStreetMap does not have every house number (new estates especially), so a suggestion fills street,
+suburb, state and postcode and the person checks the number. For complete Australian coverage the
+provider can later be G-NAF (the national address file) behind the same endpoint.
+
 ### Connecting to the database
 
 The local Postgres runs in Docker, reachable from this machine only. Any client (DBeaver, psql,

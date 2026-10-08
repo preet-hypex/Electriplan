@@ -4,7 +4,7 @@ import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { PROJECT, VIEWER_COMPANY, company } from '../test/projects'
 
-const mocks = vi.hoisted(() => ({ company: null, createProject: vi.fn(), distributorsIn: vi.fn() }))
+const mocks = vi.hoisted(() => ({ company: null, createProject: vi.fn(), distributorsIn: vi.fn(), findAddresses: vi.fn() }))
 
 vi.mock('../context/AuthContext', () => ({
   useAuth: () => ({ user: { id: 'u1', email: 'sam@example.com', user_metadata: {} }, signOut: vi.fn() }),
@@ -14,6 +14,7 @@ vi.mock('../api/projects', async original => ({
   ...(await original()),
   createProject: mocks.createProject,
   distributorsIn: mocks.distributorsIn,
+  findAddresses: mocks.findAddresses,
 }))
 
 import NewProject from './NewProject'
@@ -52,6 +53,23 @@ describe('NewProject', () => {
       site: { street: undefined, suburb: 'Brunswick', state: 'VIC', postcode: '3056' },
       distributor: 'jemena', supplyPhases: 1, status: 'active', version: undefined,
     })
+  })
+
+  it('fills the site from a found address, keeping the fields editable', async () => {
+    mocks.findAddresses.mockResolvedValue([{ label: '12 Glenlyon Road, Brunswick VIC 3056', street: '12 Glenlyon Road',
+      suburb: 'Brunswick', state: 'VIC', postcode: '3056', latitude: -37.77, longitude: 144.96 }])
+    renderPage()
+    await userEvent.type(screen.getByRole('combobox', { name: 'Find the address' }), '12 glen')
+    await userEvent.click(await screen.findByRole('option', { name: /12 Glenlyon Road/ }))
+
+    expect(screen.getByLabelText('Street')).toHaveValue('12 Glenlyon Road')
+    expect(screen.getByLabelText('Suburb')).toHaveValue('Brunswick')
+    expect(screen.getByLabelText(/^State/)).toHaveValue('VIC')
+    expect(screen.getByLabelText('Postcode')).toHaveValue('3056')
+    expect(await screen.findByRole('option', { name: 'Jemena' })).toBeInTheDocument()
+    await userEvent.clear(screen.getByLabelText('Street'))
+    await userEvent.type(screen.getByLabelText('Street'), '14 Glenlyon Road')
+    expect(screen.getByLabelText('Street')).toHaveValue('14 Glenlyon Road')
   })
 
   it('offers only the chosen state’s distributors, and none until a state is chosen', async () => {

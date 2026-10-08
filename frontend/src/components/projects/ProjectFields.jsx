@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { STATES, STATUS_LABELS, distributorsIn } from '../../api/projects'
+import AddressSearch from './AddressSearch'
 
 /** An empty form, or the form for an existing project (with its version, for saving changes). */
 export function formFor(project) {
@@ -84,10 +85,21 @@ export default function ProjectFields({ form, onChange, errors = {}, showStatus 
     // A new state has different distributors: the old choice no longer applies.
     onChange(key === 'state' ? { ...form, site, distributor: '' } : { ...form, site })
   }
+  // A picked address fills the site; a different state also clears the distributor.
+  const pickAddress = address => {
+    const site = {
+      street: address.street ?? '',
+      suburb: address.suburb ?? '',
+      state: address.state,
+      postcode: address.postcode ?? '',
+    }
+    onChange({ ...form, site, distributor: address.state === form.site.state ? form.distributor : '' })
+  }
+
   const input = (id, error) => ({ id, className: 'in', 'aria-invalid': !!error, 'aria-describedby': error ? `${id}-error` : undefined })
 
   return (
-    <>
+    <div className="form-sections">
       <fieldset className="form-section">
         <legend>Project</legend>
         <Field id="name" label="Name" error={errors.name}>
@@ -117,6 +129,7 @@ export default function ProjectFields({ form, onChange, errors = {}, showStatus 
 
       <fieldset className="form-section">
         <legend>Site</legend>
+        <AddressSearch onPick={pickAddress} />
         <Field id="street" label="Street" error={errors['site.street']}>
           <input {...input('street', errors['site.street'])} value={form.site.street} onChange={e => setSite('street', e.target.value)}
             autoComplete="address-line1" />
@@ -160,6 +173,6 @@ export default function ProjectFields({ form, onChange, errors = {}, showStatus 
           </Field>
         </div>
       </fieldset>
-    </>
+    </div>
   )
 }

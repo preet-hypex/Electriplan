@@ -4,7 +4,7 @@
  */
 import { api } from '../lib/api'
 import type {
-  CurrentCompany, Distributor, House, HouseForm, HouseStage, Membership, Project, ProjectForm, ProjectPage,
+  AddressSuggestion, CurrentCompany, Distributor, House, HouseForm, HouseStage, Membership, Project, ProjectForm, ProjectPage,
   ProjectStatus, RecentHouse,
 } from './index'
 
@@ -53,6 +53,10 @@ export const restoreHouse = (id: string): Promise<House> => api(`/api/houses/${i
 // Reference data
 export const distributorsIn = (state: string): Promise<Distributor[]> =>
   api(`/api/reference/distributors${queryString({ state })}`)
+
+/** Addresses matching what has been typed (3+ characters), split into the form's fields. */
+export const findAddresses = (typed: string): Promise<AddressSuggestion[]> =>
+  api(`/api/reference/addresses${queryString({ q: typed })}`)
 
 // ---- Words for the codes (as the database's plan_stage labels) ----
 

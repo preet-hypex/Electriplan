@@ -291,6 +291,26 @@ export type paths = {
         patch?: never;
         trace?: never;
     };
+    "/api/reference/addresses": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Find an Australian address
+         * @description Suggestions while typing a site address, from an OpenStreetMap geocoder (Photon). Fewer than 3 characters: none. House numbers are not always known: the person checks the suggestion.
+         */
+        get: operations["findAddresses"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/reference/distributors": {
         parameters: {
             query?: never;
@@ -315,6 +335,17 @@ export type paths = {
 export type webhooks = Record<string, never>;
 export type components = {
     schemas: {
+        AddressSuggestion: {
+            label: string;
+            /** Format: double */
+            latitude: number;
+            /** Format: double */
+            longitude: number;
+            postcode: string | null;
+            state: components["schemas"]["AustralianState"];
+            street: string | null;
+            suburb: string | null;
+        };
         /** @enum {string} */
         AustralianState: "NSW" | "VIC" | "QLD" | "WA" | "SA" | "TAS" | "ACT" | "NT";
         Current: {
@@ -1441,6 +1472,45 @@ export interface operations {
             };
             /** @description No such project or house in this company. */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorMessage"];
+                };
+            };
+        };
+    };
+    findAddresses: {
+        parameters: {
+            query: {
+                /** @description What has been typed so far. */
+                q: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AddressSuggestion"][];
+                };
+            };
+            /** @description Not signed in, or the access token is invalid or expired. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Address search is off or its provider did not answer: type the address. */
+            503: {
                 headers: {
                     [name: string]: unknown;
                 };
