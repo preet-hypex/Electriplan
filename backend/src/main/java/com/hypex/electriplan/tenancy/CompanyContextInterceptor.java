@@ -32,7 +32,12 @@ class CompanyContextInterceptor implements HandlerInterceptor {
         if (handler instanceof HandlerMethod method && isCompanyScoped(method)) {
             var caller = callers.require();
             try {
-                TenantSession.company(resolver.resolve(caller.id(), request.getHeader(CompanyResolver.HEADER)));
+                CompanyContext company = resolver.resolve(caller.id(), request.getHeader(CompanyResolver.HEADER));
+                Permission needed = requiredPermission(method);
+                if (needed != null && !PermissionMatrix.allows(company.role(), needed)) {
+                    throw refusal(company.role(), needed);
+                }
+                TenantSession.company(company);
             } catch (RuntimeException refused) {
                 // Spring will not call afterCompletion for a refusing interceptor.
                 TenantSession.clear();
@@ -50,6 +55,29 @@ class CompanyContextInterceptor implements HandlerInterceptor {
 
     private static boolean isCompanyScoped(HandlerMethod method) {
         return method.hasMethodAnnotation(CompanyScoped.class)
-                || AnnotatedElementUtils.hasAnnotation(method.getBeanType(), CompanyScoped.class);
+                || AnnotatedElementUtils.hasAnnotation(method.getBeanType(), CompanyScoped.class)
+                || requiredPermission(method) != null;
+    }
+
+    /** The method's @RequiresPermission, else the controller's, else none. */
+    static @Nullable Permission requiredPermission(HandlerMethod method) {
+        RequiresPermission onMethod = method.getMethodAnnotation(RequiresPermission.class);
+        if (onMethod != null) {
+            return onMethod.value();
+        }
+        RequiresPermission onType = AnnotatedElementUtils.findMergedAnnotation(method.getBeanType(), RequiresPermission.class);
+        return onType == null ? null : onType.value();
+    }
+
+    static CompanyAccessException refusal(MemberRole role, Permission needed) {
+        String allowed = PermissionMatrix.rolesWith(needed).stream().map(MemberRole::code)
+                .collect(java.util.stream.Collectors.joining(", "));
+        return new CompanyAccessException(org.springframework.http.HttpStatus.FORBIDDEN,
+                "As " + article(role) + " " + role.code() + " you cannot do this (" + needed.code() + "). Roles that can: "
+                        + allowed + ".");
+    }
+
+    private static String article(MemberRole role) {
+        return role == MemberRole.OWNER || role == MemberRole.ADMIN || role == MemberRole.ELECTRICIAN ? "an" : "a";
     }
 }
