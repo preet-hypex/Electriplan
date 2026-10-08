@@ -1,8 +1,10 @@
 import {
   FLOORPLAN_VERSION,
   emptyFloorPlan,
+  type DoorSwing,
   type FloorPlan,
   type Point,
+  type Room,
 } from './types'
 
 export class FloorPlanParseError extends Error {}
@@ -45,6 +47,17 @@ function optionalEnum<T extends string>(v: unknown, allowed: readonly T[]): T | 
 const SOURCES = ['vision', 'ocr', 'geometry', 'manual'] as const
 const DOOR_STYLES = ['swing', 'sliding', 'garage'] as const
 
+/** Which side a door opens to: 90 or -90, nothing in between. */
+function doorSwing(v: unknown, where: string): DoorSwing | undefined {
+  const n = optionalNum(v, where)
+  if (n === undefined || n === 90 || n === -90) return n
+  throw new FloorPlanParseError(`${where}: expected 90 or -90, got ${n}`)
+}
+
+function hasThreeCorners(polygon: Point[]): polygon is Room['polygon'] {
+  return polygon.length >= 3
+}
+
 function array(v: unknown, where: string): unknown[] {
   if (v === undefined || v === null) return []
   if (!Array.isArray(v)) throw new FloorPlanParseError(`${where}: expected an array`)
@@ -59,17 +72,18 @@ function array(v: unknown, where: string): unknown[] {
 export function parseFloorPlan(input: unknown): FloorPlan {
   if (!isObject(input)) throw new FloorPlanParseError('Root: expected a JSON object')
 
-  const version = typeof input.version === 'number' ? input.version : FLOORPLAN_VERSION
-  if (version > FLOORPLAN_VERSION) {
+  // A file without a version is taken to be the current one; any version other
+  // than the one in contracts/floor-plan.schema.json is refused.
+  if (input.version !== undefined && input.version !== FLOORPLAN_VERSION) {
     throw new FloorPlanParseError(
-      `This file is version ${version}; this build understands up to ${FLOORPLAN_VERSION}.`,
+      `This file is version ${JSON.stringify(input.version)}; this build understands version ${FLOORPLAN_VERSION}.`,
     )
   }
   if (input.units !== undefined && input.units !== 'mm') {
     throw new FloorPlanParseError(`units: only "mm" is supported, got ${JSON.stringify(input.units)}`)
   }
 
-  const plan: FloorPlan = { ...emptyFloorPlan(), version }
+  const plan: FloorPlan = emptyFloorPlan()
 
   plan.walls = array(input.walls, 'walls').map((raw, i) => {
     const w = isObject(raw) ? raw : {}
@@ -88,6 +102,11 @@ export function parseFloorPlan(input: unknown): FloorPlan {
     const polygon = array(r.polygon, `rooms[${i}].polygon`).map((p, j) =>
       point(p, `rooms[${i}].polygon[${j}]`),
     )
+    if (!hasThreeCorners(polygon)) {
+      throw new FloorPlanParseError(
+        `rooms[${i}].polygon: a room needs at least 3 corners, got ${polygon.length}`,
+      )
+    }
     return {
       id: str(r.id, `rooms[${i}].id`),
       name: str(r.name ?? '', `rooms[${i}].name`),
@@ -112,7 +131,7 @@ export function parseFloorPlan(input: unknown): FloorPlan {
       hingeAtStart: d.hingeAtStart === undefined || d.hingeAtStart === null
         ? undefined
         : Boolean(d.hingeAtStart),
-      swing: optionalNum(d.swing, `doors[${i}].swing`),
+      swing: doorSwing(d.swing, `doors[${i}].swing`),
       confidence: optionalNum(d.confidence, `doors[${i}].confidence`),
       source: optionalEnum(d.source, SOURCES),
     }

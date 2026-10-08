@@ -13,6 +13,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.hypex.electriplan.model.brief.ProjectBrief;
 import com.hypex.electriplan.model.design.ElectricalDesign;
 import com.hypex.electriplan.model.fixture.Fixture;
+import com.hypex.electriplan.model.plan.FloorPlan;
 import com.networknt.schema.JsonSchema;
 import com.networknt.schema.JsonSchemaFactory;
 import com.networknt.schema.SchemaLocation;
@@ -22,9 +23,10 @@ import org.springframework.core.io.Resource;
 import org.springframework.core.io.support.PathMatchingResourcePatternResolver;
 
 /**
- * Test access to the contracts in {@code ../contracts}, on the test classpath
- * as {@code classpath:contracts/}: the schemas, their example documents, and
- * the Java type each schema describes.
+ * Test access to the contracts in {@code ../contracts}, on the classpath as
+ * {@code classpath:contracts/} (the schemas from the main resources, the
+ * examples from the test resources): the schemas, their example documents,
+ * and the Java type each schema describes.
  */
 public final class Contracts {
 
@@ -32,7 +34,8 @@ public final class Contracts {
     public enum Document {
         PROJECT_BRIEF("project-brief", ProjectBrief.class),
         FIXTURE("fixture", Fixture.class),
-        ELECTRICAL_DESIGN("electrical-design", ElectricalDesign.class);
+        ELECTRICAL_DESIGN("electrical-design", ElectricalDesign.class),
+        FLOOR_PLAN("floor-plan", FloorPlan.class);
 
         public final String name;
         public final Class<?> type;

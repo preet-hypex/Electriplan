@@ -62,11 +62,12 @@ export function createWall(start: Point, end: Point, thickness = DEFAULT_WALL_TH
   }
 }
 
-export function createRoom(name: string, polygon: Point[], labelPosition: Point): Room {
+export function createRoom(name: string, polygon: Room['polygon'], labelPosition: Point): Room {
+  const [a, b, c, ...rest] = polygon
   return {
     id: nextId('room'),
     name,
-    polygon: polygon.map((p) => ({ ...p })),
+    polygon: [{ ...a }, { ...b }, { ...c }, ...rest.map((p) => ({ ...p }))],
     labelPosition: { ...labelPosition },
     source: 'manual',
   }

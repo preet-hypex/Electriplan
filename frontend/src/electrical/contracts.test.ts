@@ -18,7 +18,7 @@ const json = (path: string): any => JSON.parse(readFileSync(path, 'utf8'))
 
 const ajv = new Ajv2020({ allErrors: true, strict: true })
 ajv.addSchema(json(join(contracts, 'common.schema.json')), 'common.schema.json')
-const documents = ['project-brief', 'fixture', 'electrical-design'] as const
+const documents = ['project-brief', 'fixture', 'electrical-design', 'floor-plan'] as const
 const validators = Object.fromEntries(
   documents.map((d) => [d, ajv.compile(json(join(contracts, `${d}.schema.json`)))]),
 )

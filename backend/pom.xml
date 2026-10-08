@@ -111,6 +111,14 @@
       <version>${jspecify.version}</version>
     </dependency>
 
+    <!-- Validates JSON against the schemas in ../contracts: incoming floor
+         plans (FloorPlanReader) and the contract tests. -->
+    <dependency>
+      <groupId>com.networknt</groupId>
+      <artifactId>json-schema-validator</artifactId>
+      <version>${json-schema-validator.version}</version>
+    </dependency>
+
     <!-- @Builder / @With on the model records; compile-time only. -->
     <dependency>
       <groupId>org.projectlombok</groupId>
@@ -140,26 +148,38 @@
       <artifactId>h2</artifactId>
       <scope>test</scope>
     </dependency>
-    <!-- Validates JSON against the schemas in ../contracts (contract tests). -->
-    <dependency>
-      <groupId>com.networknt</groupId>
-      <artifactId>json-schema-validator</artifactId>
-      <version>${json-schema-validator.version}</version>
-      <scope>test</scope>
-    </dependency>
 
   </dependencies>
 
   <build>
+    <resources>
+      <resource>
+        <directory>src/main/resources</directory>
+      </resource>
+      <!-- The JSON Schemas in ../contracts, packaged as classpath:contracts/...:
+           FloorPlanReader checks incoming plans against floor-plan.schema.json.
+           The Docker build gets them as the "contracts" build context. -->
+      <resource>
+        <directory>../contracts</directory>
+        <targetPath>contracts</targetPath>
+        <includes>
+          <include>*.schema.json</include>
+        </includes>
+      </resource>
+    </resources>
     <testResources>
       <testResource>
         <directory>src/test/resources</directory>
       </testResource>
-      <!-- The JSON Schemas and their examples, shared with the frontend, on the
-           test classpath as classpath:contracts/... for the contract tests. -->
+      <!-- The examples, shared with the frontend and the analyser, on the test
+           classpath as classpath:contracts/examples/... for the contract tests.
+           The schemas themselves come from the main resources. -->
       <testResource>
         <directory>../contracts</directory>
         <targetPath>contracts</targetPath>
+        <excludes>
+          <exclude>*.schema.json</exclude>
+        </excludes>
       </testResource>
     </testResources>
     <plugins>
