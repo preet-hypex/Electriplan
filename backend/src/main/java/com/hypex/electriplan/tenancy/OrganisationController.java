@@ -7,6 +7,8 @@ import java.util.UUID;
 
 import com.hypex.electriplan.security.AuthenticatedUsers;
 
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.jspecify.annotations.Nullable;
 import org.springframework.transaction.annotation.Transactional;
@@ -16,6 +18,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 /** The caller's companies (for the company switcher), and the company a request acts in. */
 @RestController
+@Tag(name = "Companies", description = "The caller's companies, and the company a request acts in.")
 @RequestMapping("/api/organisations")
 @RequiredArgsConstructor
 class OrganisationController {
@@ -39,6 +42,8 @@ class OrganisationController {
 
     /** Every company the caller can work in: active memberships of companies that are not closed. */
     @GetMapping
+    @Operation(operationId = "listMyCompanies", summary = "The caller's companies",
+            description = "Active memberships of companies that are not closed, by name: what the company switcher offers.")
     @Transactional(readOnly = true)
     List<Membership> mine() {
         return memberships.usableBy(callers.require().id()).stream()
@@ -52,6 +57,8 @@ class OrganisationController {
      * role may do, so the web app can show only the actions that will work.
      */
     @GetMapping("/current")
+    @Operation(operationId = "getCurrentCompany", summary = "The company this request acts in",
+            description = "With the caller's role there and the permissions that role has, so the app shows only actions that will work.")
     @CompanyScoped
     @Transactional(readOnly = true)
     Current current() {
@@ -63,6 +70,7 @@ class OrganisationController {
 
     /** The licence and how many of its seats are in use. Owners and admins only. */
     @GetMapping("/current/licence")
+    @Operation(operationId = "getCurrentLicence", summary = "The company's licence and seats in use")
     @RequiresPermission(Permission.LICENCE_VIEW)
     @Transactional(readOnly = true)
     Licence licence() {

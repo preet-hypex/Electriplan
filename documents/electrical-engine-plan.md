@@ -1048,6 +1048,10 @@ Teams, licences and roles (Epic T, [teams-and-licences-plan.md](teams-and-licenc
 T1–T4, come first: every engine endpoint needs to know which company a request is for and what the
 person may do.
 
+Every endpoint is described by the API's OpenAPI document (Swagger UI at `/api/docs`; see
+[api.md](api.md)). A pull request that adds or changes one regenerates `contracts/openapi.json` and
+the web app's types with it; CI refuses it otherwise.
+
 ## 10. Milestones
 
 Each milestone ends with something an electrician can look at.
