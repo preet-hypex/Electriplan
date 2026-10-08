@@ -23,11 +23,24 @@ INSERT INTO electriplan.organisation (id, name, slug) VALUES ('aaaaaaaa-0000-400
 INSERT INTO electriplan.organisation_member VALUES ('aaaaaaaa-0000-4000-8000-000000000001', '11111111-1111-4111-8111-111111111111', 'owner');
 INSERT INTO electriplan.organisation_member (organisation_id, user_id, role) VALUES ('aaaaaaaa-0000-4000-8000-000000000001', '33333333-3333-4333-8333-333333333333', 'electrician');
 INSERT INTO electriplan.client (id, organisation_id, name) VALUES ('c0000000-0000-4000-8000-000000000001', 'aaaaaaaa-0000-4000-8000-000000000001', 'Sam Lee');
-INSERT INTO electriplan.project (id, organisation_id, reference, name, client_id, distributor_code)
+INSERT INTO electriplan.project (id, organisation_id, reference, name, client_id, distributor_code, site_state)
   VALUES ('b0000000-0000-4000-8000-000000000001', 'aaaaaaaa-0000-4000-8000-000000000001',
-          electriplan.next_reference('aaaaaaaa-0000-4000-8000-000000000001', 'project', 'PRJ'), '12 Example St', 'c0000000-0000-4000-8000-000000000001', 'citipower');
+          electriplan.next_reference('aaaaaaaa-0000-4000-8000-000000000001', 'project', 'PRJ'), '12 Example St', 'c0000000-0000-4000-8000-000000000001', 'citipower', 'VIC');
 SELECT pg_temp.ok((SELECT reference FROM electriplan.project) = 'PRJ-000001', 'first project reference is PRJ-000001');
 SELECT pg_temp.ok(electriplan.next_reference('aaaaaaaa-0000-4000-8000-000000000001', 'project', 'PRJ') = 'PRJ-000002', 'references count up');
+
+-- Projects workspace (V7)
+INSERT INTO electriplan.project (id, organisation_id, name, site_state)
+  VALUES ('b0000000-0000-4000-8000-0000000000a7', 'aaaaaaaa-0000-4000-8000-000000000001', 'No reference given', 'NSW');
+SELECT pg_temp.ok((SELECT reference FROM electriplan.project WHERE id = 'b0000000-0000-4000-8000-0000000000a7') = 'PRJ-000003',
+                  'a project inserted without a reference gets the next one');
+SELECT pg_temp.ok((SELECT lock_version FROM electriplan.project WHERE id = 'b0000000-0000-4000-8000-0000000000a7') = 0, 'a new project is at version 0');
+SELECT pg_temp.must_fail($$INSERT INTO electriplan.project (organisation_id, name) VALUES ('aaaaaaaa-0000-4000-8000-000000000001', 'Somewhere')$$,
+                         'a project with no state (there is no default state)');
+UPDATE electriplan.project SET last_activity_at = '2000-01-01' WHERE id = 'b0000000-0000-4000-8000-0000000000a7';
+SELECT pg_temp.ok((SELECT last_activity_at FROM electriplan.project WHERE id = 'b0000000-0000-4000-8000-0000000000a7') > '2001-01-01',
+                  'changing a project is activity (last_activity_at is the database''s, not the caller''s)');
+DELETE FROM electriplan.project WHERE id = 'b0000000-0000-4000-8000-0000000000a7';
 
 INSERT INTO electriplan.plan (id, organisation_id, project_id, name) VALUES
   ('d0000000-0000-4000-8000-000000000001', 'aaaaaaaa-0000-4000-8000-000000000001', 'b0000000-0000-4000-8000-000000000001', 'Lot 12 Type A');
@@ -211,9 +224,9 @@ SELECT pg_temp.ok(electriplan.seats_in_use('bbbbbbbb-0000-4000-8000-000000000002
 SELECT pg_temp.ok((SELECT count(*) FROM electriplan.project) = 0, 'organisation B sees none of A''s projects');
 SELECT pg_temp.ok((SELECT count(*) FROM electriplan.quote) = 0, 'organisation B sees none of A''s quotes');
 SELECT pg_temp.ok((SELECT count(*) FROM electriplan.organisation) = 1, 'organisation B sees only itself');
-SELECT pg_temp.must_fail($$INSERT INTO electriplan.project (organisation_id, reference, name) VALUES ('aaaaaaaa-0000-4000-8000-000000000001', 'X', 'sneaky')$$, 'B writing into A');
+SELECT pg_temp.must_fail($$INSERT INTO electriplan.project (organisation_id, reference, name, site_state) VALUES ('aaaaaaaa-0000-4000-8000-000000000001', 'X', 'sneaky', 'VIC')$$, 'B writing into A');
 WITH u AS (UPDATE electriplan.plan SET name = 'hijacked' RETURNING 1) SELECT pg_temp.ok((SELECT count(*) FROM u) = 0, 'B updating A''s plan touches nothing');
-INSERT INTO electriplan.project (id, organisation_id, reference, name) VALUES ('b0000000-0000-4000-8000-000000000002', 'bbbbbbbb-0000-4000-8000-000000000002', 'PRJ-000001', 'B site');
+INSERT INTO electriplan.project (id, organisation_id, reference, name, site_state) VALUES ('b0000000-0000-4000-8000-000000000002', 'bbbbbbbb-0000-4000-8000-000000000002', 'PRJ-000001', 'B site', 'VIC');
 SELECT pg_temp.must_fail($$INSERT INTO electriplan.plan (organisation_id, project_id, name) VALUES ('bbbbbbbb-0000-4000-8000-000000000002', 'b0000000-0000-4000-8000-000000000001', 'cross')$$, 'B pointing a plan at A''s project');
 
 -- The builder from A, while working in B: A is invisible, even to its own member (V5)

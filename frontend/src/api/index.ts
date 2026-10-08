@@ -23,6 +23,17 @@ export type MemberRole = Schemas['MemberRole']
 export type LicenceStatus = Schemas['LicenceStatus']
 export type Permission = Schemas['Permission']
 export type AustralianState = Schemas['AustralianState']
+export type ProjectPage = Schemas['ProjectPage']
+export type ProjectSummary = Schemas['ProjectSummary']
+export type Project = Schemas['Project']
+export type ProjectForm = Schemas['ProjectForm']
+export type ProjectStatus = Schemas['ProjectStatus']
+export type House = Schemas['House']
+export type HouseSummary = Schemas['HouseSummary']
+export type HouseForm = Schemas['HouseForm']
+export type HouseStage = Schemas['HouseStage']
+export type DwellingType = Schemas['DwellingType']
+export type ValidationProblem = Schemas['ValidationProblem']
 
 /** The header that picks the company a company-scoped request acts in. */
 export const COMPANY_HEADER = 'X-Organisation-Id'

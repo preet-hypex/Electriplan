@@ -90,3 +90,28 @@ Errors are `{"message": "..."}`.
 | `/api/organisations/current` | GET | **yes** | The company the request acts in, the caller's role and what it may do: `{id, name, slug, role, licence, permissions: ["company.view", ...]}`. The web app shows only actions in `permissions` |
 | `/api/organisations/current/licence` | GET | **yes**, needs `licence.view` | The licence and seat use: `{status, seatLimit, seatsInUse, licenceStartsOn, licenceEndsOn}` |
 | `/api/reference/distributors?state=VIC` | GET | no | Electricity distributors: `[{code, name, state}]` |
+
+## Projects and houses
+
+A company's work: **projects** (a job at one site) and their **houses** (one house design each; the
+database's `plan`). See [projects-workspace-plan.md](projects-workspace-plan.md). All are
+company-scoped. Seeing needs `company.view`; creating, changing, archiving and restoring need
+`project.edit` (owner, admin, builder).
+
+| Endpoint | Method | Does |
+|---|---|---|
+| `/api/projects?q=&status=&archived=&page=&size=` | GET | A page of projects, newest activity first: `{items: [{id, reference, name, suburb, state, status, archived, houseCount, stages: [{stage, count}], lastActivityAt}], page, size, total}`. `q` searches name, reference, street and suburb; `size` 1–100 (default 25) |
+| `/api/projects` | POST | Start a project (201). `name` and `site.state` required; `distributor` must supply that state; `supplyPhases` 1 or 3. The reference (`PRJ-000001`...) is assigned in order, per company |
+| `/api/projects/{id}` | GET | The project with its houses |
+| `/api/projects/{id}` | PUT | Change its details: send every field and the `version` you read |
+| `/api/projects/{id}/archive`, `/restore` | POST | Archive (leaves the list, read-only with its houses) or restore |
+| `/api/projects/{id}/houses` | POST | Add a house (201): it starts `awaiting_upload`, with its ground floor (`levels[0]`) |
+| `/api/houses/{id}` | GET | The house with its project's id, reference and name, its storeys and stage |
+| `/api/houses/{id}` | PUT | Change its name or dwelling type, with its `version` |
+| `/api/houses/{id}/archive`, `/restore` | POST | Archive or restore a house (not while its project is archived) |
+
+| Response | When |
+|---|---|
+| `400` with `errors` | `{"message": "Check the highlighted fields.", "errors": [{"field": "site.state", "message": "Choose the state the site is in"}]}` |
+| `404` | No project or house with that id **in this company**. Another company's ids are simply not found |
+| `409` | The `version` sent is not the current one (someone changed it since: reload, then change again), or it is archived |

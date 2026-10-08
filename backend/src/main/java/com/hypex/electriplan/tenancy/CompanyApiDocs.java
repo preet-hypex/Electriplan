@@ -48,9 +48,15 @@ class CompanyApiDocs implements OperationCustomizer, OpenApiCustomizer {
             operation.addExtension("x-permission", needed.code());
             operation.addExtension("x-roles", PermissionMatrix.rolesWith(needed).stream().map(MemberRole::code).toList());
         }
-        operation.getResponses()
-                .addApiResponse("400", error("No company chosen while the caller belongs to several, or the header is not a company id."))
-                .addApiResponse("403", error(forbidden));
+        String noCompany = "No company chosen while the caller belongs to several, or the header is not a company id.";
+        ApiResponse own400 = operation.getResponses().get("400");
+        if (own400 == null) {
+            operation.getResponses().addApiResponse("400", error(noCompany));
+        } else {
+            // The endpoint's own 400 (e.g. field errors) has a richer body with the same "message".
+            own400.description(own400.getDescription() + " Or: " + noCompany);
+        }
+        operation.getResponses().addApiResponse("403", error(forbidden));
         return operation;
     }
 

@@ -115,13 +115,13 @@ class ApplicationRolePostgresTests {
     void isLimitedToTheCurrentCompanyByRowLevelSecurity() throws SQLException {
         run("SELECT set_config('electriplan.organisation_id', '" + ORG + "', true)");
         run("INSERT INTO electriplan.organisation (id, name, slug) VALUES ('" + ORG + "', 'Role Test', 'role-test') ON CONFLICT DO NOTHING");
-        run("INSERT INTO electriplan.project (organisation_id, reference, name) VALUES ('" + ORG + "', 'PRJ-1', 'Site')");
+        run("INSERT INTO electriplan.project (organisation_id, reference, name, site_state) VALUES ('" + ORG + "', 'PRJ-1', 'Site', 'VIC')");
         assertThat(count("SELECT count(*) FROM electriplan.project")).isEqualTo(1);
 
         run("SELECT set_config('electriplan.organisation_id', '', true)");
         assertThat(count("SELECT count(*) FROM electriplan.project")).as("no company set").isZero();
         assertThat(count("SELECT count(*) FROM electriplan.organisation")).as("no company set").isZero();
-        refused("INSERT INTO electriplan.project (organisation_id, reference, name) VALUES ('" + ORG + "', 'PRJ-2', 'x')",
+        refused("INSERT INTO electriplan.project (organisation_id, reference, name, site_state) VALUES ('" + ORG + "', 'PRJ-2', 'x', 'VIC')",
                 "row-level security");
     }
 
