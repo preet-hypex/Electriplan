@@ -189,7 +189,7 @@ Every one of these is exercised by `schema-rules.sql` in CI.
 |---|---|---|
 | Primary keys | `uuid DEFAULT gen_random_uuid()` | Safe to expose, generated anywhere, no enumeration. Move to `uuidv7()` (Postgres 18) for better index locality when upgrading |
 | History tables | `bigint GENERATED ALWAYS AS IDENTITY` | Append-only, ordered, compact |
-| Human references | `PRJ-000042`, `Q-000107` from `electriplan.next_reference()` | Gapless per organisation; people quote these on the phone |
+| Human references | `PRJ-000042`, `Q-000107` from `electriplan.next_reference()`; a project gets its reference from a trigger when inserted without one (V7) | Gapless per organisation; people quote these on the phone |
 | Codes | `text` + `CHECK`, or a lookup table | Values can be added or retired by migration; Postgres enums cannot drop a value |
 | Money | `numeric(12,2)`, ex-GST and GST stored separately, `gst_rate` per quote | No floating point; the rate a quote was issued at never changes under it |
 | Quantities, lengths | `numeric`; geometry in millimetres inside the documents | Exact |
@@ -218,9 +218,9 @@ Every one of these is exercised by `schema-rules.sql` in CI.
 | Table | What it is |
 |---|---|
 | `client` | Who the work is for; billing details |
-| `project` | A job at one site: reference, client, address, distributor, supply phases, status |
+| `project` | A job at one site: reference, client, address, state (always given: no default, V7), distributor, supply phases, status; `last_activity_at` (the project or any of its houses last changed, by trigger, V7) orders the project list; `lock_version` for optimistic locking (V7) |
 | `project_assignee` | Who is working on a project, and as what |
-| `plan` | One house design in a project; carries `stage` and the current electrical design |
+| `plan` | One house design in a project (a **house** in the app and API); carries `stage` and the current electrical design. Archiving a house sets `archived_at` and leaves its stage alone, so it can be restored |
 | `plan_stage`, `plan_stage_transition` | The lifecycle: stages and the allowed moves |
 | `plan_stage_event` | Every stage change: from, to, who, when, note |
 | `plan_level` | A storey: name, ordinal (0 = ground), ceiling height, current floor-plan version |

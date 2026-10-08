@@ -123,6 +123,29 @@ class ApiDocsTests {
     }
 
     @Test
+    void projectEndpointsKeepTheirFieldErrorsAndSayWhoMayCallThem() {
+        JsonNode create = api.path("paths").path("/api/projects").path("post");
+        assertThat(create.path("x-permission").asText()).isEqualTo("project.edit");
+        assertThat(texts(create.path("x-roles"))).containsExactly("owner", "admin", "builder");
+        JsonNode invalid = create.path("responses").path("400");
+        assertThat(invalid.path("content").path("application/json").path("schema").path("$ref").asText())
+                .isEqualTo("#/components/schemas/ValidationProblem");
+        assertThat(invalid.path("description").asText()).contains("`errors` names each one").contains("No company chosen");
+        assertThat(create.path("responses").has("201")).isTrue();
+
+        JsonNode get = op("/api/projects/{id}");
+        assertThat(get.path("x-permission").asText()).isEqualTo("company.view");
+        assertThat(get.path("responses").path("200").path("content").path("application/json").path("schema").path("$ref").asText())
+                .isEqualTo("#/components/schemas/Project");
+        assertThat(get.path("responses").path("404").path("content").path("application/json").path("schema").path("$ref").asText())
+                .isEqualTo("#/components/schemas/ErrorMessage");
+
+        JsonNode form = schema("ProjectForm");
+        assertThat(texts(form.path("required"))).as("optional fields are optional in requests").containsExactlyInAnyOrder("name", "site");
+        assertThat(texts(schema("ProjectStatus").path("enum"))).containsExactly("active", "on_hold", "completed", "cancelled");
+    }
+
+    @Test
     void enumsUseTheirJsonValues() {
         assertThat(texts(schema("MemberRole").path("enum"))).containsExactly("owner", "admin", "builder", "electrician", "viewer");
         assertThat(texts(schema("LicenceStatus").path("enum"))).containsExactly("trial", "active", "suspended", "closed");

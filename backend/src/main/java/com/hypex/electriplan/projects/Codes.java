@@ -1,0 +1,38 @@
+package com.hypex.electriplan.projects;
+
+import java.util.Arrays;
+
+import jakarta.persistence.AttributeConverter;
+import jakarta.persistence.Converter;
+
+/** The projects enums as the lowercase codes the database's checks use. */
+final class Codes {
+
+    private Codes() {
+    }
+
+    static <E extends Enum<E>> E fromCode(Class<E> type, String code) {
+        return Arrays.stream(type.getEnumConstants())
+                .filter(e -> e.name().equalsIgnoreCase(code))
+                .findFirst()
+                .orElseThrow(() -> new IllegalStateException("Unknown " + type.getSimpleName() + " '" + code + "'"));
+    }
+
+    @Converter
+    static final class Status implements AttributeConverter<ProjectStatus, String> {
+        @Override public String convertToDatabaseColumn(ProjectStatus value) { return value.code(); }
+        @Override public ProjectStatus convertToEntityAttribute(String code) { return fromCode(ProjectStatus.class, code); }
+    }
+
+    @Converter
+    static final class Dwelling implements AttributeConverter<DwellingType, String> {
+        @Override public String convertToDatabaseColumn(DwellingType value) { return value.code(); }
+        @Override public DwellingType convertToEntityAttribute(String code) { return fromCode(DwellingType.class, code); }
+    }
+
+    @Converter
+    static final class Stage implements AttributeConverter<HouseStage, String> {
+        @Override public String convertToDatabaseColumn(HouseStage value) { return value.code(); }
+        @Override public HouseStage convertToEntityAttribute(String code) { return fromCode(HouseStage.class, code); }
+    }
+}
