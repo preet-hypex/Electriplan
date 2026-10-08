@@ -1,8 +1,10 @@
 """The FloorPlan wire format.
 
-Mirrors ``frontend/src/model/types.ts`` exactly. Fields are camelCase on the
-wire and snake_case in Python; pydantic's alias generator does the translation
-so neither side has to compromise.
+Follows ``contracts/floor-plan.schema.json``, the contract the editor and the
+electrical engine read too; ``tests/test_contract.py`` checks what the
+analyser writes against it. Fields are camelCase on the wire and snake_case in
+Python; pydantic's alias generator does the translation so neither side has to
+compromise.
 """
 
 from __future__ import annotations
@@ -145,7 +147,9 @@ class AnalysisReport(Wire):
 
 
 class FloorPlan(Wire):
-    version: int = FLOORPLAN_VERSION
+    #: Only the versions the contract lists; a newer plan is refused, not
+    #: silently passed on.
+    version: Literal[1] = FLOORPLAN_VERSION
     units: Literal["mm"] = "mm"
 
     walls: list[Wall] = Field(default_factory=list)

@@ -1,0 +1,64 @@
+{
+  "version": 1,
+  "units": "mm",
+  "rooms": [
+    {
+      "id": "room_001",
+      "name": "BED 1",
+      "polygon": [
+        {
+          "x": 40,
+          "y": 40
+        },
+        {
+          "x": 2475,
+          "y": 40
+        },
+        {
+          "x": 2475,
+          "y": 1975
+        },
+        {
+          "x": 40,
+          "y": 1975
+        }
+      ],
+      "labelPosition": {
+        "x": 1257.5,
+        "y": 1007.5
+      },
+      "confidence": 0.9,
+      "source": "ocr"
+    }
+  ],
+  "doors": [
+    {
+      "id": "door_001",
+      "wallId": "wall_005",
+      "position": 1400,
+      "width": 820,
+      "style": "swing",
+      "hingeAtStart": true,
+      "swing": 90,
+      "confidence": 0.81,
+      "source": "vision"
+    }
+  ],
+  "windows": [],
+  "openings": [],
+  "labels": [
+    {
+      "id": "label_001",
+      "text": "BED 1",
+      "position": {
+        "x": 1257.5,
+        "y": 1007.5
+      },
+      "type": "room",
+      "roomId": "room_001",
+      "confidence": 0.91,
+      "source": "ocr"
+    }
+  ],
+  "dimensions": []
+}

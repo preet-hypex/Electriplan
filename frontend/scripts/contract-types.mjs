@@ -21,6 +21,7 @@ const bundle = {
     projectBrief: { $ref: 'project-brief.schema.json' },
     fixture: { $ref: 'fixture.schema.json' },
     electricalDesign: { $ref: 'electrical-design.schema.json' },
+    floorPlan: { $ref: 'floor-plan.schema.json' },
   },
   additionalProperties: false,
 }

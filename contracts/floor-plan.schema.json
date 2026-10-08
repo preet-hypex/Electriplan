@@ -1,0 +1,509 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "FloorPlan",
+  "description": "An editable floor plan: walls, rooms, doors, windows, openings, labels and dimensions, in millimetres. Produced by the floor-plan analyser (floorplan/) from an uploaded image, edited in the editor, and read by the electrical engine, which never changes it. The image is only a reference: the geometry is complete without source. Coordinates are plan-local, origin at the top-left of the detected drawing region, y downwards. See documents/electrical-engine-plan.md sections 4.1 and 6.6.",
+  "type": "object",
+  "properties": {
+    "version": {
+      "const": 1
+    },
+    "units": {
+      "const": "mm"
+    },
+    "walls": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/wall"
+      }
+    },
+    "rooms": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/room"
+      }
+    },
+    "doors": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/door"
+      }
+    },
+    "windows": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/window"
+      }
+    },
+    "openings": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/opening"
+      }
+    },
+    "labels": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/label"
+      }
+    },
+    "dimensions": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/dimension"
+      }
+    },
+    "source": {
+      "$ref": "#/$defs/planSource"
+    },
+    "analysis": {
+      "$ref": "#/$defs/analysisReport"
+    }
+  },
+  "required": [
+    "version",
+    "units",
+    "walls",
+    "rooms",
+    "doors",
+    "windows",
+    "openings",
+    "labels",
+    "dimensions"
+  ],
+  "additionalProperties": false,
+  "$defs": {
+    "planItemSource": {
+      "title": "PlanItemSource",
+      "description": "How an item came to be in the plan: found in the image (vision), read from its text (ocr), inferred from other geometry (geometry), or drawn or corrected by a person (manual). Drives the editor's confidence badges.",
+      "type": "string",
+      "enum": [
+        "vision",
+        "ocr",
+        "geometry",
+        "manual"
+      ]
+    },
+    "confidence": {
+      "title": "Confidence",
+      "description": "How sure the analyser is of a detected item, from 0 to 1. Absent for items a person placed.",
+      "type": "number",
+      "minimum": 0,
+      "maximum": 1
+    },
+    "positiveMillimetres": {
+      "title": "PositiveMillimetres",
+      "description": "A length in millimetres that must be greater than zero: a wall's thickness, an opening's width.",
+      "type": "number",
+      "exclusiveMinimum": 0
+    },
+    "wall": {
+      "title": "Wall",
+      "description": "A wall's centre line from start to end, and its thickness measured perpendicular to that line.",
+      "type": "object",
+      "properties": {
+        "id": {
+          "$ref": "common.schema.json#/$defs/id"
+        },
+        "start": {
+          "$ref": "common.schema.json#/$defs/point"
+        },
+        "end": {
+          "$ref": "common.schema.json#/$defs/point"
+        },
+        "thickness": {
+          "$ref": "#/$defs/positiveMillimetres"
+        },
+        "confidence": {
+          "$ref": "#/$defs/confidence"
+        },
+        "source": {
+          "$ref": "#/$defs/planItemSource"
+        }
+      },
+      "required": [
+        "id",
+        "start",
+        "end",
+        "thickness"
+      ],
+      "additionalProperties": false
+    },
+    "room": {
+      "title": "Room",
+      "description": "A room: its name as written on the plan (empty when none could be read), its outline, where its name is drawn, and an optional fill colour overriding the editor's default.",
+      "type": "object",
+      "properties": {
+        "id": {
+          "$ref": "common.schema.json#/$defs/id"
+        },
+        "name": {
+          "type": "string"
+        },
+        "polygon": {
+          "type": "array",
+          "items": {
+            "$ref": "common.schema.json#/$defs/point"
+          },
+          "minItems": 3
+        },
+        "labelPosition": {
+          "$ref": "common.schema.json#/$defs/point"
+        },
+        "colour": {
+          "type": "string",
+          "pattern": "^#[0-9A-Fa-f]{6}$"
+        },
+        "confidence": {
+          "$ref": "#/$defs/confidence"
+        },
+        "source": {
+          "$ref": "#/$defs/planItemSource"
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "polygon",
+        "labelPosition"
+      ],
+      "additionalProperties": false
+    },
+    "door": {
+      "title": "Door",
+      "description": "A door in a wall. position: distance from the wall's start to the door's centre. style: how it opens (swing when absent); a sliding or garage door has no hinge or swing, so hingeAtStart and swing are ignored for one. hingeAtStart: which jamb the hinge is on, in the wall's start-to-end direction. swing: which side the leaf opens to, 90 for the wall's left-hand normal, -90 for its right.",
+      "type": "object",
+      "properties": {
+        "id": {
+          "$ref": "common.schema.json#/$defs/id"
+        },
+        "wallId": {
+          "$ref": "common.schema.json#/$defs/id"
+        },
+        "position": {
+          "$ref": "common.schema.json#/$defs/millimetres"
+        },
+        "width": {
+          "$ref": "#/$defs/positiveMillimetres"
+        },
+        "style": {
+          "title": "DoorStyle",
+          "type": "string",
+          "enum": [
+            "swing",
+            "sliding",
+            "garage"
+          ]
+        },
+        "hingeAtStart": {
+          "type": "boolean"
+        },
+        "swing": {
+          "title": "DoorSwing",
+          "type": "number",
+          "enum": [
+            90,
+            -90
+          ]
+        },
+        "confidence": {
+          "$ref": "#/$defs/confidence"
+        },
+        "source": {
+          "$ref": "#/$defs/planItemSource"
+        }
+      },
+      "required": [
+        "id",
+        "wallId",
+        "position",
+        "width"
+      ],
+      "additionalProperties": false
+    },
+    "window": {
+      "title": "Window",
+      "description": "A window in a wall. position: distance from the wall's start to the window's centre.",
+      "type": "object",
+      "properties": {
+        "id": {
+          "$ref": "common.schema.json#/$defs/id"
+        },
+        "wallId": {
+          "$ref": "common.schema.json#/$defs/id"
+        },
+        "position": {
+          "$ref": "common.schema.json#/$defs/millimetres"
+        },
+        "width": {
+          "$ref": "#/$defs/positiveMillimetres"
+        },
+        "confidence": {
+          "$ref": "#/$defs/confidence"
+        },
+        "source": {
+          "$ref": "#/$defs/planItemSource"
+        }
+      },
+      "required": [
+        "id",
+        "wallId",
+        "position",
+        "width"
+      ],
+      "additionalProperties": false
+    },
+    "opening": {
+      "title": "Opening",
+      "description": "A gap in a wall that is neither clearly a door nor clearly a window: a cased opening, or one whose symbol could not be read. Kept so the editor can show it and the user can say what it is; the engine treats it as a passage with no leaf. position: distance from the wall's start to the opening's centre.",
+      "type": "object",
+      "properties": {
+        "id": {
+          "$ref": "common.schema.json#/$defs/id"
+        },
+        "wallId": {
+          "$ref": "common.schema.json#/$defs/id"
+        },
+        "position": {
+          "$ref": "common.schema.json#/$defs/millimetres"
+        },
+        "width": {
+          "$ref": "#/$defs/positiveMillimetres"
+        },
+        "confidence": {
+          "$ref": "#/$defs/confidence"
+        },
+        "source": {
+          "$ref": "#/$defs/planItemSource"
+        }
+      },
+      "required": [
+        "id",
+        "wallId",
+        "position",
+        "width"
+      ],
+      "additionalProperties": false
+    },
+    "label": {
+      "title": "Label",
+      "description": "Text on the plan, at the centre of where it is written. roomId: set when the label was matched to a room during analysis.",
+      "type": "object",
+      "properties": {
+        "id": {
+          "$ref": "common.schema.json#/$defs/id"
+        },
+        "text": {
+          "type": "string"
+        },
+        "position": {
+          "$ref": "common.schema.json#/$defs/point"
+        },
+        "type": {
+          "title": "LabelKind",
+          "type": "string",
+          "enum": [
+            "room",
+            "dimension",
+            "other"
+          ]
+        },
+        "roomId": {
+          "$ref": "common.schema.json#/$defs/id"
+        },
+        "confidence": {
+          "$ref": "#/$defs/confidence"
+        },
+        "source": {
+          "$ref": "#/$defs/planItemSource"
+        }
+      },
+      "required": [
+        "id",
+        "text",
+        "position",
+        "type"
+      ],
+      "additionalProperties": false
+    },
+    "dimension": {
+      "title": "Dimension",
+      "description": "A measurement written on the plan, drawn from start to end: its value, in the unit it was written in (the line itself is in millimetres like everything else). Confirms the plan's scale.",
+      "type": "object",
+      "properties": {
+        "id": {
+          "$ref": "common.schema.json#/$defs/id"
+        },
+        "start": {
+          "$ref": "common.schema.json#/$defs/point"
+        },
+        "end": {
+          "$ref": "common.schema.json#/$defs/point"
+        },
+        "value": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
+        "unit": {
+          "title": "DimensionUnit",
+          "type": "string",
+          "enum": [
+            "mm",
+            "m"
+          ]
+        },
+        "confidence": {
+          "$ref": "#/$defs/confidence"
+        },
+        "source": {
+          "$ref": "#/$defs/planItemSource"
+        }
+      },
+      "required": [
+        "id",
+        "start",
+        "end",
+        "value",
+        "unit"
+      ],
+      "additionalProperties": false
+    },
+    "planSource": {
+      "title": "PlanSource",
+      "description": "The image the plan was analysed from, absent for a hand-built plan. imageUrl: where the untouched upload can be loaded from. planRegion: the detected drawing region, in pixels of the original image. mmPerPx: the scale applied to produce the millimetre coordinates. scaleConfidence and scaleMethod: how sure that scale is, and how it was found; below a threshold the engine refuses to size cables until the plan is calibrated.",
+      "type": "object",
+      "properties": {
+        "imageUrl": {
+          "type": "string",
+          "minLength": 1
+        },
+        "imageWidth": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "imageHeight": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "planRegion": {
+          "title": "PlanRegion",
+          "type": "object",
+          "properties": {
+            "x": {
+              "type": "number",
+              "minimum": 0
+            },
+            "y": {
+              "type": "number",
+              "minimum": 0
+            },
+            "width": {
+              "type": "number",
+              "exclusiveMinimum": 0
+            },
+            "height": {
+              "type": "number",
+              "exclusiveMinimum": 0
+            }
+          },
+          "required": [
+            "x",
+            "y",
+            "width",
+            "height"
+          ],
+          "additionalProperties": false
+        },
+        "mmPerPx": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
+        "scaleConfidence": {
+          "$ref": "#/$defs/confidence"
+        },
+        "scaleMethod": {
+          "title": "ScaleMethod",
+          "type": "string",
+          "enum": [
+            "ocr-dimensions",
+            "wall-thickness",
+            "manual",
+            "fallback"
+          ]
+        }
+      },
+      "required": [
+        "imageUrl",
+        "imageWidth",
+        "imageHeight",
+        "planRegion",
+        "mmPerPx",
+        "scaleConfidence",
+        "scaleMethod"
+      ],
+      "additionalProperties": false
+    },
+    "analysisReport": {
+      "title": "AnalysisReport",
+      "description": "What the analyser did and found, for the analysis screen: each step and whether it worked, the counts, and warnings. Diagnostic only: nothing reads it to design.",
+      "type": "object",
+      "properties": {
+        "steps": {
+          "type": "array",
+          "items": {
+            "title": "AnalysisStep",
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string",
+                "minLength": 1
+              },
+              "ok": {
+                "type": "boolean"
+              },
+              "detail": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "name",
+              "ok",
+              "detail"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "wallCount": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "roomCount": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "labelCount": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "dimensionCount": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "warnings": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "required": [
+        "steps",
+        "wallCount",
+        "roomCount",
+        "labelCount",
+        "dimensionCount",
+        "warnings"
+      ],
+      "additionalProperties": false
+    }
+  }
+}

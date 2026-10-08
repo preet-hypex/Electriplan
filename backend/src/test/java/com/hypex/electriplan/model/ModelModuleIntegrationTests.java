@@ -45,6 +45,7 @@ class ModelModuleIntegrationTests {
 
         assertThat(Contracts.validate(Document.PROJECT_BRIEF, springMapper.writeValueAsString(Samples.brief()))).isEmpty();
         assertThat(Contracts.validate(Document.FIXTURE, springMapper.writeValueAsString(Samples.shower()))).isEmpty();
+        assertThat(Contracts.validate(Document.FLOOR_PLAN, springMapper.writeValueAsString(Samples.floorPlan()))).isEmpty();
     }
 
     @Test

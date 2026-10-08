@@ -1,0 +1,41 @@
+{
+  "version": 1,
+  "units": "mm",
+  "walls": [
+    { "id": "wall_001", "start": { "x": 0, "y": 0 }, "end": { "x": 6000, "y": 0 }, "thickness": 200, "source": "manual" },
+    { "id": "wall_002", "start": { "x": 6000, "y": 0 }, "end": { "x": 6000, "y": 4500 }, "thickness": 200, "source": "manual" },
+    { "id": "wall_003", "start": { "x": 6000, "y": 4500 }, "end": { "x": 0, "y": 4500 }, "thickness": 200, "source": "manual" },
+    { "id": "wall_004", "start": { "x": 0, "y": 4500 }, "end": { "x": 0, "y": 0 }, "thickness": 200 },
+    { "id": "wall_005", "start": { "x": 4200, "y": 2800 }, "end": { "x": 4200, "y": 4500 }, "thickness": 90 }
+  ],
+  "rooms": [
+    {
+      "id": "room_001",
+      "name": "STUDIO",
+      "polygon": [{ "x": 100, "y": 100 }, { "x": 5900, "y": 100 }, { "x": 5900, "y": 2800 }, { "x": 4155, "y": 2800 }, { "x": 4155, "y": 4400 }, { "x": 100, "y": 4400 }],
+      "labelPosition": { "x": 2100, "y": 2200 },
+      "colour": "#3b82f6",
+      "source": "manual"
+    },
+    {
+      "id": "room_002",
+      "name": "ENS",
+      "polygon": [{ "x": 4245, "y": 2845 }, { "x": 5900, "y": 2845 }, { "x": 5900, "y": 4400 }, { "x": 4245, "y": 4400 }],
+      "labelPosition": { "x": 5072.5, "y": 3622.5 }
+    }
+  ],
+  "doors": [
+    { "id": "door_001", "wallId": "wall_005", "position": 600, "width": 720, "style": "swing", "hingeAtStart": true, "swing": 90, "source": "manual" },
+    { "id": "door_002", "wallId": "wall_003", "position": 1500, "width": 2400, "style": "garage", "hingeAtStart": true }
+  ],
+  "windows": [
+    { "id": "window_001", "wallId": "wall_001", "position": 3000, "width": 1800, "source": "manual" }
+  ],
+  "openings": [],
+  "labels": [
+    { "id": "label_001", "text": "Kitchenette", "position": { "x": 5000, "y": 800 }, "type": "other", "source": "manual" }
+  ],
+  "dimensions": [
+    { "id": "dim_001", "start": { "x": 0, "y": -300 }, "end": { "x": 6000, "y": -300 }, "value": 6, "unit": "m", "source": "manual" }
+  ]
+}

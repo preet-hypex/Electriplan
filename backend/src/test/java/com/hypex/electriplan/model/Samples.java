@@ -48,6 +48,21 @@ import com.hypex.electriplan.model.fixture.Fixture;
 import com.hypex.electriplan.model.fixture.FixtureKind;
 import com.hypex.electriplan.model.fixture.FixtureSource;
 import com.hypex.electriplan.model.fixture.Footprint;
+import com.hypex.electriplan.model.plan.AnalysisReport;
+import com.hypex.electriplan.model.plan.Dimension;
+import com.hypex.electriplan.model.plan.DimensionUnit;
+import com.hypex.electriplan.model.plan.Door;
+import com.hypex.electriplan.model.plan.DoorStyle;
+import com.hypex.electriplan.model.plan.FloorPlan;
+import com.hypex.electriplan.model.plan.Label;
+import com.hypex.electriplan.model.plan.LabelKind;
+import com.hypex.electriplan.model.plan.Opening;
+import com.hypex.electriplan.model.plan.PlanItemSource;
+import com.hypex.electriplan.model.plan.PlanSource;
+import com.hypex.electriplan.model.plan.Room;
+import com.hypex.electriplan.model.plan.ScaleMethod;
+import com.hypex.electriplan.model.plan.Wall;
+import com.hypex.electriplan.model.plan.Window;
 import com.hypex.electriplan.model.units.Amperes;
 import com.hypex.electriplan.model.units.Kilowatts;
 import com.hypex.electriplan.model.units.Lumens;
@@ -155,6 +170,39 @@ public final class Samples {
                 .violation(Violation.builder().ruleId("policy.gpo.per-bedroom").severity(Severity.WARNING)
                         .itemId("lt_001").message("Only one double outlet in Bed 2").build())
                 .decisionRequired(DecisionRequired.builder().id("d_001").itemId("lt_001").question("Ceiling height assumed 2550").build())
+                .build();
+    }
+
+    public static Wall wall(String id, double x1, double y1, double x2, double y2) {
+        return Wall.builder().id(id).start(new Point(x1, y1)).end(new Point(x2, y2))
+                .thickness(Millimetres.of(90)).confidence(0.9).source(PlanItemSource.VISION).build();
+    }
+
+    /** A one-bedroom plan with one of everything a plan can hold. */
+    public static FloorPlan floorPlan() {
+        return FloorPlan.builder()
+                .wall(wall("wall_001", 0, 0, 4000, 0))
+                .wall(wall("wall_002", 4000, 0, 4000, 3000))
+                .wall(wall("wall_003", 4000, 3000, 0, 3000))
+                .wall(wall("wall_004", 0, 3000, 0, 0))
+                .room(Room.builder().id("room_001").name("BED 1")
+                        .polygon(List.of(new Point(45, 45), new Point(3955, 45), new Point(3955, 2955), new Point(45, 2955)))
+                        .labelPosition(new Point(2000, 1500)).confidence(0.9).source(PlanItemSource.OCR).build())
+                .door(Door.builder().id("door_001").wallId("wall_003").position(Millimetres.of(800)).width(Millimetres.of(820))
+                        .style(DoorStyle.SWING).hingeAtStart(true).swing(Door.LEFT).source(PlanItemSource.MANUAL).build())
+                .window(Window.builder().id("window_001").wallId("wall_001").position(Millimetres.of(2000))
+                        .width(Millimetres.of(1500)).build())
+                .opening(Opening.builder().id("opening_001").wallId("wall_002").position(Millimetres.of(1500))
+                        .width(Millimetres.of(900)).confidence(0.5).source(PlanItemSource.VISION).build())
+                .label(Label.builder().id("label_001").text("BED 1").position(new Point(2000, 1500))
+                        .type(LabelKind.ROOM).roomId("room_001").build())
+                .dimension(Dimension.builder().id("dim_001").start(new Point(45, 45)).end(new Point(3955, 45))
+                        .value(4.0).unit(DimensionUnit.M).build())
+                .source(PlanSource.builder().imageUrl("/api/floorplan/images/abc").imageWidth(1000).imageHeight(800)
+                        .planRegion(new PlanSource.PlanRegion(100.0, 80.0, 800.0, 600.0))
+                        .mmPerPx(5.0).scaleConfidence(0.8).scaleMethod(ScaleMethod.OCR_DIMENSIONS).build())
+                .analysis(AnalysisReport.builder().step(new AnalysisReport.Step("Walls detected", true, "4 walls"))
+                        .wallCount(4).roomCount(1).labelCount(1).dimensionCount(1).build())
                 .build();
     }
 }

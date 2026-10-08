@@ -159,7 +159,7 @@ revision; confirm the current edition and amendments before encoding.
 
 ### 4.1 What the FloorPlan already gives us
 
-From `backend/app/models.py` / `frontend/src/model/types.ts`, in millimetres:
+From [`contracts/floor-plan.schema.json`](../contracts/floor-plan.schema.json) (`floorplan/app/models.py`, `frontend/src/floorplan/model/types.ts`, `model.plan` in the API), in millimetres:
 
 | Field | Electrical use |
 |---|---|
@@ -455,7 +455,7 @@ drifting:
   owner; all schemas sit together in `contracts/` at the repository root, next to
   the three codebases that use them (`floorplan/`, `frontend/`, `backend/`).
 - **TypeScript** types are generated (json-schema-to-typescript) and **Python**
-  models generated or checked (datamodel-code-generator) in CI.
+  models checked against the schema (jsonschema) in CI.
 - **Java** types are hand-written records — so units and anchors can be real types
   (`Millimetres`, `WallAnchor`, `CeilingPoint`) rather than bare doubles — and a
   **contract test** serialises every reference design and validates it against the
@@ -829,7 +829,7 @@ a rule-pack entry where it touches a rule.
 |---|---|---|---|
 | E0-S1 | Add the electrical modules to the Electriplan API | ~~Rename the application package~~ (done: `com.hypex.electriplan`); empty modules from §6.3 beside `security` and `users`; `ApplicationModules.verify()` test passes; health endpoint; Postgres + Flyway via Testcontainers; CI build; `DesignStage` contract and an orchestrator that runs an empty stage list and returns an empty valid design | M |
 | E0-S2 | ✅ **Done** — `ElectricalDesign`, `ProjectBrief`, `Fixture` JSON Schemas + Java records ([contracts/](../contracts/README.md)) | Schemas in `contracts/`; Java records with unit types; contract tests validate serialised output against the schemas; TS types generated for the editor | M |
-| E0-S2a | FloorPlan schema as the shared contract | `contracts/floor-plan.schema.json`; Python and TS checked against it in CI; engine reads it into Java records and rejects unsupported versions | M |
+| E0-S2a | ✅ **Done** — FloorPlan schema as the shared contract ([contracts/](../contracts/README.md)) | `contracts/floor-plan.schema.json`; Python and TS checked against it in CI; engine reads it into Java records and rejects unsupported versions | M |
 | E0-S3 | Rule-pack format, loader and schema validation | Loads YAML packs; rejects a rule without `id`, `tier`, `kind`, `cite`; tier precedence (state overrides national, company overrides policy only — never mandatory) tested; **supported states = states with a signed-off state file** (no hard-coded VIC; see *Expanding beyond Victoria*) | M |
 | E0-S4 | Rationale & decision-required plumbing | Any stage can attach rationale lines and decisions; they appear in the output and in the `validation` module's compliance report | S |
 | E0-S5 | Reference plan set | 10 typical Victorian single-storey, single-phase plans as FloorPlan + brief + fixtures: studio, 2-bed unit, 3-bed, 4-bed with ensuite, L-shaped living, open-plan kitchen with island, two bathrooms back-to-back, large garage, all-electric home (induction + heat pump, tests the single-phase demand limit), one plan per Victorian distributor across the set. Each designed independently by ≥ 2 electricians from the panel. Stored under `backend/src/test/resources/plans/` | M |

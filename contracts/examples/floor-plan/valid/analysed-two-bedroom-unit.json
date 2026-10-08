@@ -1,0 +1,89 @@
+{
+  "version": 1,
+  "units": "mm",
+  "walls": [
+    { "id": "wall_001", "start": { "x": 0, "y": 0 }, "end": { "x": 5000, "y": 0 }, "thickness": 80, "confidence": 0.94, "source": "vision" },
+    { "id": "wall_002", "start": { "x": 5000, "y": 0 }, "end": { "x": 5000, "y": 4000 }, "thickness": 80, "confidence": 0.93, "source": "vision" },
+    { "id": "wall_003", "start": { "x": 5000, "y": 4000 }, "end": { "x": 0, "y": 4000 }, "thickness": 80, "confidence": 0.95, "source": "vision" },
+    { "id": "wall_004", "start": { "x": 0, "y": 4000 }, "end": { "x": 0, "y": 0 }, "thickness": 80, "confidence": 0.91, "source": "vision" },
+    { "id": "wall_005", "start": { "x": 0, "y": 2000 }, "end": { "x": 5000, "y": 2000 }, "thickness": 50, "confidence": 0.88, "source": "vision" },
+    { "id": "wall_006", "start": { "x": 2500, "y": 0 }, "end": { "x": 2500, "y": 2000 }, "thickness": 50, "confidence": 0.86, "source": "vision" }
+  ],
+  "rooms": [
+    {
+      "id": "room_001",
+      "name": "BED 1",
+      "polygon": [{ "x": 40, "y": 40 }, { "x": 2475, "y": 40 }, { "x": 2475, "y": 1975 }, { "x": 40, "y": 1975 }],
+      "labelPosition": { "x": 1257.5, "y": 1007.5 },
+      "confidence": 0.9,
+      "source": "ocr"
+    },
+    {
+      "id": "room_002",
+      "name": "BED 2",
+      "polygon": [{ "x": 2525, "y": 40 }, { "x": 4960, "y": 40 }, { "x": 4960, "y": 1975 }, { "x": 2525, "y": 1975 }],
+      "labelPosition": { "x": 3742.5, "y": 1007.5 },
+      "confidence": 0.87,
+      "source": "ocr"
+    },
+    {
+      "id": "room_003",
+      "name": "LIVING",
+      "polygon": [{ "x": 40, "y": 2025 }, { "x": 4960, "y": 2025 }, { "x": 4960, "y": 3960 }, { "x": 40, "y": 3960 }],
+      "labelPosition": { "x": 2500, "y": 2992.5 },
+      "confidence": 0.92,
+      "source": "ocr"
+    },
+    {
+      "id": "room_004",
+      "name": "",
+      "polygon": [{ "x": 4200, "y": 3200 }, { "x": 4960, "y": 3200 }, { "x": 4960, "y": 3960 }],
+      "labelPosition": { "x": 4700, "y": 3700 },
+      "confidence": 0.42,
+      "source": "geometry"
+    }
+  ],
+  "doors": [
+    { "id": "door_001", "wallId": "wall_005", "position": 1400, "width": 820, "style": "swing", "hingeAtStart": true, "swing": 90, "confidence": 0.81, "source": "vision" },
+    { "id": "door_002", "wallId": "wall_005", "position": 3600, "width": 820, "style": "swing", "hingeAtStart": false, "swing": -90, "confidence": 0.77, "source": "vision" },
+    { "id": "door_003", "wallId": "wall_003", "position": 2500, "width": 1800, "style": "sliding", "hingeAtStart": true, "confidence": 0.64, "source": "vision" }
+  ],
+  "windows": [
+    { "id": "window_001", "wallId": "wall_001", "position": 1250, "width": 1200, "confidence": 0.72, "source": "vision" }
+  ],
+  "openings": [
+    { "id": "opening_001", "wallId": "wall_002", "position": 3000, "width": 900, "confidence": 0.5, "source": "vision" }
+  ],
+  "labels": [
+    { "id": "label_001", "text": "BED 1", "position": { "x": 1257.5, "y": 1007.5 }, "type": "room", "roomId": "room_001", "confidence": 0.91, "source": "ocr" },
+    { "id": "label_002", "text": "BED 2", "position": { "x": 3742.5, "y": 1007.5 }, "type": "room", "roomId": "room_002", "confidence": 0.89, "source": "ocr" },
+    { "id": "label_003", "text": "LIVING", "position": { "x": 2500, "y": 2992.5 }, "type": "room", "roomId": "room_003", "confidence": 0.93, "source": "ocr" },
+    { "id": "label_004", "text": "5.0m X 2.0m", "position": { "x": 2500, "y": 3200 }, "type": "dimension", "confidence": 0.8, "source": "ocr" }
+  ],
+  "dimensions": [
+    { "id": "dim_001", "start": { "x": 40, "y": 2025 }, "end": { "x": 40, "y": 3960 }, "value": 2000, "unit": "mm", "confidence": 0.8, "source": "ocr" },
+    { "id": "dim_002", "start": { "x": 40, "y": 2025 }, "end": { "x": 4960, "y": 2025 }, "value": 5000, "unit": "mm", "confidence": 0.8, "source": "ocr" }
+  ],
+  "source": {
+    "imageUrl": "/api/floorplan/images/3f9c2a7e1b6d4c08a5e2f1d07b9c6a34",
+    "imageWidth": 1400,
+    "imageHeight": 1100,
+    "planRegion": { "x": 190, "y": 140, "width": 1020, "height": 820 },
+    "mmPerPx": 5,
+    "scaleConfidence": 0.82,
+    "scaleMethod": "ocr-dimensions"
+  },
+  "analysis": {
+    "steps": [
+      { "name": "Image processed", "ok": true, "detail": "1400 x 1100 px" },
+      { "name": "Floor plan region detected", "ok": true, "detail": "1020 x 820 px" },
+      { "name": "Walls detected", "ok": true, "detail": "6 walls" },
+      { "name": "Scale estimated", "ok": true, "detail": "5.00 mm/px (82% confident)" }
+    ],
+    "wallCount": 6,
+    "roomCount": 4,
+    "labelCount": 4,
+    "dimensionCount": 2,
+    "warnings": ["1 room has no name; check it."]
+  }
+}

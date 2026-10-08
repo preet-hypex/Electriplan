@@ -10,6 +10,7 @@ import java.util.stream.Stream;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.hypex.electriplan.model.Contracts.Document;
 import com.hypex.electriplan.model.Contracts.Example;
+import com.hypex.electriplan.model.plan.FloorPlan;
 import com.networknt.schema.JsonSchemaFactory;
 import com.networknt.schema.SchemaLocation;
 import com.networknt.schema.SpecVersion;
@@ -88,6 +89,8 @@ class ContractTest {
         assertThat(Contracts.validate(Document.PROJECT_BRIEF, ModelJson.write(Samples.brief()))).isEmpty();
         assertThat(Contracts.validate(Document.FIXTURE, ModelJson.write(Samples.shower()))).isEmpty();
         assertThat(Contracts.validate(Document.FIXTURE, ModelJson.write(Samples.cooktop()))).isEmpty();
+        assertThat(Contracts.validate(Document.FLOOR_PLAN, ModelJson.write(Samples.floorPlan()))).isEmpty();
+        assertThat(Contracts.validate(Document.FLOOR_PLAN, ModelJson.write(FloorPlan.builder().build()))).isEmpty();
     }
 
     @Test
@@ -96,6 +99,7 @@ class ContractTest {
                 .isEqualTo(Samples.fullDesign());
         assertThat(ModelJson.read(ModelJson.write(Samples.brief()), com.hypex.electriplan.model.brief.ProjectBrief.class))
                 .isEqualTo(Samples.brief());
+        assertThat(ModelJson.read(ModelJson.write(Samples.floorPlan()), FloorPlan.class)).isEqualTo(Samples.floorPlan());
     }
 
     @Test

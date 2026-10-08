@@ -89,7 +89,7 @@ describe('FloorPlan serialisation', () => {
         {
           id: 'room_001',
           name: 'LIVING',
-          polygon: [{ x: 0, y: 0 }],
+          polygon: [{ x: 0, y: 0 }, { x: 1000, y: 0 }, { x: 0, y: 1000 }],
           labelPosition: { x: 0, y: 0 },
           colour: null,
           confidence: null,

@@ -1,0 +1,111 @@
+{
+  "version": 1,
+  "units": "mm",
+  "walls": [
+    {
+      "id": "wall_005",
+      "start": {
+        "x": 0,
+        "y": 2000
+      },
+      "end": {
+        "x": 5000,
+        "y": 2000
+      },
+      "thickness": 50,
+      "confidence": 0.88,
+      "source": "vision"
+    }
+  ],
+  "rooms": [
+    {
+      "id": "room_001",
+      "name": "BED 1",
+      "polygon": [
+        {
+          "x": 40,
+          "y": 40
+        },
+        {
+          "x": 2475,
+          "y": 40
+        },
+        {
+          "x": 2475,
+          "y": 1975
+        },
+        {
+          "x": 40,
+          "y": 1975
+        }
+      ],
+      "labelPosition": {
+        "x": 1257.5,
+        "y": 1007.5
+      },
+      "confidence": 0.9,
+      "source": "ocr"
+    }
+  ],
+  "doors": [
+    {
+      "id": "door_001",
+      "wallId": "wall_005",
+      "position": 1400,
+      "width": 820,
+      "style": "swing",
+      "hingeAtStart": true,
+      "swing": 90,
+      "confidence": 0.81,
+      "source": "vision"
+    }
+  ],
+  "windows": [],
+  "openings": [],
+  "labels": [
+    {
+      "id": "label_001",
+      "text": "BED 1",
+      "position": {
+        "x": 1257.5,
+        "y": 1007.5
+      },
+      "type": "room",
+      "roomId": "room_001",
+      "confidence": 0.91,
+      "source": "ocr"
+    }
+  ],
+  "dimensions": [],
+  "analysis": {
+    "steps": [
+      {
+        "name": "Image processed",
+        "ok": true,
+        "detail": "1400 x 1100 px"
+      },
+      {
+        "name": "Floor plan region detected",
+        "ok": true,
+        "detail": "1020 x 820 px"
+      },
+      {
+        "name": "Walls detected",
+        "ok": true,
+        "detail": "6 walls"
+      },
+      {
+        "name": "Scale estimated",
+        "ok": true,
+        "detail": "5.00 mm/px (82% confident)"
+      }
+    ],
+    "wallCount": -1,
+    "roomCount": 4,
+    "labelCount": 4,
+    "dimensionCount": 2,
+    "warnings": [
+      "1 room has no name; check it."
+    ]
+  }
+}

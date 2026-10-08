@@ -1,4 +1,4 @@
-import type { FloorPlan, Point, Wall } from './types'
+import type { FloorPlan, Room, Wall } from './types'
 import { FLOORPLAN_VERSION } from './types'
 
 /**
@@ -46,7 +46,7 @@ const walls: Wall[] = [
   wall(5200, HALL_Y, 5200, H),
 ]
 
-const rect = (x1: number, y1: number, x2: number, y2: number): Point[] => [
+const rect = (x1: number, y1: number, x2: number, y2: number): Room['polygon'] => [
   { x: x1, y: y1 },
   { x: x2, y: y1 },
   { x: x2, y: y2 },

@@ -21,7 +21,11 @@ services:
     restart: unless-stopped
 
   api:
-    build: ./backend
+    build:
+      context: ./backend
+      # The JSON Schemas the API packages (see backend/Dockerfile).
+      additional_contexts:
+        contracts: ./contracts
     image: electriplan-api:local
     env_file:
       - path: ./backend/.env

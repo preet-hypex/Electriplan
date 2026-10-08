@@ -87,11 +87,38 @@ export type CircuitType = 'lighting' | 'power' | 'dedicated' | 'smoke-alarm'
 export type DeviceKind = 'RCBO' | 'RCD' | 'MCB'
 export type TripCurve = 'B' | 'C' | 'D'
 export type Severity = 'error' | 'warning'
+/**
+ * A length in millimetres that must be greater than zero: a wall's thickness, an opening's width.
+ *
+ * This interface was referenced by `FloorPlan`'s JSON-Schema
+ * via the `definition` "positiveMillimetres".
+ */
+export type PositiveMillimetres = number
+/**
+ * How sure the analyser is of a detected item, from 0 to 1. Absent for items a person placed.
+ *
+ * This interface was referenced by `FloorPlan`'s JSON-Schema
+ * via the `definition` "confidence".
+ */
+export type Confidence = number
+/**
+ * How an item came to be in the plan: found in the image (vision), read from its text (ocr), inferred from other geometry (geometry), or drawn or corrected by a person (manual). Drives the editor's confidence badges.
+ *
+ * This interface was referenced by `FloorPlan`'s JSON-Schema
+ * via the `definition` "planItemSource".
+ */
+export type PlanItemSource = 'vision' | 'ocr' | 'geometry' | 'manual'
+export type DoorStyle = 'swing' | 'sliding' | 'garage'
+export type DoorSwing = 90 | -90
+export type LabelKind = 'room' | 'dimension' | 'other'
+export type DimensionUnit = 'mm' | 'm'
+export type ScaleMethod = 'ocr-dimensions' | 'wall-thickness' | 'manual' | 'fallback'
 
 export interface Contracts {
   projectBrief?: ProjectBrief
   fixture?: Fixture
   electricalDesign?: ElectricalDesign
+  floorPlan?: FloorPlan
 }
 /**
  * What the floor plan cannot say about a house but its electrical design needs: supply, construction, appliances and the builder's preferences. See documents/electrical-engine-plan.md section 4.3. state selects the state rules applied on top of the national ones; which states the engine designs is decided by the rule pack.
@@ -402,4 +429,167 @@ export interface DecisionRequired {
   id: Id
   itemIds: Id[]
   question: string
+}
+/**
+ * An editable floor plan: walls, rooms, doors, windows, openings, labels and dimensions, in millimetres. Produced by the floor-plan analyser (floorplan/) from an uploaded image, edited in the editor, and read by the electrical engine, which never changes it. The image is only a reference: the geometry is complete without source. Coordinates are plan-local, origin at the top-left of the detected drawing region, y downwards. See documents/electrical-engine-plan.md sections 4.1 and 6.6.
+ */
+export interface FloorPlan {
+  version: 1
+  units: 'mm'
+  walls: Wall[]
+  rooms: Room[]
+  doors: Door[]
+  windows: Window[]
+  openings: Opening[]
+  labels: Label[]
+  dimensions: Dimension[]
+  source?: PlanSource
+  analysis?: AnalysisReport
+}
+/**
+ * A wall's centre line from start to end, and its thickness measured perpendicular to that line.
+ *
+ * This interface was referenced by `FloorPlan`'s JSON-Schema
+ * via the `definition` "wall".
+ */
+export interface Wall {
+  id: Id
+  start: Point
+  end: Point
+  thickness: PositiveMillimetres
+  confidence?: Confidence
+  source?: PlanItemSource
+}
+/**
+ * A room: its name as written on the plan (empty when none could be read), its outline, where its name is drawn, and an optional fill colour overriding the editor's default.
+ *
+ * This interface was referenced by `FloorPlan`'s JSON-Schema
+ * via the `definition` "room".
+ */
+export interface Room {
+  id: Id
+  name: string
+  /**
+   * @minItems 3
+   */
+  polygon: [Point, Point, Point, ...Point[]]
+  labelPosition: Point
+  colour?: string
+  confidence?: Confidence
+  source?: PlanItemSource
+}
+/**
+ * A door in a wall. position: distance from the wall's start to the door's centre. style: how it opens (swing when absent); a sliding or garage door has no hinge or swing, so hingeAtStart and swing are ignored for one. hingeAtStart: which jamb the hinge is on, in the wall's start-to-end direction. swing: which side the leaf opens to, 90 for the wall's left-hand normal, -90 for its right.
+ *
+ * This interface was referenced by `FloorPlan`'s JSON-Schema
+ * via the `definition` "door".
+ */
+export interface Door {
+  id: Id
+  wallId: Id
+  position: Millimetres
+  width: PositiveMillimetres
+  style?: DoorStyle
+  hingeAtStart?: boolean
+  swing?: DoorSwing
+  confidence?: Confidence
+  source?: PlanItemSource
+}
+/**
+ * A window in a wall. position: distance from the wall's start to the window's centre.
+ *
+ * This interface was referenced by `FloorPlan`'s JSON-Schema
+ * via the `definition` "window".
+ */
+export interface Window {
+  id: Id
+  wallId: Id
+  position: Millimetres
+  width: PositiveMillimetres
+  confidence?: Confidence
+  source?: PlanItemSource
+}
+/**
+ * A gap in a wall that is neither clearly a door nor clearly a window: a cased opening, or one whose symbol could not be read. Kept so the editor can show it and the user can say what it is; the engine treats it as a passage with no leaf. position: distance from the wall's start to the opening's centre.
+ *
+ * This interface was referenced by `FloorPlan`'s JSON-Schema
+ * via the `definition` "opening".
+ */
+export interface Opening {
+  id: Id
+  wallId: Id
+  position: Millimetres
+  width: PositiveMillimetres
+  confidence?: Confidence
+  source?: PlanItemSource
+}
+/**
+ * Text on the plan, at the centre of where it is written. roomId: set when the label was matched to a room during analysis.
+ *
+ * This interface was referenced by `FloorPlan`'s JSON-Schema
+ * via the `definition` "label".
+ */
+export interface Label {
+  id: Id
+  text: string
+  position: Point
+  type: LabelKind
+  roomId?: Id
+  confidence?: Confidence
+  source?: PlanItemSource
+}
+/**
+ * A measurement written on the plan, drawn from start to end: its value, in the unit it was written in (the line itself is in millimetres like everything else). Confirms the plan's scale.
+ *
+ * This interface was referenced by `FloorPlan`'s JSON-Schema
+ * via the `definition` "dimension".
+ */
+export interface Dimension {
+  id: Id
+  start: Point
+  end: Point
+  value: number
+  unit: DimensionUnit
+  confidence?: Confidence
+  source?: PlanItemSource
+}
+/**
+ * The image the plan was analysed from, absent for a hand-built plan. imageUrl: where the untouched upload can be loaded from. planRegion: the detected drawing region, in pixels of the original image. mmPerPx: the scale applied to produce the millimetre coordinates. scaleConfidence and scaleMethod: how sure that scale is, and how it was found; below a threshold the engine refuses to size cables until the plan is calibrated.
+ *
+ * This interface was referenced by `FloorPlan`'s JSON-Schema
+ * via the `definition` "planSource".
+ */
+export interface PlanSource {
+  imageUrl: string
+  imageWidth: number
+  imageHeight: number
+  planRegion: PlanRegion
+  mmPerPx: number
+  scaleConfidence: Confidence
+  scaleMethod: ScaleMethod
+}
+export interface PlanRegion {
+  x: number
+  y: number
+  width: number
+  height: number
+}
+/**
+ * What the analyser did and found, for the analysis screen: each step and whether it worked, the counts, and warnings. Diagnostic only: nothing reads it to design.
+ *
+ * This interface was referenced by `FloorPlan`'s JSON-Schema
+ * via the `definition` "analysisReport".
+ */
+export interface AnalysisReport {
+  steps: AnalysisStep[]
+  wallCount: number
+  roomCount: number
+  labelCount: number
+  dimensionCount: number
+  warnings: string[]
+}
+export interface AnalysisStep {
+  name: string
+  ok: boolean
+  detail: string
 }

@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { emptyFloorPlan, type FloorPlan, type Room } from './types'
 import { planChecks, polygonPerimeterM, roomAreaM2, roomSchedule } from './metrics'
 
-const rect = (x: number, y: number, w: number, h: number) => [
+const rect = (x: number, y: number, w: number, h: number): Room['polygon'] => [
   { x, y },
   { x: x + w, y },
   { x: x + w, y: y + h },

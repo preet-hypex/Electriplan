@@ -25,6 +25,11 @@ import com.hypex.electriplan.model.design.TripCurve;
 import com.hypex.electriplan.model.design.ZoneKind;
 import com.hypex.electriplan.model.fixture.FixtureKind;
 import com.hypex.electriplan.model.fixture.FixtureSource;
+import com.hypex.electriplan.model.plan.DimensionUnit;
+import com.hypex.electriplan.model.plan.DoorStyle;
+import com.hypex.electriplan.model.plan.LabelKind;
+import com.hypex.electriplan.model.plan.PlanItemSource;
+import com.hypex.electriplan.model.plan.ScaleMethod;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
@@ -53,7 +58,12 @@ class EnumParityTest {
                 Arguments.of(CircuitType.class, "electrical-design.schema.json", "/$defs/circuit/properties/type/enum"),
                 Arguments.of(DeviceKind.class, "electrical-design.schema.json", "/$defs/switchboard/properties/devices/items/properties/kind/enum"),
                 Arguments.of(TripCurve.class, "electrical-design.schema.json", "/$defs/switchboard/properties/devices/items/properties/curve/enum"),
-                Arguments.of(Severity.class, "electrical-design.schema.json", "/$defs/violation/properties/severity/enum"));
+                Arguments.of(Severity.class, "electrical-design.schema.json", "/$defs/violation/properties/severity/enum"),
+                Arguments.of(PlanItemSource.class, "floor-plan.schema.json", "/$defs/planItemSource/enum"),
+                Arguments.of(DoorStyle.class, "floor-plan.schema.json", "/$defs/door/properties/style/enum"),
+                Arguments.of(LabelKind.class, "floor-plan.schema.json", "/$defs/label/properties/type/enum"),
+                Arguments.of(DimensionUnit.class, "floor-plan.schema.json", "/$defs/dimension/properties/unit/enum"),
+                Arguments.of(ScaleMethod.class, "floor-plan.schema.json", "/$defs/planSource/properties/scaleMethod/enum"));
     }
 
     @ParameterizedTest(name = "{0} matches {1}#{2}")
