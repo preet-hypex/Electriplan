@@ -1,0 +1,60 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Common",
+  "description": "Building blocks shared by the Electriplan contracts. Lengths are millimetres unless a property name says otherwise (lengthM is metres, demandA amperes...).",
+  "$defs": {
+    "id": {
+      "title": "Id",
+      "description": "An identifier, unique within its document: wall_004, lt_001, c_L1.",
+      "type": "string",
+      "pattern": "^[A-Za-z][A-Za-z0-9_-]{0,63}$"
+    },
+    "millimetres": {
+      "title": "Millimetres",
+      "description": "A length or distance in millimetres, never negative.",
+      "type": "number",
+      "minimum": 0
+    },
+    "point": {
+      "title": "Point",
+      "description": "A position in plan coordinates, millimetres. Origin at the top-left of the drawing area, y downwards (SVG convention); may be negative.",
+      "type": "object",
+      "properties": {
+        "x": { "type": "number" },
+        "y": { "type": "number" }
+      },
+      "required": ["x", "y"],
+      "additionalProperties": false
+    },
+    "side": {
+      "title": "Side",
+      "description": "Which face of a wall, looking from the wall's start towards its end.",
+      "type": "string",
+      "enum": ["left", "right"]
+    },
+    "wallAnchor": {
+      "title": "WallAnchor",
+      "description": "A position on a wall face, so it moves with the wall: the wall, the distance from the wall's start, the face, and the height above the finished floor.",
+      "type": "object",
+      "properties": {
+        "wallId": { "$ref": "#/$defs/id" },
+        "position": { "$ref": "#/$defs/millimetres" },
+        "side": { "$ref": "#/$defs/side" },
+        "height": { "$ref": "#/$defs/millimetres" }
+      },
+      "required": ["wallId", "position", "side"],
+      "additionalProperties": false
+    },
+    "source": {
+      "title": "Source",
+      "description": "Who placed an item: the engine, or a person (who the engine then designs around and never moves).",
+      "type": "string",
+      "enum": ["engine", "manual"]
+    },
+    "australianState": {
+      "title": "AustralianState",
+      "type": "string",
+      "enum": ["NSW", "VIC", "QLD", "WA", "SA", "TAS", "ACT", "NT"]
+    }
+  }
+}

@@ -1,0 +1,19 @@
+{
+  "id": "shower_01",
+  "kind": "shower",
+  "roomId": "room_007",
+  "footprint": {
+    "centre": {
+      "x": 6450,
+      "y": 2100
+    },
+    "width": 0,
+    "depth": 900,
+    "rotationDeg": 0
+  },
+  "waterOutlet": {
+    "x": 6450,
+    "y": 1680
+  },
+  "source": "manual"
+}

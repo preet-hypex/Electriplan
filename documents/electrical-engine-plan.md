@@ -28,6 +28,30 @@ v1; stock checks and real quotations against Planna are the next iteration (§6.
 | Platform | **Electriplan, a Spring Modulith service separate from Planna One** (Java 21, Spring Boot 3, Spring Modulith 1.4 — same line as Planna One) | The engine is modules of the Electriplan API, with Electriplan's own database and release cycle (§6). Vision stays in Python. Integrates with Planna One ERP in the next iteration for stock and quotations (§6.7) |
 | Supply | **Single-phase only** | Brief `supply.phases` is fixed at 1. No phase balancing in v1 (moved to E17). If maximum demand exceeds what the distributor allows on a single phase, the engine raises a decision-required item recommending three-phase, rather than designing it |
 
+### Expanding beyond Victoria
+
+v1 designs Victorian houses, but nothing in the contracts, the model or the database is limited to
+Victoria: the brief accepts every state, distributors are database rows, and AS/NZS 3000 (fixtures,
+zones, circuits) is national. What differs by state is **rules** (smoke alarms in every bedroom in
+Queensland, each state's service and installation rules) and **reference data** (its distributors).
+Every design records which state's rules made it (`rulePack.state` in the design contract), so a
+sign-off stays traceable after more states are added.
+
+Adding a state, e.g. New South Wales:
+
+| Step | What | Code change? |
+|---|---|---|
+| 1 | Encode its rules as `rulepacks/au-residential/state/NSW.yaml`: smoke alarms, service and installation rules, anything that overrides the national pack | No — data |
+| 2 | A licensed electrician **from that state** signs the state rules off (recorded in the rule pack's `meta.yaml`, as for Victoria) | No |
+| 3 | Add its distributors (Ausgrid, Endeavour Energy, Essential Energy) to `electricity_distributor`, with their supply limits | No — a migration that inserts rows |
+| 4 | Reference plans from that state, designed by local electricians, to measure the engine against (§1) | No |
+| 5 | Release the rule pack. The state is now supported | No |
+
+**Rule for the engine (E0-S3 onwards): never hard-code "VIC only".** The states the engine designs
+are the states that have a **signed-off state file in the current rule pack**; the readiness check
+refuses any other state with a clear message ("Electriplan does not design NSW houses yet"). Adding
+a state is then a rule-pack release, not an engine change.
+
 ---
 
 ## Contents
@@ -804,9 +828,9 @@ a rule-pack entry where it touches a rule.
 | ID | Story | Acceptance criteria | Size |
 |---|---|---|---|
 | E0-S1 | Add the electrical modules to the Electriplan API | ~~Rename the application package~~ (done: `com.hypex.electriplan`); empty modules from §6.3 beside `security` and `users`; `ApplicationModules.verify()` test passes; health endpoint; Postgres + Flyway via Testcontainers; CI build; `DesignStage` contract and an orchestrator that runs an empty stage list and returns an empty valid design | M |
-| E0-S2 | `ElectricalDesign`, `ProjectBrief`, `Fixture` JSON Schemas + Java records | Schemas in `contracts/`; Java records with unit types; contract tests validate serialised output against the schemas; TS types generated for the editor | M |
+| E0-S2 | ✅ **Done** — `ElectricalDesign`, `ProjectBrief`, `Fixture` JSON Schemas + Java records ([contracts/](../contracts/README.md)) | Schemas in `contracts/`; Java records with unit types; contract tests validate serialised output against the schemas; TS types generated for the editor | M |
 | E0-S2a | FloorPlan schema as the shared contract | `contracts/floor-plan.schema.json`; Python and TS checked against it in CI; engine reads it into Java records and rejects unsupported versions | M |
-| E0-S3 | Rule-pack format, loader and schema validation | Loads YAML packs; rejects a rule without `id`, `tier`, `kind`, `cite`; tier precedence (state overrides national, company overrides policy only — never mandatory) tested | M |
+| E0-S3 | Rule-pack format, loader and schema validation | Loads YAML packs; rejects a rule without `id`, `tier`, `kind`, `cite`; tier precedence (state overrides national, company overrides policy only — never mandatory) tested; **supported states = states with a signed-off state file** (no hard-coded VIC; see *Expanding beyond Victoria*) | M |
 | E0-S4 | Rationale & decision-required plumbing | Any stage can attach rationale lines and decisions; they appear in the output and in the `validation` module's compliance report | S |
 | E0-S5 | Reference plan set | 10 typical Victorian single-storey, single-phase plans as FloorPlan + brief + fixtures: studio, 2-bed unit, 3-bed, 4-bed with ensuite, L-shaped living, open-plan kitchen with island, two bathrooms back-to-back, large garage, all-electric home (induction + heat pump, tests the single-phase demand limit), one plan per Victorian distributor across the set. Each designed independently by ≥ 2 electricians from the panel. Stored under `backend/src/test/resources/plans/` | M |
 | E0-S6 | Standards register | `meta.yaml` pins editions; a script lists every rule with its citation and ⚠ status; CI fails if a mandatory rule is unverified in a "release" pack | S |

@@ -32,6 +32,8 @@ jobs:
           cache: npm
           cache-dependency-path: frontend/package-lock.json
       - run: npm ci
+      - name: Contract types are up to date
+        run: npm run contracts:check
       - name: Typecheck
         run: npm run typecheck
       - name: Tests

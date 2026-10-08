@@ -1,0 +1,106 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Fixture",
+  "description": "A fixed item in a house that electrical design depends on: wet fixtures (wet-area zones are measured from them), benches (kitchen outlets follow them), appliances (dedicated circuits), the meter box and switchboard (where every cable starts). Placed on the floor plan; see documents/electrical-engine-plan.md section 4.2. wallAnchor: for fixtures fixed to a wall (basin, bench run, switchboard, rangehood), which wall and where, so the fixture moves with it. waterOutlet: showers and baths, the fixed water outlet that an unenclosed shower's zones are measured from. heightMm: height of the fixture's top above the floor; a shower screen's height decides whether it bounds a zone.",
+  "type": "object",
+  "properties": {
+    "id": {
+      "$ref": "common.schema.json#/$defs/id"
+    },
+    "kind": {
+      "title": "FixtureKind",
+      "type": "string",
+      "enum": [
+        "shower",
+        "bath",
+        "basin",
+        "wc",
+        "kitchen-sink",
+        "laundry-tub",
+        "shower-screen",
+        "bench-run",
+        "island-bench",
+        "cooktop",
+        "oven",
+        "rangehood",
+        "fridge-space",
+        "dishwasher",
+        "washing-machine",
+        "dryer",
+        "hot-water-unit",
+        "ac-indoor-unit",
+        "ac-outdoor-unit",
+        "meter-box",
+        "switchboard",
+        "pool"
+      ]
+    },
+    "roomId": {
+      "$ref": "common.schema.json#/$defs/id"
+    },
+    "footprint": {
+      "title": "Footprint",
+      "description": "The fixture's outline seen from above: centre, width along its own x axis, depth, and rotation in degrees clockwise.",
+      "type": "object",
+      "properties": {
+        "centre": {
+          "$ref": "common.schema.json#/$defs/point"
+        },
+        "width": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
+        "depth": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
+        "rotationDeg": {
+          "type": "number",
+          "minimum": -360,
+          "maximum": 360
+        }
+      },
+      "required": [
+        "centre",
+        "width",
+        "depth",
+        "rotationDeg"
+      ],
+      "additionalProperties": false
+    },
+    "wallAnchor": {
+      "$ref": "common.schema.json#/$defs/wallAnchor"
+    },
+    "waterOutlet": {
+      "$ref": "common.schema.json#/$defs/point"
+    },
+    "heightMm": {
+      "$ref": "common.schema.json#/$defs/millimetres"
+    },
+    "ratingKw": {
+      "description": "Appliances: nameplate rating, where known. Drives dedicated circuits and maximum demand.",
+      "type": "number",
+      "exclusiveMinimum": 0
+    },
+    "source": {
+      "description": "Placed by a person, or detected from the plan image (then to be confirmed).",
+      "type": "string",
+      "enum": [
+        "manual",
+        "vision"
+      ]
+    },
+    "confidence": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 1
+    }
+  },
+  "required": [
+    "id",
+    "kind",
+    "footprint",
+    "source"
+  ],
+  "additionalProperties": false
+}

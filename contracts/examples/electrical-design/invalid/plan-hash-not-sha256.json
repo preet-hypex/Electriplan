@@ -1,0 +1,357 @@
+{
+  "version": 1,
+  "planRef": {
+    "planHash": "md5:abc",
+    "planVersion": 3
+  },
+  "rulePack": {
+    "id": "au-residential",
+    "version": "2026.1",
+    "state": "VIC",
+    "standards": [
+      "AS/NZS 3000:2018+A3",
+      "VIC SIR 2024"
+    ]
+  },
+  "points": [
+    {
+      "id": "lt_001",
+      "kind": "downlight",
+      "roomId": "room_002",
+      "placement": {
+        "type": "ceiling",
+        "at": {
+          "x": 1200,
+          "y": 1050
+        }
+      },
+      "spec": {
+        "itemCode": "DL-IC4-10W-800LM",
+        "watts": 10,
+        "lumens": 800,
+        "ic": "IC-4",
+        "ip": "IP20"
+      },
+      "circuitId": "c_L1",
+      "controlledBy": [
+        "sw_001"
+      ],
+      "rationale": [
+        "lumen method: 2 x 800 lm for 120 lx in 12.4 m2",
+        "grid 1x2, wall offset 1050 mm"
+      ],
+      "source": "engine"
+    },
+    {
+      "id": "lt_002",
+      "kind": "downlight",
+      "roomId": "room_002",
+      "placement": {
+        "type": "ceiling",
+        "at": {
+          "x": 3300,
+          "y": 1050
+        }
+      },
+      "spec": {
+        "itemCode": "DL-IC4-10W-800LM",
+        "watts": 10,
+        "lumens": 800,
+        "ic": "IC-4",
+        "ip": "IP20"
+      },
+      "circuitId": "c_L1",
+      "controlledBy": [
+        "sw_001"
+      ],
+      "rationale": [
+        "lumen method: 2 x 800 lm for 120 lx in 12.4 m2",
+        "grid 1x2, wall offset 1050 mm"
+      ],
+      "source": "engine"
+    },
+    {
+      "id": "fan_001",
+      "kind": "exhaust-fan",
+      "roomId": "room_007",
+      "placement": {
+        "type": "ceiling",
+        "at": {
+          "x": 6100,
+          "y": 2500
+        }
+      },
+      "spec": {
+        "itemCode": "EF-250-IP44",
+        "watts": 30,
+        "ip": "IP44"
+      },
+      "circuitId": "c_L1",
+      "controlledBy": [
+        "sw_002"
+      ],
+      "rationale": [
+        "ensuite without an openable window: exhaust required (NCC)",
+        "outside bath zone 1"
+      ],
+      "source": "engine"
+    },
+    {
+      "id": "sw_001",
+      "kind": "switch",
+      "roomId": "room_002",
+      "placement": {
+        "type": "wall",
+        "wallId": "wall_004",
+        "position": 1460,
+        "side": "left",
+        "height": 1100
+      },
+      "spec": {
+        "itemCode": "SW-1G",
+        "gangs": 1,
+        "ways": [
+          "1-way"
+        ]
+      },
+      "controls": [
+        [
+          "lt_001",
+          "lt_002"
+        ]
+      ],
+      "rationale": [
+        "latch side of door_001, 100 mm from the architrave"
+      ],
+      "source": "engine"
+    },
+    {
+      "id": "sw_002",
+      "kind": "switch",
+      "roomId": "room_007",
+      "placement": {
+        "type": "wall",
+        "wallId": "wall_009",
+        "position": 300,
+        "side": "right",
+        "height": 1100
+      },
+      "spec": {
+        "itemCode": "SW-1G",
+        "gangs": 1,
+        "ways": [
+          "1-way"
+        ]
+      },
+      "controls": [
+        [
+          "fan_001"
+        ]
+      ],
+      "rationale": [
+        "outside the ensuite, at its door: switches are kept out of zones 1 and 2"
+      ],
+      "source": "engine"
+    },
+    {
+      "id": "gpo_001",
+      "kind": "gpo-double",
+      "roomId": "room_002",
+      "placement": {
+        "type": "wall",
+        "wallId": "wall_002",
+        "position": 450,
+        "side": "left",
+        "height": 300
+      },
+      "spec": {
+        "itemCode": "GPO-DBL-10A",
+        "ratingA": 10
+      },
+      "circuitId": "c_P1",
+      "rationale": [
+        "bedroom: double outlet each side of the likely bed wall (policy)"
+      ],
+      "source": "engine"
+    },
+    {
+      "id": "gpo_002",
+      "kind": "gpo-double",
+      "roomId": "room_002",
+      "placement": {
+        "type": "wall",
+        "wallId": "wall_002",
+        "position": 2950,
+        "side": "left",
+        "height": 300
+      },
+      "spec": {
+        "itemCode": "GPO-DBL-10A",
+        "ratingA": 10
+      },
+      "circuitId": "c_P1",
+      "rationale": [
+        "bedroom: double outlet each side of the likely bed wall (policy)"
+      ],
+      "source": "manual"
+    },
+    {
+      "id": "sa_001",
+      "kind": "smoke-alarm",
+      "placement": {
+        "type": "ceiling",
+        "at": {
+          "x": 4800,
+          "y": 300
+        }
+      },
+      "spec": {
+        "itemCode": "SA-240V-PE"
+      },
+      "circuitId": "c_L1",
+      "rationale": [
+        "hallway serving bedrooms (NCC)",
+        "more than 300 mm from walls"
+      ],
+      "source": "engine"
+    }
+  ],
+  "zones": [
+    {
+      "id": "z_001",
+      "kind": "bath-zone-1",
+      "fixtureId": "shower_01",
+      "polygon": [
+        {
+          "x": 5250,
+          "y": 1680
+        },
+        {
+          "x": 7650,
+          "y": 1680
+        },
+        {
+          "x": 7650,
+          "y": 2900
+        },
+        {
+          "x": 5250,
+          "y": 2900
+        }
+      ],
+      "floorToHeight": 2250,
+      "rule": "AS/NZS 3000 cl. 6.2.2"
+    }
+  ],
+  "circuits": [
+    {
+      "id": "c_L1",
+      "type": "lighting",
+      "label": "Lights - Bed 2, ensuite and hall",
+      "points": [
+        "lt_001",
+        "lt_002",
+        "fan_001",
+        "sa_001"
+      ],
+      "protectionId": "p_01",
+      "demandA": 0.4,
+      "cable": {
+        "csaMm2": 1.5,
+        "type": "TPS 2C+E",
+        "lengthM": 24.6
+      },
+      "voltageDropPct": 0.4,
+      "zsOhm": 1.32,
+      "zsMaxOhm": 7.28,
+      "route": [
+        {
+          "from": "board",
+          "to": "sa_001",
+          "lengthM": 9.2
+        },
+        {
+          "from": "sa_001",
+          "to": "lt_001",
+          "lengthM": 4.1
+        }
+      ]
+    },
+    {
+      "id": "c_P1",
+      "type": "power",
+      "label": "Power - bedrooms",
+      "points": [
+        "gpo_001",
+        "gpo_002"
+      ],
+      "protectionId": "p_02",
+      "demandA": 10,
+      "cable": {
+        "csaMm2": 2.5,
+        "type": "TPS 2C+E",
+        "lengthM": 18
+      }
+    }
+  ],
+  "switchboard": {
+    "location": {
+      "wallId": "wall_031",
+      "position": 600,
+      "side": "left",
+      "height": 1500
+    },
+    "mainSwitch": {
+      "ratingA": 63,
+      "poles": 1
+    },
+    "devices": [
+      {
+        "id": "p_01",
+        "kind": "RCBO",
+        "ratingA": 10,
+        "curve": "C",
+        "rcdMa": 30,
+        "circuits": [
+          "c_L1"
+        ]
+      },
+      {
+        "id": "p_02",
+        "kind": "RCBO",
+        "ratingA": 20,
+        "curve": "C",
+        "rcdMa": 30,
+        "circuits": [
+          "c_P1"
+        ]
+      }
+    ],
+    "spd": {
+      "fitted": true,
+      "reason": "Company policy: surge protection on every new board"
+    },
+    "polesUsed": 4,
+    "polesTotal": 24
+  },
+  "maxDemand": {
+    "method": "AS/NZS 3000 Appendix C",
+    "perPhaseA": [
+      48.6
+    ],
+    "consumerMains": {
+      "csaMm2": 16,
+      "type": "XLPE Cu"
+    }
+  },
+  "violations": [],
+  "decisionsRequired": [
+    {
+      "id": "d_001",
+      "itemIds": [
+        "fan_001"
+      ],
+      "question": "Exhaust fan duct route to outside is not on the plan; assumed through the roof space."
+    }
+  ]
+}

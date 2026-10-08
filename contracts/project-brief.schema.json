@@ -1,0 +1,176 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "ProjectBrief",
+  "description": "What the floor plan cannot say about a house but its electrical design needs: supply, construction, appliances and the builder's preferences. See documents/electrical-engine-plan.md section 4.3. state selects the state rules applied on top of the national ones; which states the engine designs is decided by the rule pack.",
+  "type": "object",
+  "properties": {
+    "version": {
+      "const": 1
+    },
+    "state": {
+      "$ref": "common.schema.json#/$defs/australianState"
+    },
+    "distributor": {
+      "title": "DistributorCode",
+      "description": "The electricity distributor (DNSP), by code: jemena, citipower... Configurable reference data, not a fixed list: the codes are rows of the database table electriplan.electricity_distributor (GET /api/reference/distributors), and the API checks a brief's code exists there and belongs to the brief's state. Same format as that table's code column.",
+      "type": "string",
+      "pattern": "^[a-z0-9_]+$",
+      "maxLength": 40
+    },
+    "supply": {
+      "title": "Supply",
+      "type": "object",
+      "properties": {
+        "phases": {
+          "description": "v1 designs single-phase only.",
+          "enum": [
+            1,
+            3
+          ]
+        },
+        "nominalVoltage": {
+          "const": 230
+        },
+        "consumerMainsLengthM": {
+          "description": "Metres from the point of supply to the switchboard, if known.",
+          "type": "number",
+          "exclusiveMinimum": 0
+        }
+      },
+      "required": [
+        "phases",
+        "nominalVoltage"
+      ],
+      "additionalProperties": false
+    },
+    "construction": {
+      "title": "Construction",
+      "type": "object",
+      "properties": {
+        "storeys": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 4
+        },
+        "defaultCeilingHeight": {
+          "type": "number",
+          "minimum": 2100,
+          "maximum": 6000
+        },
+        "ceilingInsulated": {
+          "type": "boolean"
+        },
+        "roofSpaceAccessible": {
+          "type": "boolean"
+        },
+        "slab": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "storeys",
+        "defaultCeilingHeight",
+        "ceilingInsulated",
+        "roofSpaceAccessible",
+        "slab"
+      ],
+      "additionalProperties": false
+    },
+    "appliances": {
+      "title": "Appliances",
+      "type": "object",
+      "properties": {
+        "cooktop": {
+          "title": "CooktopType",
+          "type": "string",
+          "enum": [
+            "induction",
+            "electric",
+            "gas",
+            "none"
+          ]
+        },
+        "oven": {
+          "title": "OvenType",
+          "type": "string",
+          "enum": [
+            "electric",
+            "gas",
+            "none"
+          ]
+        },
+        "hotWater": {
+          "title": "HotWaterType",
+          "type": "string",
+          "enum": [
+            "heat-pump",
+            "electric-storage",
+            "electric-instantaneous",
+            "gas",
+            "solar-boosted"
+          ]
+        },
+        "airConditioning": {
+          "title": "AirConditioningType",
+          "type": "string",
+          "enum": [
+            "ducted",
+            "split",
+            "none"
+          ]
+        },
+        "evCharger": {
+          "type": "boolean"
+        },
+        "pool": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "cooktop",
+        "oven",
+        "hotWater",
+        "airConditioning",
+        "evCharger",
+        "pool"
+      ],
+      "additionalProperties": false
+    },
+    "preferences": {
+      "title": "Preferences",
+      "description": "The builder's overrides of design-policy defaults for this house. Never overrides a mandatory rule. Omitted means the organisation's policy applies.",
+      "type": "object",
+      "properties": {
+        "downlightItemCode": {
+          "type": "string",
+          "pattern": "^[A-Z0-9][A-Z0-9.-]*$"
+        },
+        "switchHeight": {
+          "type": "number",
+          "minimum": 900,
+          "maximum": 1400
+        },
+        "gpoHeight": {
+          "type": "number",
+          "minimum": 200,
+          "maximum": 1400
+        },
+        "spareSwitchboardPolesPct": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 100
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "required": [
+    "version",
+    "state",
+    "distributor",
+    "supply",
+    "construction",
+    "appliances"
+  ],
+  "additionalProperties": false
+}

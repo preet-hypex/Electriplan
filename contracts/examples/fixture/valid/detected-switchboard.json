@@ -1,0 +1,9 @@
+{
+  "id": "board_01",
+  "kind": "switchboard",
+  "roomId": "room_010",
+  "footprint": { "centre": { "x": 9800, "y": 450 }, "width": 450, "depth": 150, "rotationDeg": 0 },
+  "wallAnchor": { "wallId": "wall_031", "position": 600, "side": "left", "height": 1500 },
+  "source": "vision",
+  "confidence": 0.72
+}
