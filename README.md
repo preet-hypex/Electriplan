@@ -164,7 +164,8 @@ of `/api/*` to the API on 8081.
 |---|---|
 | Frontend tests and types | `cd frontend && npm test && npm run typecheck` |
 | Analyser tests (needs Python 3.11+ and `brew install tesseract`) | `floorplan/run.sh test` |
-| API tests, without installing Java | `docker run --rm -v "$PWD/backend":/src -w /src maven:3.9-eclipse-temurin-21 mvn -B test` |
+| API tests, all of them (needs JDK 21, Maven and Docker running) | `./scripts/test-api.sh` — starts a throwaway Postgres, runs `mvn verify` against it as CI does, and removes it afterwards, pass or fail. Extra Maven arguments pass through, e.g. `./scripts/test-api.sh -Dtest=ModularityTests` |
+| API tests, without installing Java (the Postgres tests are skipped) | `docker run --rm -v "$PWD/backend":/src -w /src maven:3.9-eclipse-temurin-21 mvn -B test` |
 | API outside Docker (needs JDK 21: `brew install openjdk@21`, and Maven) | `backend/run.sh` |
 | Analyser outside Docker | `floorplan/run.sh` (port 8082) |
 
