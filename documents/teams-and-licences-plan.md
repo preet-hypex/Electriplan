@@ -17,6 +17,9 @@ Supabase signs in can call every endpoint.
 | Roles | **Owner, admin, builder, electrician, viewer** — one role per person per company |
 | Can people from another company see or review a design? | **No, never.** No external reviewers. Only the company's own electricians review its designs |
 | Who creates a company and sets its seats? | **Electriplan (the platform operator)**, when the licence is sold. Public sign-up stays off. Self-service purchase can come later without changing the model |
+| Do viewers use a seat? | **No — viewers are free**, so a company can show plans to homeowners or site staff without buying seats. Only roles that change things (owner, admin, builder, electrician) use seats |
+| Trial | **3 seats for 14 days**, then the company must hold an active licence |
+| Data after a licence closes | **Kept 90 days**, then deleted |
 | Can one person belong to two companies? | Yes (e.g. an electrician contracting for two builders), with a separate role in each. Each request acts in exactly one company, and nothing crosses between them |
 
 ## 2. What already exists, and what is missing
@@ -39,10 +42,12 @@ New columns on `organisation` (migration V3):
 |---|---|
 | `seat_limit` | How many people the licence covers. Set by the operator |
 | `licence_starts_on`, `licence_ends_on` | The licence period. After the end date the company becomes read-only (below) |
+| `closed_at` | When the licence was closed; data is deleted 90 days later |
 
-**What uses a seat:** every **active member** and every **pending invitation** (so a company cannot
-invite past its limit and let the invitations race). Suspended members, revoked and expired
-invitations do not. Enforced **in the database** by a trigger on `organisation_member` and
+**What uses a seat:** every **active member** and every **pending invitation** whose role is owner,
+admin, builder or electrician (so a company cannot invite past its limit and let the invitations
+race). **Viewers never use a seat**, nor do suspended members or revoked and expired invitations.
+Changing a viewer into any other role needs a free seat. Enforced **in the database** by a trigger on `organisation_member` and
 `organisation_invitation`: adding past the limit is refused whatever the code path. Lowering the
 limit below current use is allowed (the operator may do it at renewal) but blocks new invitations
 until the company is back under it.
@@ -51,12 +56,13 @@ until the company is back under it.
 
 | State | Members can |
 |---|---|
-| `trial` | Everything, with the trial seat limit |
+| `trial` | Everything, with **3 seats for 14 days** (`licence_ends_on` = start + 14 days) |
 | `active` | Everything |
 | `suspended` (lapsed, unpaid) | **Read only**: view and download, no changes. A banner says why |
-| `closed` | Nothing. Data kept for the retention period, then removed by the operator |
+| `closed` | Nothing. Data **kept 90 days** after closing (in case the company comes back or asks for an export), then deleted |
 
-A daily job moves companies past `licence_ends_on` from `active` to `suspended`.
+A daily job moves companies past `licence_ends_on` from `trial` or `active` to `suspended`, and
+deletes companies `closed` for more than 90 days (`closed_at` records when).
 
 ## 4. Roles and permissions
 
@@ -109,7 +115,7 @@ Sizes: **S** ≤ 2 days, **M** 3–5 days, **L** 1–2 weeks.
 
 | ID | Story | Acceptance criteria | Size |
 |---|---|---|---|
-| T1 | Seats and licence period | Migration V3 adds `seat_limit`, `licence_starts_on`, `licence_ends_on`; a trigger refuses a member or invitation past the limit; schema-rules tests for at, over and lowered limits | S |
+| T1 | Seats and licence period | Migration V3 adds `seat_limit`, `licence_starts_on`, `licence_ends_on`, `closed_at`; trial defaults (3 seats, 14 days); a trigger refuses a seated member or invitation past the limit, never counts viewers, and checks a viewer promoted to another role; schema-rules tests for at, over and lowered limits, viewers, and promotion | S |
 | T2 | Runtime database role | A `NOSUPERUSER NOBYPASSRLS` role the API connects as, with the grants it needs; Flyway still migrates as the owner; local Docker, CI and README updated | M |
 | T3 | Company context per request | `X-Organisation-Id` resolution, membership and status checks (403), `SET LOCAL` per transaction; JPA entities for organisation and member; Postgres tests prove a query sees only the current company | L |
 | T4 | Permission model | `Permission` enum and the role matrix in §4 in one place; an annotation on endpoints; a test for **every role × every permission**; the always-rules (last owner, own role) | M |
@@ -135,8 +141,7 @@ designs, reviews) needs to know which company the request is for and what the pe
 - **Isolation:** two companies seeded side by side; every list and every id lookup checked for
   leakage.
 
-## 8. Open questions
+## 8. Decided
 
-1. Retention after `closed`: how long is a closed company's data kept (e.g. 90 days)?
-2. Trial: how many seats and how many days?
-3. Does a viewer seat cost the same as any other seat, or are viewers free?
+Retention after closing (90 days), trial (3 seats, 14 days) and viewer seats (free) were settled on
+2026-10-08 and are in §1.
