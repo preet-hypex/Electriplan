@@ -9,6 +9,7 @@ import com.hypex.electriplan.projects.dto.HouseSummary;
 import com.hypex.electriplan.projects.dto.Level;
 import com.hypex.electriplan.projects.dto.Project;
 import com.hypex.electriplan.projects.dto.ProjectRef;
+import com.hypex.electriplan.projects.dto.RecentHouse;
 import com.hypex.electriplan.projects.dto.ProjectSummary;
 import com.hypex.electriplan.projects.dto.Site;
 import com.hypex.electriplan.projects.dto.StageCount;
@@ -83,6 +84,11 @@ public final class ProjectViews {
                 h.getCreatedAt(),
                 h.getUpdatedAt(),
                 h.getLockVersion());
+    }
+
+    static RecentHouse recentHouse(HouseEntity h, ProjectEntity project) {
+        return new RecentHouse(h.getId(), h.getName(), h.getStage(), h.getUpdatedAt(),
+                new ProjectRef(project.getId(), project.getReference(), project.getName()));
     }
 
     static Level level(LevelEntity l) {

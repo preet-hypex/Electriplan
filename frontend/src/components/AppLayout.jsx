@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
-import { NavLink } from 'react-router-dom'
+import { NavLink, useLocation } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
+import { useCompany } from '../context/CompanyContext'
 import brand from '../lib/brand'
 import Icon from './Icon'
 import Logo from './Logo'
@@ -8,8 +9,8 @@ import Logo from './Logo'
 // What the product does, in workflow order. Only sections that exist are links;
 // the rest are shown so people can see where the product is going.
 const NAV = [
-  { to: '/', label: 'Home', icon: 'home', end: true },
-  { to: '/floor-plan', label: 'Floor plans', icon: 'plan' },
+  { to: '/', label: 'Projects', icon: 'folder', end: true, also: '/projects' },
+  { to: '/floor-plan', label: 'Floor-plan editor', icon: 'plan' },
   { label: 'Electrical design', icon: 'bolt', soon: true },
   { label: 'Reviews', icon: 'review', soon: true },
   { label: 'Quotes', icon: 'quote', soon: true },
@@ -44,6 +45,22 @@ function writeCollapsed(collapsed) {
   }
 }
 
+/** The company you are working in; a choice when you belong to several. */
+function CompanySwitcher() {
+  const { status, company, companies, switchTo } = useCompany()
+  if (status !== 'ready' || !company) return null
+  if (companies.length < 2) {
+    return <div className="side-company" title={company.name}><span className="side-company-name">{company.name}</span></div>
+  }
+  return (
+    <div className="side-company">
+      <select className="side-company-pick" aria-label="Company" value={company.id} onChange={e => switchTo(e.target.value)}>
+        {companies.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+      </select>
+    </div>
+  )
+}
+
 /**
  * The frame around every signed-in page. `fill` is for tools such as the
  * floor-plan editor: the page is exactly the window's height and the content
@@ -51,6 +68,7 @@ function writeCollapsed(collapsed) {
  */
 export default function AppLayout({ title, actions, fill = false, children }) {
   const { user, signOut } = useAuth()
+  const { pathname } = useLocation()
   const [collapsed, setCollapsed] = useState(readCollapsed)
 
   const toggleSidebar = () => {
@@ -68,6 +86,7 @@ export default function AppLayout({ title, actions, fill = false, children }) {
     <div className={`shell${fill ? ' fill' : ''}${collapsed ? ' collapsed' : ''}`}>
       <aside className="side" id="app-sidebar">
         <NavLink to="/" className="side-brand"><Logo /></NavLink>
+        <CompanySwitcher />
 
         <nav className="side-nav" aria-label="Main">
           <div className="side-label">Workspace</div>
@@ -78,7 +97,8 @@ export default function AppLayout({ title, actions, fill = false, children }) {
               </span>
             )
             : (
-              <NavLink key={item.label} to={item.to} end={item.end} className="side-link" title={item.label}>
+              <NavLink key={item.label} to={item.to} end={item.end} title={item.label}
+                className={({ isActive }) => `side-link${isActive || (item.also && pathname.startsWith(item.also)) ? ' active' : ''}`}>
                 <Icon name={item.icon} /><span>{item.label}</span>
               </NavLink>
             ))}

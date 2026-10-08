@@ -106,6 +106,7 @@ company-scoped. Seeing needs `company.view`; creating, changing, archiving and r
 | `/api/projects/{id}` | PUT | Change its details: send every field and the `version` you read |
 | `/api/projects/{id}/archive`, `/restore` | POST | Archive (leaves the list, read-only with its houses) or restore |
 | `/api/projects/{id}/houses` | POST | Add a house (201): it starts `awaiting_upload`, with its ground floor (`levels[0]`) |
+| `/api/houses/recent?size=` | GET | The houses changed most recently (not archived, in projects that are not), newest first, each with its project's id, reference and name: "continue where you left off". `size` 1–20 (default 6) |
 | `/api/houses/{id}` | GET | The house with its project's id, reference and name, its storeys and stage |
 | `/api/houses/{id}` | PUT | Change its name or dwelling type, with its `version` |
 | `/api/houses/{id}/archive`, `/restore` | POST | Archive or restore a house (not while its project is archived) |

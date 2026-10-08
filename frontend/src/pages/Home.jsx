@@ -1,124 +1,189 @@
+import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
+import { useCompany } from '../context/CompanyContext'
 import AppLayout, { displayName } from '../components/AppLayout'
+import CompanyGate from '../components/CompanyGate'
 import Icon from '../components/Icon'
+import StageBadge from '../components/StageBadge'
+import { STATUS_LABELS, ago, listProjects, recentHouses } from '../api/projects'
 
-// The workflow the product is built around. Status is the truth about what can
-// be used today, not a promise.
-const STEPS = [
-  {
-    icon: 'plan', title: 'Floor plan', status: 'available', to: '/floor-plan',
-    text: 'Upload a plan image. Walls, rooms, doors, windows and room names are found and laid out to scale.',
-  },
-  {
-    icon: 'bolt', title: 'Electrical layout', status: 'next',
-    text: 'Lights, switches, power points, wet-area zones and circuits, laid out to AS/NZS 3000.',
-  },
-  {
-    icon: 'review', title: 'Electrician review', status: 'planned',
-    text: 'A licensed electrician checks, adjusts and signs off the design.',
-  },
-  {
-    icon: 'quote', title: 'Quote', status: 'planned',
-    text: 'A bill of materials with cable lengths, ready to price and quote.',
-  },
-]
-
-const STATUS = { available: 'Available', next: 'Coming next', planned: 'Planned' }
+const PAGE_SIZE = 25
 
 function greeting(date = new Date()) {
   const h = date.getHours()
   return h < 12 ? 'Good morning' : h < 18 ? 'Good afternoon' : 'Good evening'
 }
 
-/** The landing page after signing in. */
+/** Text typed into the search box, settled for a moment before searching. */
+function useSettled(value, ms = 300) {
+  const [settled, setSettled] = useState(value)
+  useEffect(() => {
+    const timer = setTimeout(() => setSettled(value), ms)
+    return () => clearTimeout(timer)
+  }, [value, ms])
+  return settled
+}
+
+/** The landing page after signing in: the company's projects, and where to pick up work. */
 export default function Home() {
   const { user } = useAuth()
+  const { company, can } = useCompany()
+  const newProject = can('project.edit') && (
+    <Link to="/projects/new" className="btn pri"><Icon name="plus" size={16} />New project</Link>
+  )
 
   return (
-    <AppLayout
-      title="Home"
-      actions={<Link to="/floor-plan" className="btn pri"><Icon name="upload" size={16} />New floor plan</Link>}
-    >
-      <section className="hero">
-        <div>
-          <p className="eyebrow">{greeting()}, {displayName(user)}</p>
-          <h2>From a floor plan to an electrician-ready design.</h2>
-          <p className="lede">Start with a floor-plan image. We turn it into an accurate, editable plan — the base
-            for the electrical layout, review and quote that follow.</p>
-        </div>
-        <div className="hero-actions">
-          <Link to="/floor-plan" className="btn pri lg"><Icon name="upload" size={16} />Upload a floor plan</Link>
-          <span className="hint">JPG or PNG, up to 25 MB</span>
-        </div>
+    <AppLayout title="Projects" actions={newProject}>
+      <section className="welcome">
+        <p className="eyebrow">{greeting()}, {displayName(user)}</p>
+        {company && <h2>{company.name}</h2>}
       </section>
-
-      <section aria-labelledby="workflow">
-        <div className="section-head">
-          <h3 id="workflow">Your workflow</h3>
-          <span className="meta">Four steps from plan to quote</span>
-        </div>
-        <ol className="steps">
-          {STEPS.map((step, i) => {
-            const body = (
-              <>
-                <div className="step-top">
-                  <span className="step-icon"><Icon name={step.icon} /></span>
-                  <span className={`badge ${step.status}`}>{STATUS[step.status]}</span>
-                </div>
-                <div className="step-num">Step {i + 1}</div>
-                <h4>{step.title}</h4>
-                <p>{step.text}</p>
-                {step.to && <span className="step-go">Open <Icon name="arrow" size={14} /></span>}
-              </>
-            )
-            return (
-              <li key={step.title}>
-                {step.to
-                  ? <Link to={step.to} className="step live">{body}</Link>
-                  : <div className="step" aria-disabled="true">{body}</div>}
-              </li>
-            )
-          })}
-        </ol>
-      </section>
-
-      <div className="split">
-        <section className="panel" aria-labelledby="recent">
-          <div className="pnh"><h3 id="recent">Recent projects</h3></div>
-          <div className="empty">
-            <span className="empty-icon"><Icon name="folder" size={22} /></span>
-            <h4>No saved projects yet</h4>
-            <p>For now, plans are saved as JSON files from the editor and reopened from the upload screen.
-              Projects saved to your account arrive with the electrical layout.</p>
-            <Link to="/floor-plan" className="btn">Open the floor-plan editor</Link>
-          </div>
-        </section>
-
-        <section className="panel" aria-labelledby="start">
-          <div className="pnh"><h3 id="start">Getting started</h3></div>
-          <ol className="checklist">
-            <li className="done">
-              <span className="tick"><Icon name="check" size={14} /></span>
-              <div><b>Sign in</b><p>You’re signed in as {user.email}.</p></div>
-            </li>
-            <li>
-              <span className="tick">2</span>
-              <div><b>Upload a floor plan</b><p>Drop a JPG or PNG of a plan, or open the sample plan from the
-                upload screen.</p></div>
-            </li>
-            <li>
-              <span className="tick">3</span>
-              <div><b>Check the scale</b><p>Use <i>Calibrate scale</i> in the editor with a dimension you
-                know, so every length is right.</p></div>
-            </li>
-            <li>
-              <span className="tick">4</span>
-              <div><b>Correct and save</b><p>Fix any walls, rooms or openings, then <i>Save JSON</i>.</p></div>
-            </li>
-          </ol>
-        </section>
-      </div>
+      <CompanyGate>
+        <RecentHouses />
+        <ProjectList canCreate={can('project.edit')} />
+      </CompanyGate>
     </AppLayout>
+  )
+}
+
+/** "Continue where you left off": the houses changed most recently. Hidden until there are some. */
+function RecentHouses() {
+  const [houses, setHouses] = useState([])
+
+  useEffect(() => {
+    let current = true
+    recentHouses(4).then(list => current && setHouses(list)).catch(() => {})
+    return () => { current = false }
+  }, [])
+
+  if (houses.length === 0) return null
+  return (
+    <section aria-labelledby="recent">
+      <div className="section-head"><h3 id="recent">Continue where you left off</h3></div>
+      <ul className="recent">
+        {houses.map(house => (
+          <li key={house.id}>
+            <Link to={`/projects/${house.project.id}`} className="recent-card">
+              <span className="recent-project">{house.project.reference} · {house.project.name}</span>
+              <span className="recent-house">{house.name}</span>
+              <span className="recent-foot"><StageBadge stage={house.stage} /><span className="meta">{ago(house.updatedAt)}</span></span>
+            </Link>
+          </li>
+        ))}
+      </ul>
+    </section>
+  )
+}
+
+/** The project list: search, status and archived filters, and pages. */
+function ProjectList({ canCreate }) {
+  const [words, setWords] = useState('')
+  const [status, setStatus] = useState('')
+  const [archived, setArchived] = useState(false)
+  const [page, setPage] = useState(0)
+  const [result, setResult] = useState({ loading: true })
+  const query = useSettled(words)
+
+  // A new search starts from the first page.
+  useEffect(() => setPage(0), [query, status, archived])
+
+  useEffect(() => {
+    let current = true
+    setResult(r => ({ ...r, loading: true }))
+    listProjects({ q: query, status: status || undefined, archived: archived || undefined, page, size: PAGE_SIZE })
+      .then(data => current && setResult({ data }))
+      .catch(e => current && setResult({ error: e.message }))
+    return () => { current = false }
+  }, [query, status, archived, page])
+
+  const filtering = query !== '' || status !== '' || archived
+  const data = result.data
+
+  return (
+    <section className="panel" aria-labelledby="projects">
+      <div className="pnh">
+        <h3 id="projects">{archived ? 'Archived projects' : 'Projects'}</h3>
+        {data && <span className="meta">{data.total} {data.total === 1 ? 'project' : 'projects'}</span>}
+      </div>
+      <div className="toolbar">
+        <input className="in search" type="search" placeholder="Search name, reference, street or suburb"
+          aria-label="Search projects" value={words} onChange={e => setWords(e.target.value)} />
+        <select className="in" aria-label="Status" value={status} onChange={e => setStatus(e.target.value)}>
+          <option value="">Any status</option>
+          {Object.entries(STATUS_LABELS).map(([code, label]) => <option key={code} value={code}>{label}</option>)}
+        </select>
+        <label className="check">
+          <input type="checkbox" checked={archived} onChange={e => setArchived(e.target.checked)} /> Archived
+        </label>
+      </div>
+
+      {result.error && <div className="callout bad" role="alert">The projects could not be loaded: {result.error}</div>}
+      {data && data.items.length === 0 && (filtering
+        ? <div className="empty"><h4>No projects match</h4><p>Try other words, or clear the filters.</p></div>
+        : <NoProjectsYet canCreate={canCreate} />)}
+      {data && data.items.length > 0 && <ProjectTable items={data.items} />}
+      {data && data.total > PAGE_SIZE && (
+        <Pager page={page} size={PAGE_SIZE} total={data.total} onPage={setPage} />
+      )}
+      {result.loading && !data && <p className="hint pad">Loading projects…</p>}
+    </section>
+  )
+}
+
+function NoProjectsYet({ canCreate }) {
+  return (
+    <div className="empty">
+      <span className="empty-icon"><Icon name="folder" size={22} /></span>
+      <h4>No projects yet</h4>
+      {canCreate
+        ? (
+          <>
+            <p>A project is a job at one site. Add its houses, then their floor plans.</p>
+            <Link to="/projects/new" className="btn pri"><Icon name="plus" size={16} />Start your first project</Link>
+          </>
+        )
+        : <p>An owner, admin or builder in your company starts projects. They will appear here.</p>}
+    </div>
+  )
+}
+
+function ProjectTable({ items }) {
+  return (
+    <table className="table">
+      <thead>
+        <tr><th>Reference</th><th>Project</th><th>Site</th><th>Houses</th><th className="right">Last activity</th></tr>
+      </thead>
+      <tbody>
+        {items.map(p => (
+          <tr key={p.id}>
+            <td className="mono">{p.reference}</td>
+            <td>
+              <Link to={`/projects/${p.id}`} className="row-link">{p.name}</Link>
+              {p.status !== 'active' && <span className="status-tag">{STATUS_LABELS[p.status]}</span>}
+            </td>
+            <td>{[p.suburb, p.state].filter(Boolean).join(', ')}</td>
+            <td>
+              {p.houseCount === 0
+                ? <span className="meta">None yet</span>
+                : <span className="stages">{p.stages.map(s => <StageBadge key={s.stage} stage={s.stage} count={s.count} />)}</span>}
+            </td>
+            <td className="right meta">{ago(p.lastActivityAt)}</td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  )
+}
+
+function Pager({ page, size, total, onPage }) {
+  const from = page * size + 1
+  const to = Math.min(total, (page + 1) * size)
+  return (
+    <div className="pager">
+      <span className="meta">{from}–{to} of {total}</span>
+      <button type="button" className="btn" disabled={page === 0} onClick={() => onPage(page - 1)}>Previous</button>
+      <button type="button" className="btn" disabled={to >= total} onClick={() => onPage(page + 1)}>Next</button>
+    </div>
   )
 }

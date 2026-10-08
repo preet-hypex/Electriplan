@@ -1,5 +1,6 @@
 package com.hypex.electriplan.projects.service;
 
+import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
 
@@ -10,6 +11,7 @@ import com.hypex.electriplan.projects.domain.DwellingType;
 import com.hypex.electriplan.projects.domain.ProjectsProblem;
 import com.hypex.electriplan.projects.dto.House;
 import com.hypex.electriplan.projects.dto.HouseForm;
+import com.hypex.electriplan.projects.dto.RecentHouse;
 import com.hypex.electriplan.projects.entity.HouseEntity;
 import com.hypex.electriplan.projects.entity.LevelEntity;
 import com.hypex.electriplan.projects.entity.ProjectEntity;
@@ -17,6 +19,7 @@ import com.hypex.electriplan.tenancy.domain.CompanyContext;
 import com.hypex.electriplan.tenancy.service.CurrentCompany;
 
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -50,6 +53,19 @@ public class HousesService {
         HouseEntity saved = houses.saveAndFlush(house);
         levels.saveAndFlush(LevelEntity.groundFloor(saved));
         return view(saved, project);
+    }
+
+    static final int MAX_RECENT = 20;
+
+    /** The houses changed most recently in the company, newest first: where to pick up work. */
+    @Transactional(readOnly = true)
+    public List<RecentHouse> recent(int size) {
+        if (size < 1 || size > MAX_RECENT) {
+            throw ProjectsProblem.invalid("size", "Ask for 1 to " + MAX_RECENT + " houses");
+        }
+        return houses.findRecentlyChanged(PageRequest.of(0, size)).stream()
+                .map(row -> ProjectViews.recentHouse(row.house(), row.project()))
+                .toList();
     }
 
     @Transactional(readOnly = true)

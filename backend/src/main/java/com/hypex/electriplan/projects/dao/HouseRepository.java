@@ -7,7 +7,9 @@ import java.util.UUID;
 import com.hypex.electriplan.projects.domain.HouseStage;
 import com.hypex.electriplan.projects.domain.ProjectsProblem;
 import com.hypex.electriplan.projects.entity.HouseEntity;
+import com.hypex.electriplan.projects.entity.ProjectEntity;
 
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 
@@ -30,5 +32,17 @@ public interface HouseRepository extends JpaRepository<HouseEntity, UUID> {
     List<StageTally> countByStage(Collection<UUID> projects);
 
     public record StageTally(UUID projectId, HouseStage stage, long count) {
+    }
+
+    /** Houses that are not archived, in projects that are not archived, most recently changed first. */
+    @Query("""
+            select new com.hypex.electriplan.projects.dao.HouseRepository$HouseInProject(h, p)
+              from HouseEntity h join ProjectEntity p on p.id = h.projectId
+             where h.archivedAt is null and p.archivedAt is null
+             order by h.updatedAt desc, h.name""")
+    List<HouseInProject> findRecentlyChanged(Pageable page);
+
+    /** A house with its project, read in one query. */
+    public record HouseInProject(HouseEntity house, ProjectEntity project) {
     }
 }

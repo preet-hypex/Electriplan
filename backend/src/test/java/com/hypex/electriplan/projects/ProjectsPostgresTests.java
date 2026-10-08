@@ -375,6 +375,35 @@ class ProjectsPostgresTests extends PostgresApplicationTest {
     }
 
     @Test
+    void recentHousesAreTheLatestChangedOutsideArchivedProjects() throws Exception {
+        JsonNode project = createProject(BUILDER, projectForm("Recent work"));
+        String projectId = project.path("id").asText();
+        JsonNode first = addHouse(BUILDER, projectId, "First");
+        JsonNode second = addHouse(BUILDER, projectId, "Second");
+
+        JsonNode recent = body(call(VIEWER, get("/api/houses/recent").param("size", "2")).andExpect(status().isOk()));
+        assertThat(recent).hasSize(2);
+        assertThat(recent.get(0).path("id").asText()).isEqualTo(second.path("id").asText());
+        assertThat(recent.get(0).path("stage").asText()).isEqualTo("awaiting_upload");
+        assertThat(recent.get(0).path("project").path("reference").asText()).isEqualTo(project.path("reference").asText());
+        assertThat(recent.get(1).path("id").asText()).isEqualTo(first.path("id").asText());
+
+        call(BUILDER, put("/api/houses/" + first.path("id").asText()).content("{\"name\":\"First, renamed\",\"version\":0}"))
+                .andExpect(status().isOk());
+        recent = body(call(VIEWER, get("/api/houses/recent").param("size", "1")));
+        assertThat(recent.get(0).path("name").asText()).as("a change brings a house to the top").isEqualTo("First, renamed");
+
+        call(BUILDER, post("/api/projects/" + projectId + "/archive")).andExpect(status().isOk());
+        recent = body(call(VIEWER, get("/api/houses/recent").param("size", "20")));
+        List<String> ids = new ArrayList<>();
+        recent.forEach(h -> ids.add(h.path("id").asText()));
+        assertThat(ids).as("an archived project's houses are not offered").doesNotContain(first.path("id").asText(), second.path("id").asText());
+
+        assertThat(body(call(B_OWNER, get("/api/houses/recent").param("size", "20"))).toString()).doesNotContain("Recent work");
+        call(VIEWER, get("/api/houses/recent").param("size", "21")).andExpect(status().isBadRequest());
+    }
+
+    @Test
     void aHouseNeedsAName() throws Exception {
         JsonNode project = createProject(BUILDER, projectForm("Nameless"));
         JsonNode problem = body(call(BUILDER, post("/api/projects/" + project.path("id").asText() + "/houses").content("{}"))

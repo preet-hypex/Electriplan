@@ -648,6 +648,35 @@
         ],
         "type": "object"
       },
+      "RecentHouse": {
+        "properties": {
+          "id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "project": {
+            "$ref": "#/components/schemas/ProjectRef"
+          },
+          "stage": {
+            "$ref": "#/components/schemas/HouseStage"
+          },
+          "updatedAt": {
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "project",
+          "stage",
+          "updatedAt"
+        ],
+        "type": "object"
+      },
       "Site": {
         "properties": {
           "postcode": {
@@ -822,6 +851,85 @@
   },
   "openapi": "3.0.1",
   "paths": {
+    "/api/houses/recent": {
+      "get": {
+        "description": "Not archived, in projects that are not archived, most recently changed first: \"continue where you left off\".\n\n**Permission:** `company.view` (roles: owner, admin, builder, electrician, viewer).",
+        "operationId": "listRecentHouses",
+        "parameters": [
+          {
+            "description": "1 to 20.",
+            "in": "query",
+            "name": "size",
+            "required": false,
+            "schema": {
+              "default": 6,
+              "format": "int32",
+              "type": "integer"
+            }
+          },
+          {
+            "description": "The company to act in. Needed only when the caller belongs to more than one.",
+            "in": "header",
+            "name": "X-Organisation-Id",
+            "required": false,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/RecentHouse"
+                  },
+                  "type": "array"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorMessage"
+                }
+              }
+            },
+            "description": "No company chosen while the caller belongs to several, or the header is not a company id."
+          },
+          "401": {
+            "description": "Not signed in, or the access token is invalid or expired."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorMessage"
+                }
+              }
+            },
+            "description": "The caller is not an active member of that company, or it is closed. Or the caller's role there lacks `company.view`."
+          }
+        },
+        "summary": "Houses worked on lately",
+        "tags": [
+          "Projects"
+        ],
+        "x-permission": "company.view",
+        "x-roles": [
+          "owner",
+          "admin",
+          "builder",
+          "electrician",
+          "viewer"
+        ]
+      }
+    },
     "/api/houses/{id}": {
       "get": {
         "description": "**Permission:** `company.view` (roles: owner, admin, builder, electrician, viewer).",

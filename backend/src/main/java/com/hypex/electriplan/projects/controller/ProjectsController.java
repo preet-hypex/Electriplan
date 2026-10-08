@@ -2,6 +2,7 @@ package com.hypex.electriplan.projects.controller;
 
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
+import java.util.List;
 import java.util.UUID;
 
 import com.hypex.electriplan.projects.domain.ProjectStatus;
@@ -11,6 +12,7 @@ import com.hypex.electriplan.projects.dto.HouseForm;
 import com.hypex.electriplan.projects.dto.Project;
 import com.hypex.electriplan.projects.dto.ProjectForm;
 import com.hypex.electriplan.projects.dto.ProjectPage;
+import com.hypex.electriplan.projects.dto.RecentHouse;
 import com.hypex.electriplan.projects.dto.ValidationProblem;
 import com.hypex.electriplan.projects.service.HousesService;
 import com.hypex.electriplan.projects.service.ProjectsService;
@@ -149,6 +151,14 @@ public class ProjectsController {
             description = "It starts awaiting its floor plan, with its ground floor ready.")
     House addHouse(@PathVariable UUID id, @Valid @RequestBody HouseForm form) {
         return houses.add(id, form);
+    }
+
+    @GetMapping("/houses/recent")
+    @RequiresPermission(Permission.COMPANY_VIEW)
+    @Operation(operationId = "listRecentHouses", summary = "Houses worked on lately",
+            description = "Not archived, in projects that are not archived, most recently changed first: \"continue where you left off\".")
+    List<RecentHouse> recentHouses(@Parameter(description = "1 to 20.") @RequestParam(defaultValue = "6") int size) {
+        return houses.recent(size);
     }
 
     @GetMapping("/houses/{id}")

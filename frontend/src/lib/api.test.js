@@ -4,7 +4,7 @@ vi.mock('./supabase', () => ({
   supabase: { auth: { getSession: async () => ({ data: { session: { access_token: 'tok' } } }) } },
 }))
 
-import { api } from './api'
+import { api, setCompany } from './api'
 
 function respond(status, body) {
   vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(
@@ -32,6 +32,22 @@ describe('api', () => {
   it('falls back to a plain message when the API gives none', async () => {
     respond(502, {})
     await expect(api('/api/me')).rejects.toMatchObject({ status: 502, message: expect.stringMatching(/did not answer/) })
+  })
+
+  it('sends the chosen company with every call, and nothing when none is chosen', async () => {
+    respond(200, {})
+    await api('/api/projects')
+    expect(fetch.mock.calls[0][1].headers['X-Organisation-Id']).toBeUndefined()
+
+    setCompany('c0ffee00-0000-4000-8000-000000000001')
+    respond(200, {})
+    await api('/api/projects')
+    expect(fetch.mock.calls[0][1].headers['X-Organisation-Id']).toBe('c0ffee00-0000-4000-8000-000000000001')
+
+    setCompany(null)
+    respond(200, {})
+    await api('/api/projects')
+    expect(fetch.mock.calls[0][1].headers['X-Organisation-Id']).toBeUndefined()
   })
 
   it('returns null for 204 No Content', async () => {

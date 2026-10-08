@@ -125,6 +125,18 @@ Postgres within a few minutes.
 
 The web app's Supabase settings are built into it, so **after re-running setup, rebuild `web`**.
 
+### Your company (local)
+
+Projects belong to a company, and creating companies is an operator task that is not built yet (T6).
+Locally, put your account into one yourself, after signing in to the app once:
+
+```bash
+scripts/dev-company.sh you@example.com "Hypex"
+```
+
+That creates the company (active, 10 seats) and makes you its owner; running it again changes nothing.
+Add `builder`, `electrician` or `viewer` as a third argument to try another role with a second account.
+
 ### Connecting to the database
 
 The local Postgres runs in Docker, reachable from this machine only. Any client (DBeaver, psql,
