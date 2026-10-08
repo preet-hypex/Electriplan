@@ -117,3 +117,21 @@ company-scoped. Seeing needs `company.view`; creating, changing, archiving and r
 | `400` with `errors` | `{"message": "Check the highlighted fields.", "errors": [{"field": "site.state", "message": "Choose the state the site is in"}]}` |
 | `404` | No project or house with that id **in this company**. Another company's ids are simply not found |
 | `409` | The `version` sent is not the current one (someone changed it since: reload, then change again), or it is archived |
+
+## Floor plans
+
+A house's floor plan (its ground floor in v1): **one draft** the editor saves as it goes, and
+**numbered versions** frozen from it ("Save version"). Versions never change (the database refuses);
+the newest is the house's floor plan for designs. Seeing needs `company.view`; saving and restoring
+need `floor-plan.edit` (owner, admin, builder, electrician). An archived house's plan is read-only (409).
+
+| Endpoint | Method | Does |
+|---|---|---|
+| `/api/houses/{id}/floor-plan` | GET | What the editor opens: the draft, or the newest version: `{houseId, levelId, versionNo, state, version, basedOnVersionNo, document, savedAt, savedBy}`. `404` *"This house has no floor plan yet."* |
+| `/api/houses/{id}/floor-plan/draft` | PUT | Save the plan as the draft: `{document, version?}`. `version` is the draft's from the last open or save; leave it out when there is no draft. A stale `version` is a `409`; a plan that breaks `contracts/floor-plan.schema.json` is a `400` listing each problem |
+| `/api/houses/{id}/floor-plan/versions` | POST | Save the draft as a version (201): `{version, note?}`. The next edit starts a new draft from it |
+| `/api/houses/{id}/floor-plan/versions` | GET | The history, newest first: number, state, note, rooms, walls, openings, floor area, open checks, when, who, and which is `current` |
+| `/api/houses/{id}/floor-plan/versions/{no}` | GET | One version, to look at |
+| `/api/houses/{id}/floor-plan/versions/{no}/restore` | POST | That version's contents become the draft: `{version?}` (the draft's, when there is one) |
+
+Saving a floor plan counts as activity on the house (migration V8), so it heads "continue where you left off".

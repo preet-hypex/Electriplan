@@ -48,6 +48,21 @@ class ApiDocsConfiguration {
                 .addSecurityItem(new SecurityRequirement().addList(SIGN_IN));
     }
 
+    /**
+     * A JsonNode (a document passed through whole, such as a FloorPlan) is any
+     * JSON object: its own schema lives in contracts/, not here.
+     */
+    @Bean
+    OpenApiCustomizer jsonDocuments() {
+        return api -> {
+            if (api.getComponents() != null && api.getComponents().getSchemas() != null
+                    && api.getComponents().getSchemas().get("JsonNode") instanceof io.swagger.v3.oas.models.media.Schema<?> node) {
+                node.setAdditionalProperties(true);
+                node.setDescription("A JSON document, checked against its schema in contracts/ (e.g. floor-plan.schema.json).");
+            }
+        };
+    }
+
     /** Every endpoint answers 401 without a valid sign-in. */
     @Bean
     OpenApiCustomizer signInResponses() {

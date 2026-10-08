@@ -10,6 +10,7 @@ import ResetPassword from './pages/ResetPassword'
 import Home from './pages/Home'
 import NewProject from './pages/NewProject'
 import Project from './pages/Project'
+import HouseFloorPlan from './pages/HouseFloorPlan'
 import FloorPlan from './pages/FloorPlan'
 import Account from './pages/Account'
 
@@ -27,6 +28,7 @@ export default function App() {
             <Route path="/" element={<ProtectedRoute><Home /></ProtectedRoute>} />
             <Route path="/projects/new" element={<ProtectedRoute><NewProject /></ProtectedRoute>} />
             <Route path="/projects/:id" element={<ProtectedRoute><Project /></ProtectedRoute>} />
+            <Route path="/projects/:projectId/houses/:houseId/floor-plan" element={<ProtectedRoute><HouseFloorPlan /></ProtectedRoute>} />
             <Route path="/floor-plan" element={<ProtectedRoute><FloorPlan /></ProtectedRoute>} />
             <Route path="/account" element={<ProtectedRoute><Account /></ProtectedRoute>} />
             <Route path="*" element={<Navigate to="/" replace />} />

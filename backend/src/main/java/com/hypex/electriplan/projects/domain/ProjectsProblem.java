@@ -23,6 +23,11 @@ public class ProjectsProblem extends RuntimeException {
         return new ProjectsProblem(HttpStatus.NOT_FOUND, "No " + what + " with that id in this company.", List.of());
     }
 
+    /** 404 with its own words, for something that does not exist yet rather than an unknown id. */
+    public static ProjectsProblem missing(String message) {
+        return new ProjectsProblem(HttpStatus.NOT_FOUND, message, List.of());
+    }
+
     public static ProjectsProblem conflict(String message) {
         return new ProjectsProblem(HttpStatus.CONFLICT, message, List.of());
     }

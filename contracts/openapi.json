@@ -54,6 +54,20 @@
         ],
         "type": "string"
       },
+      "CommitForm": {
+        "properties": {
+          "note": {
+            "maxLength": 500,
+            "minLength": 0,
+            "type": "string"
+          },
+          "version": {
+            "format": "int32",
+            "type": "integer"
+          }
+        },
+        "type": "object"
+      },
       "Current": {
         "properties": {
           "id": {
@@ -144,6 +158,140 @@
         "required": [
           "field",
           "message"
+        ],
+        "type": "object"
+      },
+      "FloorPlanDocument": {
+        "properties": {
+          "basedOnVersionNo": {
+            "format": "int32",
+            "nullable": true,
+            "type": "integer"
+          },
+          "document": {
+            "$ref": "#/components/schemas/JsonNode"
+          },
+          "houseId": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "levelId": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "savedAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "savedBy": {
+            "format": "uuid",
+            "nullable": true,
+            "type": "string"
+          },
+          "state": {
+            "$ref": "#/components/schemas/FloorPlanState"
+          },
+          "version": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "versionNo": {
+            "format": "int32",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "basedOnVersionNo",
+          "document",
+          "houseId",
+          "levelId",
+          "savedAt",
+          "savedBy",
+          "state",
+          "version",
+          "versionNo"
+        ],
+        "type": "object"
+      },
+      "FloorPlanOrigin": {
+        "enum": [
+          "analysis",
+          "editor",
+          "import"
+        ],
+        "type": "string"
+      },
+      "FloorPlanState": {
+        "enum": [
+          "draft",
+          "committed"
+        ],
+        "type": "string"
+      },
+      "FloorPlanVersion": {
+        "properties": {
+          "committedAt": {
+            "format": "date-time",
+            "nullable": true,
+            "type": "string"
+          },
+          "current": {
+            "type": "boolean"
+          },
+          "floorAreaM2": {
+            "nullable": true,
+            "type": "number"
+          },
+          "note": {
+            "nullable": true,
+            "type": "string"
+          },
+          "openChecks": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "openings": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "rooms": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "savedAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "savedBy": {
+            "format": "uuid",
+            "nullable": true,
+            "type": "string"
+          },
+          "state": {
+            "$ref": "#/components/schemas/FloorPlanState"
+          },
+          "versionNo": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "walls": {
+            "format": "int32",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "committedAt",
+          "current",
+          "floorAreaM2",
+          "note",
+          "openChecks",
+          "openings",
+          "rooms",
+          "savedAt",
+          "savedBy",
+          "state",
+          "versionNo",
+          "walls"
         ],
         "type": "object"
       },
@@ -287,6 +435,11 @@
           "stage",
           "updatedAt"
         ],
+        "type": "object"
+      },
+      "JsonNode": {
+        "additionalProperties": true,
+        "description": "A JSON document, checked against its schema in contracts/ (e.g. floor-plan.schema.json).",
         "type": "object"
       },
       "Level": {
@@ -714,6 +867,33 @@
           "project",
           "stage",
           "updatedAt"
+        ],
+        "type": "object"
+      },
+      "RestoreForm": {
+        "properties": {
+          "version": {
+            "format": "int32",
+            "type": "integer"
+          }
+        },
+        "type": "object"
+      },
+      "SaveDraftForm": {
+        "properties": {
+          "document": {
+            "$ref": "#/components/schemas/JsonNode"
+          },
+          "origin": {
+            "$ref": "#/components/schemas/FloorPlanOrigin"
+          },
+          "version": {
+            "format": "int32",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "document"
         ],
         "type": "object"
       },
@@ -1233,6 +1413,586 @@
           "owner",
           "admin",
           "builder"
+        ]
+      }
+    },
+    "/api/houses/{id}/floor-plan": {
+      "get": {
+        "description": "The draft if there is one, otherwise the newest version. 404 when the house has none yet.\n\n**Permission:** `company.view` (roles: owner, admin, builder, electrician, viewer).",
+        "operationId": "openFloorPlan",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "description": "The company to act in. Needed only when the caller belongs to more than one.",
+            "in": "header",
+            "name": "X-Organisation-Id",
+            "required": false,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FloorPlanDocument"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorMessage"
+                }
+              }
+            },
+            "description": "No company chosen while the caller belongs to several, or the header is not a company id."
+          },
+          "401": {
+            "description": "Not signed in, or the access token is invalid or expired."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorMessage"
+                }
+              }
+            },
+            "description": "The caller is not an active member of that company, or it is closed. Or the caller's role there lacks `company.view`."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorMessage"
+                }
+              }
+            },
+            "description": "No such house in this company, or no floor plan (version) yet."
+          }
+        },
+        "summary": "The house's floor plan, to edit",
+        "tags": [
+          "Floor plans"
+        ],
+        "x-permission": "company.view",
+        "x-roles": [
+          "owner",
+          "admin",
+          "builder",
+          "electrician",
+          "viewer"
+        ]
+      }
+    },
+    "/api/houses/{id}/floor-plan/draft": {
+      "put": {
+        "description": "What the editor sends as it goes. Send the draft's `version` from the last open or save; leave it out when there is no draft yet. The plan is checked against contracts/floor-plan.schema.json.\n\n**Permission:** `floor-plan.edit` (roles: owner, admin, builder, electrician).",
+        "operationId": "saveFloorPlanDraft",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "description": "The company to act in. Needed only when the caller belongs to more than one.",
+            "in": "header",
+            "name": "X-Organisation-Id",
+            "required": false,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SaveDraftForm"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FloorPlanDocument"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationProblem"
+                }
+              }
+            },
+            "description": "Not a valid floor plan, or a field is wrong; `errors` names each problem. Or: No company chosen while the caller belongs to several, or the header is not a company id."
+          },
+          "401": {
+            "description": "Not signed in, or the access token is invalid or expired."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorMessage"
+                }
+              }
+            },
+            "description": "The caller is not an active member of that company, or it is closed. Or the caller's role there lacks `floor-plan.edit`."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorMessage"
+                }
+              }
+            },
+            "description": "No such house in this company, or no floor plan (version) yet."
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorMessage"
+                }
+              }
+            },
+            "description": "Saved by someone else since `version`, or the house is archived."
+          }
+        },
+        "summary": "Save the floor plan as the house's draft",
+        "tags": [
+          "Floor plans"
+        ],
+        "x-permission": "floor-plan.edit",
+        "x-roles": [
+          "owner",
+          "admin",
+          "builder",
+          "electrician"
+        ]
+      }
+    },
+    "/api/houses/{id}/floor-plan/versions": {
+      "get": {
+        "description": "**Permission:** `company.view` (roles: owner, admin, builder, electrician, viewer).",
+        "operationId": "listFloorPlanVersions",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "description": "The company to act in. Needed only when the caller belongs to more than one.",
+            "in": "header",
+            "name": "X-Organisation-Id",
+            "required": false,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/FloorPlanVersion"
+                  },
+                  "type": "array"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorMessage"
+                }
+              }
+            },
+            "description": "No company chosen while the caller belongs to several, or the header is not a company id."
+          },
+          "401": {
+            "description": "Not signed in, or the access token is invalid or expired."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorMessage"
+                }
+              }
+            },
+            "description": "The caller is not an active member of that company, or it is closed. Or the caller's role there lacks `company.view`."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorMessage"
+                }
+              }
+            },
+            "description": "No such house in this company, or no floor plan (version) yet."
+          }
+        },
+        "summary": "The house's floor-plan history, newest first",
+        "tags": [
+          "Floor plans"
+        ],
+        "x-permission": "company.view",
+        "x-roles": [
+          "owner",
+          "admin",
+          "builder",
+          "electrician",
+          "viewer"
+        ]
+      },
+      "post": {
+        "description": "Freezes the draft: read-only from now on, and the house's floor plan for designs. The next edit starts a new draft.\n\n**Permission:** `floor-plan.edit` (roles: owner, admin, builder, electrician).",
+        "operationId": "saveFloorPlanVersion",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "description": "The company to act in. Needed only when the caller belongs to more than one.",
+            "in": "header",
+            "name": "X-Organisation-Id",
+            "required": false,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CommitForm"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FloorPlanVersion"
+                }
+              }
+            },
+            "description": "Created"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationProblem"
+                }
+              }
+            },
+            "description": "Not a valid floor plan, or a field is wrong; `errors` names each problem. Or: No company chosen while the caller belongs to several, or the header is not a company id."
+          },
+          "401": {
+            "description": "Not signed in, or the access token is invalid or expired."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorMessage"
+                }
+              }
+            },
+            "description": "The caller is not an active member of that company, or it is closed. Or the caller's role there lacks `floor-plan.edit`."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorMessage"
+                }
+              }
+            },
+            "description": "No such house in this company, or no floor plan (version) yet."
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorMessage"
+                }
+              }
+            },
+            "description": "Saved by someone else since `version`, or the house is archived."
+          }
+        },
+        "summary": "Save the draft as a version",
+        "tags": [
+          "Floor plans"
+        ],
+        "x-permission": "floor-plan.edit",
+        "x-roles": [
+          "owner",
+          "admin",
+          "builder",
+          "electrician"
+        ]
+      }
+    },
+    "/api/houses/{id}/floor-plan/versions/{versionNo}": {
+      "get": {
+        "description": "**Permission:** `company.view` (roles: owner, admin, builder, electrician, viewer).",
+        "operationId": "getFloorPlanVersion",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "versionNo",
+            "required": true,
+            "schema": {
+              "format": "int32",
+              "type": "integer"
+            }
+          },
+          {
+            "description": "The company to act in. Needed only when the caller belongs to more than one.",
+            "in": "header",
+            "name": "X-Organisation-Id",
+            "required": false,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FloorPlanDocument"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorMessage"
+                }
+              }
+            },
+            "description": "No company chosen while the caller belongs to several, or the header is not a company id."
+          },
+          "401": {
+            "description": "Not signed in, or the access token is invalid or expired."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorMessage"
+                }
+              }
+            },
+            "description": "The caller is not an active member of that company, or it is closed. Or the caller's role there lacks `company.view`."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorMessage"
+                }
+              }
+            },
+            "description": "No such house in this company, or no floor plan (version) yet."
+          }
+        },
+        "summary": "One floor-plan version, to look at",
+        "tags": [
+          "Floor plans"
+        ],
+        "x-permission": "company.view",
+        "x-roles": [
+          "owner",
+          "admin",
+          "builder",
+          "electrician",
+          "viewer"
+        ]
+      }
+    },
+    "/api/houses/{id}/floor-plan/versions/{versionNo}/restore": {
+      "post": {
+        "description": "Its contents replace the draft (send the draft's `version` when there is one).\n\n**Permission:** `floor-plan.edit` (roles: owner, admin, builder, electrician).",
+        "operationId": "restoreFloorPlanVersion",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "versionNo",
+            "required": true,
+            "schema": {
+              "format": "int32",
+              "type": "integer"
+            }
+          },
+          {
+            "description": "The company to act in. Needed only when the caller belongs to more than one.",
+            "in": "header",
+            "name": "X-Organisation-Id",
+            "required": false,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RestoreForm"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FloorPlanDocument"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorMessage"
+                }
+              }
+            },
+            "description": "No company chosen while the caller belongs to several, or the header is not a company id."
+          },
+          "401": {
+            "description": "Not signed in, or the access token is invalid or expired."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorMessage"
+                }
+              }
+            },
+            "description": "The caller is not an active member of that company, or it is closed. Or the caller's role there lacks `floor-plan.edit`."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorMessage"
+                }
+              }
+            },
+            "description": "No such house in this company, or no floor plan (version) yet."
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorMessage"
+                }
+              }
+            },
+            "description": "Saved by someone else since `version`, or the house is archived."
+          }
+        },
+        "summary": "Make an earlier version the draft",
+        "tags": [
+          "Floor plans"
+        ],
+        "x-permission": "floor-plan.edit",
+        "x-roles": [
+          "owner",
+          "admin",
+          "builder",
+          "electrician"
         ]
       }
     },
@@ -2247,6 +3007,10 @@
     {
       "description": "The signed-in user.",
       "name": "Me"
+    },
+    {
+      "description": "A house's floor plan: the draft being edited, and the versions saved from it.",
+      "name": "Floor plans"
     },
     {
       "description": "The caller's companies, and the company a request acts in.",

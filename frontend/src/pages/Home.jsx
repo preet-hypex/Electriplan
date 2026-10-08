@@ -64,7 +64,7 @@ function RecentHouses() {
       <ul className="recent">
         {houses.map(house => (
           <li key={house.id}>
-            <Link to={`/projects/${house.project.id}`} className="recent-card">
+            <Link to={`/projects/${house.project.id}/houses/${house.id}/floor-plan`} className="recent-card">
               <span className="recent-project">{house.project.reference} · {house.project.name}</span>
               <span className="recent-house">{house.name}</span>
               <span className="recent-foot"><StageBadge stage={house.stage} /><span className="meta">{ago(house.updatedAt)}</span></span>

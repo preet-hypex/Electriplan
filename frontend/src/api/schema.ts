@@ -51,6 +51,118 @@ export type paths = {
         patch?: never;
         trace?: never;
     };
+    "/api/houses/{id}/floor-plan": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The house's floor plan, to edit
+         * @description The draft if there is one, otherwise the newest version. 404 when the house has none yet.
+         *
+         *     **Permission:** `company.view` (roles: owner, admin, builder, electrician, viewer).
+         */
+        get: operations["openFloorPlan"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/houses/{id}/floor-plan/draft": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Save the floor plan as the house's draft
+         * @description What the editor sends as it goes. Send the draft's `version` from the last open or save; leave it out when there is no draft yet. The plan is checked against contracts/floor-plan.schema.json.
+         *
+         *     **Permission:** `floor-plan.edit` (roles: owner, admin, builder, electrician).
+         */
+        put: operations["saveFloorPlanDraft"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/houses/{id}/floor-plan/versions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The house's floor-plan history, newest first
+         * @description **Permission:** `company.view` (roles: owner, admin, builder, electrician, viewer).
+         */
+        get: operations["listFloorPlanVersions"];
+        put?: never;
+        /**
+         * Save the draft as a version
+         * @description Freezes the draft: read-only from now on, and the house's floor plan for designs. The next edit starts a new draft.
+         *
+         *     **Permission:** `floor-plan.edit` (roles: owner, admin, builder, electrician).
+         */
+        post: operations["saveFloorPlanVersion"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/houses/{id}/floor-plan/versions/{versionNo}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * One floor-plan version, to look at
+         * @description **Permission:** `company.view` (roles: owner, admin, builder, electrician, viewer).
+         */
+        get: operations["getFloorPlanVersion"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/houses/{id}/floor-plan/versions/{versionNo}/restore": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Make an earlier version the draft
+         * @description Its contents replace the draft (send the draft's `version` when there is one).
+         *
+         *     **Permission:** `floor-plan.edit` (roles: owner, admin, builder, electrician).
+         */
+        post: operations["restoreFloorPlanVersion"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/houses/{id}/restore": {
         parameters: {
             query?: never;
@@ -348,6 +460,11 @@ export type components = {
         };
         /** @enum {string} */
         AustralianState: "NSW" | "VIC" | "QLD" | "WA" | "SA" | "TAS" | "ACT" | "NT";
+        CommitForm: {
+            note?: string;
+            /** Format: int32 */
+            version?: number;
+        };
         Current: {
             /** Format: uuid */
             id: string;
@@ -371,6 +488,50 @@ export type components = {
         FieldProblem: {
             field: string;
             message: string;
+        };
+        FloorPlanDocument: {
+            /** Format: int32 */
+            basedOnVersionNo: number | null;
+            document: components["schemas"]["JsonNode"];
+            /** Format: uuid */
+            houseId: string;
+            /** Format: uuid */
+            levelId: string;
+            /** Format: date-time */
+            savedAt: string;
+            /** Format: uuid */
+            savedBy: string | null;
+            state: components["schemas"]["FloorPlanState"];
+            /** Format: int32 */
+            version: number;
+            /** Format: int32 */
+            versionNo: number;
+        };
+        /** @enum {string} */
+        FloorPlanOrigin: "analysis" | "editor" | "import";
+        /** @enum {string} */
+        FloorPlanState: "draft" | "committed";
+        FloorPlanVersion: {
+            /** Format: date-time */
+            committedAt: string | null;
+            current: boolean;
+            floorAreaM2: number | null;
+            note: string | null;
+            /** Format: int32 */
+            openChecks: number;
+            /** Format: int32 */
+            openings: number;
+            /** Format: int32 */
+            rooms: number;
+            /** Format: date-time */
+            savedAt: string;
+            /** Format: uuid */
+            savedBy: string | null;
+            state: components["schemas"]["FloorPlanState"];
+            /** Format: int32 */
+            versionNo: number;
+            /** Format: int32 */
+            walls: number;
         };
         House: {
             archived: boolean;
@@ -411,6 +572,10 @@ export type components = {
             stage: components["schemas"]["HouseStage"];
             /** Format: date-time */
             updatedAt: string;
+        };
+        /** @description A JSON document, checked against its schema in contracts/ (e.g. floor-plan.schema.json). */
+        JsonNode: {
+            [key: string]: unknown;
         };
         Level: {
             /** Format: int32 */
@@ -534,6 +699,16 @@ export type components = {
             stage: components["schemas"]["HouseStage"];
             /** Format: date-time */
             updatedAt: string;
+        };
+        RestoreForm: {
+            /** Format: int32 */
+            version?: number;
+        };
+        SaveDraftForm: {
+            document: components["schemas"]["JsonNode"];
+            origin?: components["schemas"]["FloorPlanOrigin"];
+            /** Format: int32 */
+            version?: number;
         };
         Site: {
             postcode: string | null;
@@ -772,6 +947,401 @@ export interface operations {
             };
             /** @description No such project or house in this company. */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorMessage"];
+                };
+            };
+        };
+    };
+    openFloorPlan: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description The company to act in. Needed only when the caller belongs to more than one. */
+                "X-Organisation-Id"?: string;
+            };
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FloorPlanDocument"];
+                };
+            };
+            /** @description No company chosen while the caller belongs to several, or the header is not a company id. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorMessage"];
+                };
+            };
+            /** @description Not signed in, or the access token is invalid or expired. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description The caller is not an active member of that company, or it is closed. Or the caller's role there lacks `company.view`. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorMessage"];
+                };
+            };
+            /** @description No such house in this company, or no floor plan (version) yet. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorMessage"];
+                };
+            };
+        };
+    };
+    saveFloorPlanDraft: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description The company to act in. Needed only when the caller belongs to more than one. */
+                "X-Organisation-Id"?: string;
+            };
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SaveDraftForm"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FloorPlanDocument"];
+                };
+            };
+            /** @description Not a valid floor plan, or a field is wrong; `errors` names each problem. Or: No company chosen while the caller belongs to several, or the header is not a company id. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ValidationProblem"];
+                };
+            };
+            /** @description Not signed in, or the access token is invalid or expired. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description The caller is not an active member of that company, or it is closed. Or the caller's role there lacks `floor-plan.edit`. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorMessage"];
+                };
+            };
+            /** @description No such house in this company, or no floor plan (version) yet. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorMessage"];
+                };
+            };
+            /** @description Saved by someone else since `version`, or the house is archived. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorMessage"];
+                };
+            };
+        };
+    };
+    listFloorPlanVersions: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description The company to act in. Needed only when the caller belongs to more than one. */
+                "X-Organisation-Id"?: string;
+            };
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FloorPlanVersion"][];
+                };
+            };
+            /** @description No company chosen while the caller belongs to several, or the header is not a company id. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorMessage"];
+                };
+            };
+            /** @description Not signed in, or the access token is invalid or expired. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description The caller is not an active member of that company, or it is closed. Or the caller's role there lacks `company.view`. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorMessage"];
+                };
+            };
+            /** @description No such house in this company, or no floor plan (version) yet. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorMessage"];
+                };
+            };
+        };
+    };
+    saveFloorPlanVersion: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description The company to act in. Needed only when the caller belongs to more than one. */
+                "X-Organisation-Id"?: string;
+            };
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CommitForm"];
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FloorPlanVersion"];
+                };
+            };
+            /** @description Not a valid floor plan, or a field is wrong; `errors` names each problem. Or: No company chosen while the caller belongs to several, or the header is not a company id. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ValidationProblem"];
+                };
+            };
+            /** @description Not signed in, or the access token is invalid or expired. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description The caller is not an active member of that company, or it is closed. Or the caller's role there lacks `floor-plan.edit`. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorMessage"];
+                };
+            };
+            /** @description No such house in this company, or no floor plan (version) yet. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorMessage"];
+                };
+            };
+            /** @description Saved by someone else since `version`, or the house is archived. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorMessage"];
+                };
+            };
+        };
+    };
+    getFloorPlanVersion: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description The company to act in. Needed only when the caller belongs to more than one. */
+                "X-Organisation-Id"?: string;
+            };
+            path: {
+                id: string;
+                versionNo: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FloorPlanDocument"];
+                };
+            };
+            /** @description No company chosen while the caller belongs to several, or the header is not a company id. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorMessage"];
+                };
+            };
+            /** @description Not signed in, or the access token is invalid or expired. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description The caller is not an active member of that company, or it is closed. Or the caller's role there lacks `company.view`. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorMessage"];
+                };
+            };
+            /** @description No such house in this company, or no floor plan (version) yet. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorMessage"];
+                };
+            };
+        };
+    };
+    restoreFloorPlanVersion: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description The company to act in. Needed only when the caller belongs to more than one. */
+                "X-Organisation-Id"?: string;
+            };
+            path: {
+                id: string;
+                versionNo: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RestoreForm"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FloorPlanDocument"];
+                };
+            };
+            /** @description No company chosen while the caller belongs to several, or the header is not a company id. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorMessage"];
+                };
+            };
+            /** @description Not signed in, or the access token is invalid or expired. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description The caller is not an active member of that company, or it is closed. Or the caller's role there lacks `floor-plan.edit`. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorMessage"];
+                };
+            };
+            /** @description No such house in this company, or no floor plan (version) yet. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorMessage"];
+                };
+            };
+            /** @description Saved by someone else since `version`, or the house is archived. */
+            409: {
                 headers: {
                     [name: string]: unknown;
                 };

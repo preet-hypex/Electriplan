@@ -103,7 +103,7 @@ describe('Home: the project list', () => {
     }])
     renderHome()
     const recent = within(await screen.findByRole('region', { name: 'Continue where you left off' }))
-    expect(recent.getByRole('link', { name: /type a/i })).toHaveAttribute('href', `/projects/${SUMMARY.id}`)
+    expect(recent.getByRole('link', { name: /type a/i })).toHaveAttribute('href', `/projects/${SUMMARY.id}/houses/h1/floor-plan`)
     expect(recent.getByText('Checking floor plan')).toBeInTheDocument()
     expect(recent.getByText('PRJ-000042 · 12 Example St')).toBeInTheDocument()
   })

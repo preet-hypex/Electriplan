@@ -1,4 +1,5 @@
 import { useRef, useState } from 'react'
+import type { HouseMode } from '../FloorPlanApp'
 import { useEditor } from '../state/store'
 import { parseFloorPlanJson, serialiseFloorPlan } from '../model/serialise'
 import { exportPlan } from '../api/client'
@@ -21,7 +22,7 @@ export function fileNameFor(planName: string): string {
   return `${base}.json`
 }
 
-function Chip({ tone, children, title }: { tone: 'ok' | 'warn' | 'muted'; children: React.ReactNode; title?: string }) {
+export function Chip({ tone, children, title }: { tone: 'ok' | 'warn' | 'muted'; children: React.ReactNode; title?: string }) {
   const tones = {
     ok: 'border-emerald-200 bg-emerald-50 text-emerald-800',
     warn: 'border-amber-200 bg-amber-50 text-amber-800',
@@ -66,7 +67,16 @@ function CommandButton({
  * The plan as a document: its name, its state, and the commands that act on
  * the whole of it (open, analyse, calibrate, undo, save).
  */
-export function DocumentHeader({ onNewAnalysis, onCalibrate }: { onNewAnalysis: () => void; onCalibrate: () => void }) {
+export function DocumentHeader({
+  onNewAnalysis,
+  onCalibrate,
+  house,
+}: {
+  onNewAnalysis: () => void
+  onCalibrate: () => void
+  /** A house's plan: its title, save state and commands replace the file ones. */
+  house?: HouseMode
+}) {
   const plan = useEditor((s) => s.plan)
   const loadPlan = useEditor((s) => s.loadPlan)
   const planName = useEditor((s) => s.planName)
@@ -102,8 +112,9 @@ export function DocumentHeader({ onNewAnalysis, onCalibrate }: { onNewAnalysis: 
       } catch {
         text = serialiseFloorPlan(plan)
       }
-      download(fileNameFor(planName), text)
-      markSaved()
+      download(fileNameFor(house ? house.title : planName), text)
+      // A house's plan saves itself; downloading a copy does not save it.
+      if (!house) markSaved()
     } finally {
       setBusy(false)
     }
@@ -120,6 +131,9 @@ export function DocumentHeader({ onNewAnalysis, onCalibrate }: { onNewAnalysis: 
         </span>
         <div className="min-w-0">
           <p className="text-[11px] font-medium uppercase tracking-wide text-slate-500">Floor plan</p>
+          {house ? (
+            <h2 className="text-[15px] font-semibold text-slate-900">{house.title}</h2>
+          ) : (
           <label className="group flex items-center gap-1.5">
             <input
               value={planName}
@@ -131,11 +145,12 @@ export function DocumentHeader({ onNewAnalysis, onCalibrate }: { onNewAnalysis: 
             />
             <Icon name="pencil" size={13} className="text-slate-400 opacity-0 group-hover:opacity-100" />
           </label>
+          )}
         </div>
       </div>
 
       <div className="flex flex-wrap items-center gap-2">
-        {dirty ? <Chip tone="warn">● Unsaved changes</Chip> : <Chip tone="ok">✓ Saved</Chip>}
+        {house ? house.status : dirty ? <Chip tone="warn">● Unsaved changes</Chip> : <Chip tone="ok">✓ Saved</Chip>}
         {source ? (
           <Chip
             tone={scaleOk ? 'muted' : 'warn'}
@@ -177,15 +192,22 @@ export function DocumentHeader({ onNewAnalysis, onCalibrate }: { onNewAnalysis: 
         <CommandButton icon="open" label="Open" title="Open a plan saved as JSON" onClick={() => fileRef.current?.click()} />
         <CommandButton icon="scan" label="Analyse image" onClick={onNewAnalysis} />
         <CommandButton icon="ruler" label="Calibrate" title="Set the scale from a length you know" onClick={onCalibrate} />
-        <button
-          type="button"
-          onClick={save}
-          disabled={busy}
-          className="inline-flex h-8 items-center gap-1.5 rounded bg-blue-600 px-3.5 text-[13px] font-medium text-white hover:bg-blue-700 disabled:opacity-60"
-        >
-          <Icon name="save" />
-          {busy ? 'Saving…' : 'Save'}
-        </button>
+        {house ? (
+          <>
+            <CommandButton icon="save" label={busy ? 'Preparing…' : 'Download'} title="Download a copy as JSON" onClick={save} disabled={busy} />
+            {house.actions}
+          </>
+        ) : (
+          <button
+            type="button"
+            onClick={save}
+            disabled={busy}
+            className="inline-flex h-8 items-center gap-1.5 rounded bg-blue-600 px-3.5 text-[13px] font-medium text-white hover:bg-blue-700 disabled:opacity-60"
+          >
+            <Icon name="save" />
+            {busy ? 'Saving…' : 'Save'}
+          </button>
+        )}
       </div>
     </header>
   )

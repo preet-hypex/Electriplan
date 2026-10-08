@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react'
 import { Canvas } from './components/canvas/Canvas'
 import { DocumentHeader } from './components/DocumentHeader'
 import { Ribbon } from './components/Ribbon'
@@ -19,29 +19,43 @@ import './floorplan.css'
 type Screen = 'upload' | 'analysing' | 'editor'
 
 /**
+ * When the editor works on a house's floor plan (rather than a file): the
+ * page provides the title, the save state, the commands and any message, and
+ * keeps the plan saved itself.
+ */
+export interface HouseMode {
+  title: string
+  status: ReactNode
+  actions: ReactNode
+  banner?: ReactNode
+}
+
+/**
  * The floor-plan editor: upload → analysis → editor. It fills whatever box it is
  * given (the app shell's content area), and everything it renders sits inside
  * .fp-root, the scope its styles (floorplan.css) apply to.
  */
 export default function FloorPlanApp({
   getAccessToken,
+  house,
 }: {
   /** The signed-in user's access token, sent with every call to the analyser. */
   getAccessToken: () => Promise<string | null>
+  house?: HouseMode
 }) {
   setAccessTokenProvider(getAccessToken)
   return (
     <div className="fp-root relative h-full">
-      <FloorPlanScreens />
+      <FloorPlanScreens house={house} />
     </div>
   )
 }
 
 /** The plan lives in the store, so it outlives a visit to another page; reloading or closing the tab does not. */
-function useWarnBeforeUnloadWhenDirty() {
+function useWarnBeforeUnloadWhenDirty(enabled: boolean) {
   const dirty = useEditor((s) => s.dirty)
   useEffect(() => {
-    if (!dirty) return
+    if (!enabled || !dirty) return
     const warn = (e: BeforeUnloadEvent) => e.preventDefault()
     window.addEventListener('beforeunload', warn)
     return () => window.removeEventListener('beforeunload', warn)
@@ -52,7 +66,7 @@ function hasContent(plan: FloorPlan): boolean {
   return plan.walls.length > 0 || plan.rooms.length > 0
 }
 
-function FloorPlanScreens() {
+function FloorPlanScreens({ house }: { house?: HouseMode }) {
   // Coming back to this page with a plan already open goes straight to it.
   const [screen, setScreen] = useState<Screen>(() =>
     hasContent(useEditor.getState().plan) ? 'editor' : 'upload',
@@ -66,7 +80,7 @@ function FloorPlanScreens() {
 
   const loadPlan = useEditor((s) => s.loadPlan)
   useKeyboardShortcuts(screen === 'editor' && !calibrating)
-  useWarnBeforeUnloadWhenDirty()
+  useWarnBeforeUnloadWhenDirty(!house)
 
   useEffect(() => {
     void health().then(setApiReachable)
@@ -148,6 +162,7 @@ function FloorPlanScreens() {
 
   return (
     <Editor
+      house={house}
       onNewAnalysis={() => setScreen('upload')}
       onCalibrate={() => setCalibrating(true)}
       calibrating={calibrating}
@@ -157,11 +172,13 @@ function FloorPlanScreens() {
 }
 
 function Editor({
+  house,
   onNewAnalysis,
   onCalibrate,
   calibrating,
   onCloseCalibration,
 }: {
+  house?: HouseMode
   onNewAnalysis: () => void
   onCalibrate: () => void
   calibrating: boolean
@@ -182,7 +199,8 @@ function Editor({
 
   return (
     <div className="flex h-full w-full flex-col bg-slate-50">
-      <DocumentHeader onNewAnalysis={onNewAnalysis} onCalibrate={onCalibrate} />
+      <DocumentHeader onNewAnalysis={onNewAnalysis} onCalibrate={onCalibrate} house={house} />
+      {house?.banner}
       <Ribbon canvasSize={canvasSize} />
       <div className="flex min-h-0 flex-1">
         <Navigator />
