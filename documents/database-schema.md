@@ -80,8 +80,9 @@ rather than by every query remembering a `WHERE`.
 
 Two deliberate exceptions to "only the current organisation":
 
-- people can always **read** their own memberships, and the organisations they belong to, so the app
-  can offer an organisation switcher;
+- with **no company chosen**, people can read their own memberships and the organisations they belong
+  to, so the app can offer a company switcher. Once a company is chosen, even those disappear: inside
+  a company, only that company is visible (V5);
 - the **platform catalogue** (`catalogue_item` with no organisation) is readable by everyone and
   writable only in a transaction that sets `electriplan.platform_admin = 'on'`.
 
