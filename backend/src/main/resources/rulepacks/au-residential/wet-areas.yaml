@@ -1,0 +1,50 @@
+# Wet areas: AS/NZS 3000 Section 6. Values and clause numbers only, never the
+# standard's text. Every value is a working assumption until verified.
+rules:
+  - id: wet.zone.height
+    tier: mandatory
+    kind: value
+    value_mm: 2250
+    cite: "AS/NZS 3000:2018 cl. 6.2.2"        # ⚠ verify clause and value
+    verified: false
+
+  - id: wet.zone1.shower-reach
+    tier: mandatory
+    kind: value
+    value_mm: 1200
+    cite: "AS/NZS 3000:2018 cl. 6.2.2"        # ⚠ verify
+    verified: false
+
+  - id: wet.zone2.width
+    tier: mandatory
+    kind: value
+    value_mm: 600
+    cite: "AS/NZS 3000:2018 cl. 6.2.2"        # ⚠ verify
+    verified: false
+
+  - id: wet.zone3.width
+    tier: mandatory
+    kind: value
+    value_mm: 2400
+    cite: "AS/NZS 3000:2018 cl. 6.2.2"        # ⚠ verify
+    verified: false
+
+  - id: wet.gpo.zone2
+    tier: mandatory
+    kind: exclusion
+    applies_to: [gpo-single, gpo-double, switch]
+    zone: bath-zone-2
+    exceptions: [shaver-outlet-isolating-transformer]   # ⚠ verify list
+    cite: "AS/NZS 3000:2018 cl. 6.2.4"        # ⚠ verify clause
+    message: "Socket outlets and switches are not permitted in zone 2 of a bath or shower"
+    verified: false
+
+  - id: wet.sink.outlet-clearance
+    tier: mandatory
+    kind: clearance
+    applies_to: [gpo-single, gpo-double, switch]
+    from: [sink, laundry-tub]
+    distance_mm: 150
+    cite: "AS/NZS 3000:2018 cl. 6.2"          # ⚠ verify clause and distance
+    message: "Socket outlets and switches must be clear of the sink or tub"
+    verified: false

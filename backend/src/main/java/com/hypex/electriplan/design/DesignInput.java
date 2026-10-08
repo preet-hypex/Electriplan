@@ -7,6 +7,7 @@ import com.hypex.electriplan.model.brief.ProjectBrief;
 import com.hypex.electriplan.model.design.RulePackRef;
 import com.hypex.electriplan.model.fixture.Fixture;
 import com.hypex.electriplan.model.plan.FloorPlan;
+import com.hypex.electriplan.rules.RuleSet;
 
 /**
  * Everything a design is made from: the floor plan and which saved revision of
@@ -16,25 +17,30 @@ import com.hypex.electriplan.model.plan.FloorPlan;
  * @param planRevision the plan's revision number as saved
  *        ({@code floor_plan_version.version_no}), recorded in the design's
  *        {@code planRef.planVersion}. Not the FloorPlan schema version.
- * @param rulePack the rule pack release and state the design is made with;
- *        its state must be the brief's state.
+ * @param rules the rules the design is made with, for the brief's state
+ *        (from {@link com.hypex.electriplan.rules.RuleBook#rulesFor})
  */
 public record DesignInput(
         FloorPlan plan,
         int planRevision,
         ProjectBrief brief,
         List<Fixture> fixtures,
-        RulePackRef rulePack) {
+        RuleSet rules) {
 
     public DesignInput {
         Checks.required(plan, "plan");
         Checks.between(planRevision, 1, Integer.MAX_VALUE, "planRevision");
         Checks.required(brief, "brief");
         fixtures = Checks.list(fixtures, "fixtures");
-        Checks.required(rulePack, "rulePack");
-        if (rulePack.state() != brief.state()) {
-            throw new IllegalArgumentException("rulePack.state is " + rulePack.state()
+        Checks.required(rules, "rules");
+        if (rules.ref().state() != brief.state()) {
+            throw new IllegalArgumentException("The rules are for " + rules.ref().state()
                     + " but the brief is for " + brief.state());
         }
+    }
+
+    /** Which rules these are, as the design records them. */
+    public RulePackRef rulePack() {
+        return rules.ref();
     }
 }
