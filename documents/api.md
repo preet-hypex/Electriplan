@@ -44,3 +44,26 @@ Interactive docs: http://localhost:8082/docs.
 
 Without a token, or with one that does not verify, every endpoint but health answers `401` with
 `WWW-Authenticate: Bearer`. If `SUPABASE_URL` is not set, it answers `503` saying so.
+
+## Companies
+
+Most Electriplan endpoints work inside one company. They are marked `@CompanyScoped` in the code and
+say so here. For those:
+
+- Send **`X-Organisation-Id: <company id>`**. A person who belongs to exactly one company may leave
+  it out.
+- The caller must be an **active member** of that company, and the company must not be closed.
+- Every database query the endpoint makes is then limited to that company by row-level security.
+
+| Response | When |
+|---|---|
+| `400` | The header is not a company id, or it is missing and the caller belongs to several companies |
+| `403` | The caller is not an active member of that company, the company is closed or does not exist (one message for all three, so nothing is learned about other companies), or the caller belongs to no company |
+
+Errors are `{"message": "..."}`.
+
+| Endpoint | Method | Company-scoped | Returns |
+|---|---|:-:|---|
+| `/api/organisations` | GET | no | The caller's companies, for the company switcher: `[{id, name, role, licence}]` — active memberships of companies that are not closed |
+| `/api/organisations/current` | GET | **yes** | The company the request acts in: `{id, name, slug, role, licence, seatLimit, licenceStartsOn, licenceEndsOn}` |
+| `/api/reference/distributors?state=VIC` | GET | no | Electricity distributors: `[{code, name, state}]` |
