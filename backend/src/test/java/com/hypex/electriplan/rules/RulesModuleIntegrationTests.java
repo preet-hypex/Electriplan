@@ -3,7 +3,8 @@ package com.hypex.electriplan.rules;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.hypex.electriplan.model.common.AustralianState;
-import com.hypex.electriplan.users.SupabaseUsers;
+import com.hypex.electriplan.users.service.SupabaseUsers;
+
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;

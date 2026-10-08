@@ -23,7 +23,10 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.hypex.electriplan.PostgresApplicationTest;
 import com.hypex.electriplan.TestDatabase;
-import com.hypex.electriplan.users.SupabaseUsers;
+import com.hypex.electriplan.projects.controller.ProjectsErrors;
+import com.hypex.electriplan.projects.dto.House;
+import com.hypex.electriplan.users.service.SupabaseUsers;
+
 import org.hamcrest.Matchers;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;

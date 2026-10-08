@@ -1,7 +1,7 @@
 /**
  * Which company a request is for, and keeping it to that company.
  *
- * <p>For an endpoint marked {@link com.hypex.electriplan.tenancy.CompanyScoped},
+ * <p>For an endpoint marked {@link com.hypex.electriplan.tenancy.domain.CompanyScoped},
  * the company comes from the {@code X-Organisation-Id} header (or is the
  * caller's only company), the caller must be an active member of it, and it
  * must not be closed. Every database transaction in the request then runs with

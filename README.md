@@ -172,6 +172,29 @@ of `/api/*` to the API on 8081.
 | Analyser outside Docker | `floorplan/run.sh` (port 8082) |
 | Change the engine's rules (YAML rule packs) | see [documents/rule-packs.md](documents/rule-packs.md). Locally the API designs states whose rules are not signed off yet (`RULES_ALLOW_UNSIGNED_STATES=true` in `docker-compose.yml`); production never does |
 
+### Backend package layout
+
+Each module of the API (`backend/src/main/java/com/hypex/electriplan/<module>/`) is a Spring Modulith
+module. Modules with web, database and business code split it into layer folders:
+
+| Folder | Holds |
+|---|---|
+| `controller` | REST controllers, and the error handlers, interceptors and filters around them |
+| `service` | The use cases (transactions) |
+| `dao` | Spring Data repositories and query specifications |
+| `entity` | JPA entities and their converters |
+| `dto` | Request and response records (what the API reads and writes) |
+| `domain` | Enums, value types, annotations and exceptions the layers share |
+| `config` | Spring configuration |
+
+`projects`, `tenancy`, `reference` and `users` are laid out this way. `model`, `rules`, `design`,
+`security` and `apidocs` hold plain logic or configuration and stay flat.
+
+A module's folders are private to it. A folder other modules may use is marked
+`@NamedInterface` in its `package-info.java` (`tenancy/domain`, `tenancy/service`, `reference/service`,
+`reference/dto`), and a module that uses one names it: `allowedDependencies = {"tenancy :: service", ...}`.
+`ModularityTests` fails on anything else.
+
 ## Continuous integration
 
 Every pull request into `main`, and every push to `main`, runs `.github/workflows/ci.yml` on

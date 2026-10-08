@@ -6,6 +6,6 @@
  *
  * <p>"House" here is the database's {@code plan}; "level" its {@code plan_level}.
  */
-@org.springframework.modulith.ApplicationModule(displayName = "Projects", allowedDependencies = {"model", "tenancy", "reference"})
+@org.springframework.modulith.ApplicationModule(displayName = "Projects", allowedDependencies = {"model", "tenancy :: domain", "tenancy :: service", "reference :: service", "reference :: dto"})
 @org.jspecify.annotations.NullMarked
 package com.hypex.electriplan.projects;

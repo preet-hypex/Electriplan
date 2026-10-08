@@ -1,7 +1,6 @@
 package com.hypex.electriplan.model.plan;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
-import com.hypex.electriplan.model.Checks;
 import com.hypex.electriplan.model.units.Millimetres;
 
 import lombok.Builder;
