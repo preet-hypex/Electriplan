@@ -5,6 +5,7 @@ import java.util.UUID;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.hypex.electriplan.projects.domain.FloorPlanState;
+import com.hypex.electriplan.projects.domain.HouseStage;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 import org.jspecify.annotations.Nullable;
@@ -17,6 +18,7 @@ import org.jspecify.annotations.Nullable;
  * @param version send it back when saving the draft: a draft saved by someone
  *        else since is refused (409) rather than overwritten
  * @param basedOnVersionNo the version this draft started from, if any
+ * @param houseStage where the house is now (saving a plan can move it, e.g. to floor_plan_review)
  */
 public record FloorPlanDocument(
         UUID houseId,
@@ -28,5 +30,6 @@ public record FloorPlanDocument(
         @Schema(description = "The FloorPlan (contracts/floor-plan.schema.json).", type = "object")
         JsonNode document,
         Instant savedAt,
-        @Nullable UUID savedBy) {
+        @Nullable UUID savedBy,
+        HouseStage houseStage) {
 }

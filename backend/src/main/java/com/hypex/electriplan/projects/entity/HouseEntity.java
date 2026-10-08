@@ -91,6 +91,14 @@ public class HouseEntity {
         return archivedAt != null;
     }
 
+    /**
+     * A move to the next stage. Only along electriplan.plan_stage_transition:
+     * the database refuses any other (see HouseStages).
+     */
+    public void moveTo(HouseStage next) {
+        stage = next;
+    }
+
     public void rename(String newName) {
         name = newName;
     }

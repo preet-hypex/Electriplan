@@ -5,7 +5,7 @@
 import { api } from '../lib/api'
 import type {
   AddressSuggestion, CurrentCompany, Distributor, House, HouseForm, HouseStage, Membership, Project, ProjectForm, ProjectPage,
-  ProjectStatus, RecentHouse,
+  ProjectStatus, RecentHouse, StageEvent,
 } from './index'
 
 export type ProjectQuery = {
@@ -45,6 +45,8 @@ export const restoreProject = (id: string): Promise<Project> => api(`/api/projec
 export const addHouse = (projectId: string, form: HouseForm): Promise<House> =>
   api(`/api/projects/${projectId}/houses`, post(form))
 export const recentHouses = (size = 6): Promise<RecentHouse[]> => api(`/api/houses/recent${queryString({ size })}`)
+/** How the house got where it is: every stage move, newest first. */
+export const houseStages = (id: string): Promise<StageEvent[]> => api(`/api/houses/${id}/stages`)
 export const getHouse = (id: string): Promise<House> => api(`/api/houses/${id}`)
 export const updateHouse = (id: string, form: HouseForm): Promise<House> => api(`/api/houses/${id}`, put(form))
 export const archiveHouse = (id: string): Promise<House> => api(`/api/houses/${id}/archive`, post())

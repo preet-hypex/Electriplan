@@ -95,6 +95,28 @@ export type paths = {
         patch?: never;
         trace?: never;
     };
+    "/api/houses/{id}/floor-plan/approve": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Approve the house's floor plan
+         * @description Saves the draft as a version (with the note), if there is a draft, and moves the house to floor_plan_approved: the plan electrical design starts from. Only a plan being checked (floor_plan_review) can be approved (409 otherwise). Editing it afterwards sends it back for checking.
+         *
+         *     **Permission:** `floor-plan.edit` (roles: owner, admin, builder, electrician).
+         */
+        post: operations["approveFloorPlan"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/houses/{id}/floor-plan/draft": {
         parameters: {
             query?: never;
@@ -221,6 +243,28 @@ export type paths = {
          * @description **Permission:** `project.edit` (roles: owner, admin, builder).
          */
         post: operations["restoreHouse"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/houses/{id}/stages": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * A house's stage history
+         * @description Every move of the house's stage, newest first: from, to, when, and who (with their name when known).
+         *
+         *     **Permission:** `company.view` (roles: owner, admin, builder, electrician, viewer).
+         */
+        get: operations["listHouseStages"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -539,6 +583,7 @@ export type components = {
             document: components["schemas"]["JsonNode"];
             /** Format: uuid */
             houseId: string;
+            houseStage: components["schemas"]["HouseStage"];
             /** Format: uuid */
             levelId: string;
             /** Format: date-time */
@@ -773,6 +818,16 @@ export type components = {
             /** Format: int64 */
             count: number;
             stage: components["schemas"]["HouseStage"];
+        };
+        StageEvent: {
+            /** Format: date-time */
+            at: string;
+            /** Format: uuid */
+            by: string | null;
+            byName: string | null;
+            from: components["schemas"]["HouseStage"] | null;
+            note: string | null;
+            to: components["schemas"]["HouseStage"];
         };
         SupabaseUser: {
             appMetadata: {
@@ -1112,6 +1167,78 @@ export interface operations {
             };
             /** @description No such house in this company, or no floor plan (version) yet. */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorMessage"];
+                };
+            };
+        };
+    };
+    approveFloorPlan: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description The company to act in. Needed only when the caller belongs to more than one. */
+                "X-Organisation-Id"?: string;
+            };
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CommitForm"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FloorPlanDocument"];
+                };
+            };
+            /** @description Not a valid floor plan, or a field is wrong; `errors` names each problem. Or: No company chosen while the caller belongs to several, or the header is not a company id. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ValidationProblem"];
+                };
+            };
+            /** @description Not signed in, or the access token is invalid or expired. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description The caller is not an active member of that company, or it is closed. Or the caller's role there lacks `floor-plan.edit`. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorMessage"];
+                };
+            };
+            /** @description No such house in this company, or no floor plan (version) yet. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorMessage"];
+                };
+            };
+            /** @description Saved by someone else since `version`, or the house is archived. */
+            409: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -1621,6 +1748,65 @@ export interface operations {
             };
             /** @description Changed by someone else since `version`, or archived. */
             409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorMessage"];
+                };
+            };
+        };
+    };
+    listHouseStages: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description The company to act in. Needed only when the caller belongs to more than one. */
+                "X-Organisation-Id"?: string;
+            };
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StageEvent"][];
+                };
+            };
+            /** @description No company chosen while the caller belongs to several, or the header is not a company id. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorMessage"];
+                };
+            };
+            /** @description Not signed in, or the access token is invalid or expired. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description The caller is not an active member of that company, or it is closed. Or the caller's role there lacks `company.view`. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorMessage"];
+                };
+            };
+            /** @description No such project or house in this company. */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };

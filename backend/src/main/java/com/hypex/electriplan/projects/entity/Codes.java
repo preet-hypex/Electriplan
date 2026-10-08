@@ -58,6 +58,7 @@ public final class Codes {
     @Converter
     static final class Stage implements AttributeConverter<HouseStage, String> {
         @Override public String convertToDatabaseColumn(HouseStage value) { return value.code(); }
-        @Override public HouseStage convertToEntityAttribute(String code) { return fromCode(HouseStage.class, code); }
+        // A house's first stage event has no stage before it.
+        @Override public HouseStage convertToEntityAttribute(String code) { return code == null ? null : fromCode(HouseStage.class, code); }
     }
 }

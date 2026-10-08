@@ -30,7 +30,7 @@ import org.springframework.web.multipart.MultipartFile;
  * A floor-plan image uploaded for a house (P5), in three steps:
  *
  * <ol>
- *   <li>Keep the image in the company's files (S3) and record an analysis run, committed.</li>
+ *   <li>Keep the image in the company's files (S3) and record an analysis run, committed; the house is analysing.</li>
  *   <li>Ask the analyser to read it, outside any transaction (it can take a minute).</li>
  *   <li>Record how the run went; on success its plan becomes the house's draft.</li>
  * </ol>
@@ -69,7 +69,10 @@ public class HouseUploadsService {
             plan = analyser.analyse(started.bytes(), fileName(upload), started.file().contentType(), started.file().url(),
                     mmPerPx, accessToken());
         } catch (AnalysisFailedException e) {
-            transaction.executeWithoutResult(tx -> runs.findById(started.runId()).ifPresent(run -> run.failed(e.getMessage())));
+            transaction.executeWithoutResult(tx -> {
+                runs.findById(started.runId()).ifPresent(run -> run.failed(e.getMessage()));
+                floorPlans.analysisFailed(houseId);
+            });
             throw e.unavailable() ? ProjectsProblem.unavailable(e.getMessage()) : ProjectsProblem.unprocessable(e.getMessage());
         }
 
@@ -82,7 +85,7 @@ public class HouseUploadsService {
     }
 
     private Started keepAndStart(UUID houseId, MultipartFile upload, @Nullable Double mmPerPx) {
-        UUID levelId = floorPlans.editableLevel(houseId);
+        UUID levelId = floorPlans.startAnalysis(houseId);
         byte[] bytes = read(upload);
         StoredFile file = files.storeImage(bytes, upload.getOriginalFilename(), FilePurpose.FLOOR_PLAN_SOURCE);
         CompanyContext company = current.require();

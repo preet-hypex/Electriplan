@@ -39,6 +39,7 @@ export type SiteForm = Schemas['SiteForm']
 export type AddressSuggestion = Schemas['AddressSuggestion']
 export type FloorPlanDocument = Schemas['FloorPlanDocument']
 export type FloorPlanVersion = Schemas['FloorPlanVersion']
+export type StageEvent = Schemas['StageEvent']
 
 /** The header that picks the company a company-scoped request acts in. */
 export const COMPANY_HEADER = 'X-Organisation-Id'

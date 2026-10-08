@@ -33,6 +33,13 @@ export function uploadFloorPlanImage(houseId: string, file: File, version?: numb
 export const saveFloorPlanVersion = (houseId: string, version: number, note?: string): Promise<FloorPlanVersion> =>
   api(`${base(houseId)}/versions`, { method: 'POST', json: { version, note } })
 
+/**
+ * Approves the floor plan: the draft (if any) is saved as a version with the
+ * note, and the house moves to "Floor plan approved". Returns that version.
+ */
+export const approveFloorPlan = (houseId: string, version?: number, note?: string): Promise<FloorPlanDocument> =>
+  api(`${base(houseId)}/approve`, { method: 'POST', json: { version, note } })
+
 export const floorPlanHistory = (houseId: string): Promise<FloorPlanVersion[]> => api(`${base(houseId)}/versions`)
 
 export const restoreFloorPlanVersion = (houseId: string, versionNo: number, version?: number): Promise<FloorPlanDocument> =>

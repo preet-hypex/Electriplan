@@ -13,6 +13,7 @@ import com.hypex.electriplan.projects.dto.Project;
 import com.hypex.electriplan.projects.dto.ProjectForm;
 import com.hypex.electriplan.projects.dto.ProjectPage;
 import com.hypex.electriplan.projects.dto.RecentHouse;
+import com.hypex.electriplan.projects.dto.StageEvent;
 import com.hypex.electriplan.projects.dto.ValidationProblem;
 import com.hypex.electriplan.projects.service.HousesService;
 import com.hypex.electriplan.projects.service.ProjectsService;
@@ -168,6 +169,16 @@ public class ProjectsController {
     @Operation(operationId = "getHouse", summary = "A house, with its project and storeys")
     House getHouse(@PathVariable UUID id) {
         return houses.get(id);
+    }
+
+    @GetMapping("/houses/{id}/stages")
+    @RequiresPermission(Permission.COMPANY_VIEW)
+    @Ok
+    @NotFound
+    @Operation(operationId = "listHouseStages", summary = "A house's stage history",
+            description = "Every move of the house's stage, newest first: from, to, when, and who (with their name when known).")
+    List<StageEvent> stages(@PathVariable UUID id) {
+        return houses.stageHistory(id);
     }
 
     @PutMapping("/houses/{id}")

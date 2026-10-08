@@ -128,6 +128,20 @@ public class FloorPlansController {
         return uploads.upload(id, file, mmPerPx, version);
     }
 
+    @PostMapping("/approve")
+    @RequiresPermission(Permission.FLOOR_PLAN_EDIT)
+    @Ok
+    @Invalid
+    @NotFound
+    @Conflict
+    @Operation(operationId = "approveFloorPlan", summary = "Approve the house's floor plan",
+            description = "Saves the draft as a version (with the note), if there is a draft, and moves the house to floor_plan_approved: "
+                    + "the plan electrical design starts from. Only a plan being checked (floor_plan_review) can be approved (409 otherwise). "
+                    + "Editing it afterwards sends it back for checking.")
+    FloorPlanDocument approve(@PathVariable UUID id, @Valid @RequestBody CommitForm form) {
+        return floorPlans.approve(id, form);
+    }
+
     @GetMapping("/versions")
     @RequiresPermission(Permission.COMPANY_VIEW)
     @Ok
