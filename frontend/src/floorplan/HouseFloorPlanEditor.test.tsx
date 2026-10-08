@@ -7,7 +7,7 @@ import type { HouseMode } from './FloorPlanApp'
 
 const mocks = vi.hoisted(() => ({
   openFloorPlan: vi.fn(), saveFloorPlanDraft: vi.fn(), saveFloorPlanVersion: vi.fn(),
-  floorPlanHistory: vi.fn(), restoreFloorPlanVersion: vi.fn(),
+  floorPlanHistory: vi.fn(), restoreFloorPlanVersion: vi.fn(), uploadFloorPlanImage: vi.fn(),
 }))
 vi.mock('../api/floorPlans', () => mocks)
 
@@ -19,6 +19,8 @@ vi.mock('./FloorPlanApp', () => ({
       <div data-testid="status">{house.status}</div>
       {house.banner}
       <div data-testid="actions">{house.actions}</div>
+      <button type="button" onClick={() => void house.analyse(new File(['png'], 'plan.png', { type: 'image/png' }))
+        .then(plan => useEditor.getState().loadPlan(plan))}>Upload stand-in</button>
     </div>
   ),
 }))
@@ -104,6 +106,23 @@ describe('HouseFloorPlanEditor', () => {
     await waitFor(() => expect(mocks.restoreFloorPlanVersion).toHaveBeenCalledWith('h1', 1, 4))
     expect(useEditor.getState().plan.rooms[0].name).toBe('Studio')
     expect(screen.queryByRole('dialog')).toBeNull()
+  })
+
+  it('uploads an image through the API, whose analysed plan is already the saved draft', async () => {
+    const analysed = { ...PLAN, rooms: [{ ...PLAN.rooms[0], id: 'r7', name: 'Analysed' }] }
+    mocks.uploadFloorPlanImage.mockResolvedValue(doc('draft', 7, 2, analysed))
+    renderEditor()
+    await screen.findByText('✓ All changes saved')
+    await userEvent.click(screen.getByRole('button', { name: 'Upload stand-in' }))
+
+    await waitFor(() => expect(useEditor.getState().plan.rooms[0].name).toBe('Analysed'))
+    const [houseId, file, version] = mocks.uploadFloorPlanImage.mock.calls[0]
+    expect(houseId).toBe('h1')
+    expect(file.name).toBe('plan.png')
+    expect(version).toBe(4)
+    await new Promise(r => setTimeout(r, 1700))
+    expect(mocks.saveFloorPlanDraft).not.toHaveBeenCalled()
+    expect(screen.getByTestId('status')).toHaveTextContent('All changes saved')
   })
 
   it('lets people who cannot edit look, without saving', async () => {

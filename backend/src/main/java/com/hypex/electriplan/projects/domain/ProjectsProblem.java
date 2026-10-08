@@ -28,6 +28,16 @@ public class ProjectsProblem extends RuntimeException {
         return new ProjectsProblem(HttpStatus.NOT_FOUND, message, List.of());
     }
 
+    /** 422: the request was understood but could not be done, e.g. the analyser could not read the plan. */
+    public static ProjectsProblem unprocessable(String message) {
+        return new ProjectsProblem(HttpStatus.UNPROCESSABLE_ENTITY, message, List.of());
+    }
+
+    /** 503: a service this needs is not answering. */
+    public static ProjectsProblem unavailable(String message) {
+        return new ProjectsProblem(HttpStatus.SERVICE_UNAVAILABLE, message, List.of());
+    }
+
     public static ProjectsProblem conflict(String message) {
         return new ProjectsProblem(HttpStatus.CONFLICT, message, List.of());
     }

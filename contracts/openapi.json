@@ -581,6 +581,17 @@
         ],
         "type": "object"
       },
+      "Message": {
+        "properties": {
+          "message": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "message"
+        ],
+        "type": "object"
+      },
       "Permission": {
         "enum": [
           "company.view",
@@ -1071,6 +1082,90 @@
   },
   "openapi": "3.0.1",
   "paths": {
+    "/api/files/{id}": {
+      "get": {
+        "description": "The bytes, with their type. A file's contents never change, so it may be cached.\n\n**Permission:** `company.view` (roles: owner, admin, builder, electrician, viewer).",
+        "operationId": "getFile",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "The company to act in. Needed only when the caller belongs to more than one.",
+            "in": "header",
+            "name": "X-Organisation-Id",
+            "required": false,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "image/*": {
+                "schema": {
+                  "format": "binary",
+                  "type": "string"
+                }
+              }
+            },
+            "description": "The file"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorMessage"
+                }
+              }
+            },
+            "description": "No company chosen while the caller belongs to several, or the header is not a company id."
+          },
+          "401": {
+            "description": "Not signed in, or the access token is invalid or expired."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorMessage"
+                }
+              }
+            },
+            "description": "The caller is not an active member of that company, or it is closed. Or the caller's role there lacks `company.view`."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Message"
+                }
+              }
+            },
+            "description": "No such file in this company."
+          }
+        },
+        "summary": "A file of the company",
+        "tags": [
+          "Files"
+        ],
+        "x-permission": "company.view",
+        "x-roles": [
+          "owner",
+          "admin",
+          "builder",
+          "electrician",
+          "viewer"
+        ]
+      }
+    },
     "/api/houses/recent": {
       "get": {
         "description": "Not archived, in projects that are not archived, most recently changed first: \"continue where you left off\".\n\n**Permission:** `company.view` (roles: owner, admin, builder, electrician, viewer).",
@@ -1591,6 +1686,165 @@
           }
         },
         "summary": "Save the floor plan as the house's draft",
+        "tags": [
+          "Floor plans"
+        ],
+        "x-permission": "floor-plan.edit",
+        "x-roles": [
+          "owner",
+          "admin",
+          "builder",
+          "electrician"
+        ]
+      }
+    },
+    "/api/houses/{id}/floor-plan/uploads": {
+      "post": {
+        "description": "The image (JPG or PNG, up to 25 MB) is kept in the company's files; the analyser reads it, and its plan becomes the house's draft, pointing at the kept image. Send the draft's `version` when the house has a draft.\n\n**Permission:** `floor-plan.edit` (roles: owner, admin, builder, electrician).",
+        "operationId": "uploadFloorPlanImage",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "mmPerPx",
+            "required": false,
+            "schema": {
+              "format": "double",
+              "type": "number"
+            }
+          },
+          {
+            "in": "query",
+            "name": "version",
+            "required": false,
+            "schema": {
+              "format": "int32",
+              "type": "integer"
+            }
+          },
+          {
+            "description": "The company to act in. Needed only when the caller belongs to more than one.",
+            "in": "header",
+            "name": "X-Organisation-Id",
+            "required": false,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "properties": {
+                  "file": {
+                    "format": "binary",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "file"
+                ],
+                "type": "object"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FloorPlanDocument"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationProblem"
+                }
+              }
+            },
+            "description": "Not a valid floor plan, or a field is wrong; `errors` names each problem. Or: No company chosen while the caller belongs to several, or the header is not a company id."
+          },
+          "401": {
+            "description": "Not signed in, or the access token is invalid or expired."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorMessage"
+                }
+              }
+            },
+            "description": "The caller is not an active member of that company, or it is closed. Or the caller's role there lacks `floor-plan.edit`."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorMessage"
+                }
+              }
+            },
+            "description": "No such house in this company, or no floor plan (version) yet."
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorMessage"
+                }
+              }
+            },
+            "description": "Saved by someone else since `version`, or the house is archived."
+          },
+          "413": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorMessage"
+                }
+              }
+            },
+            "description": "The image is larger than 25 MB."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorMessage"
+                }
+              }
+            },
+            "description": "The analyser could not make a plan from the image; the run is kept with the reason."
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorMessage"
+                }
+              }
+            },
+            "description": "The analyser or file storage is not answering."
+          }
+        },
+        "summary": "Upload a floor-plan image and analyse it into the draft",
         "tags": [
           "Floor plans"
         ],
@@ -3007,6 +3261,10 @@
     {
       "description": "The signed-in user.",
       "name": "Me"
+    },
+    {
+      "description": "Files a company keeps, such as uploaded floor-plan images.",
+      "name": "Files"
     },
     {
       "description": "A house's floor plan: the draft being edited, and the versions saved from it.",

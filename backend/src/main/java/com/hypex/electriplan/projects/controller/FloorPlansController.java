@@ -13,6 +13,7 @@ import com.hypex.electriplan.projects.dto.RestoreForm;
 import com.hypex.electriplan.projects.dto.SaveDraftForm;
 import com.hypex.electriplan.projects.dto.ValidationProblem;
 import com.hypex.electriplan.projects.service.FloorPlansService;
+import com.hypex.electriplan.projects.service.HouseUploadsService;
 import com.hypex.electriplan.tenancy.domain.Permission;
 import com.hypex.electriplan.tenancy.domain.RequiresPermission;
 
@@ -23,15 +24,20 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.jspecify.annotations.Nullable;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
 
 /** A house's floor plan: the draft the editor saves as it goes, and its versions (P4). */
 @RestController
@@ -41,6 +47,7 @@ import org.springframework.web.bind.annotation.RestController;
 public class FloorPlansController {
 
     private final FloorPlansService floorPlans;
+    private final HouseUploadsService uploads;
 
     @Retention(RetentionPolicy.RUNTIME)
     @ApiResponse(responseCode = "200", description = "OK")
@@ -98,6 +105,27 @@ public class FloorPlansController {
             description = "Freezes the draft: read-only from now on, and the house's floor plan for designs. The next edit starts a new draft.")
     FloorPlanVersion commit(@PathVariable UUID id, @Valid @RequestBody CommitForm form) {
         return floorPlans.commit(id, form);
+    }
+
+    @PostMapping(path = "/uploads", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @RequiresPermission(Permission.FLOOR_PLAN_EDIT)
+    @Ok
+    @Invalid
+    @NotFound
+    @Conflict
+    @ApiResponse(responseCode = "413", description = "The image is larger than 25 MB.",
+            content = @Content(schema = @Schema(implementation = ErrorMessage.class)))
+    @ApiResponse(responseCode = "422", description = "The analyser could not make a plan from the image; the run is kept with the reason.",
+            content = @Content(schema = @Schema(implementation = ErrorMessage.class)))
+    @ApiResponse(responseCode = "503", description = "The analyser or file storage is not answering.",
+            content = @Content(schema = @Schema(implementation = ErrorMessage.class)))
+    @Operation(operationId = "uploadFloorPlanImage", summary = "Upload a floor-plan image and analyse it into the draft",
+            description = "The image (JPG or PNG, up to 25 MB) is kept in the company's files; the analyser reads it, and its plan "
+                    + "becomes the house's draft, pointing at the kept image. Send the draft's `version` when the house has a draft.")
+    FloorPlanDocument upload(@PathVariable UUID id, @RequestPart("file") MultipartFile file,
+                             @RequestParam(required = false) @Nullable Double mmPerPx,
+                             @RequestParam(required = false) @Nullable Integer version) {
+        return uploads.upload(id, file, mmPerPx, version);
     }
 
     @GetMapping("/versions")

@@ -3,6 +3,7 @@ package com.hypex.electriplan.projects.service;
 import java.util.List;
 import java.util.UUID;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import com.hypex.electriplan.model.plan.FloorPlan;
 import com.hypex.electriplan.projects.dao.FloorPlanVersionRepository;
 import com.hypex.electriplan.projects.dao.HouseRepository;
@@ -65,23 +66,45 @@ public class FloorPlansService {
 
     /** The editor's plan as the house's draft: a new draft, or new contents for the one there is. */
     public FloorPlanDocument saveDraft(UUID houseId, SaveDraftForm form) {
+        FloorPlanVersionEntity draft = writeDraft(houseId, FloorPlanReading.read(form.document()), form.version(),
+                form.origin() == null ? FloorPlanOrigin.EDITOR : form.origin());
+        return document(houseId, versions.saveAndFlush(draft));
+    }
+
+    /** The analyser's plan of an uploaded image as the house's draft, recording the run and the image. */
+    public FloorPlanDocument saveAnalysed(UUID houseId, JsonNode document, @Nullable Integer version, UUID runId, UUID fileId) {
+        FloorPlanVersionEntity draft = writeDraft(houseId, FloorPlanReading.read(document), version, FloorPlanOrigin.ANALYSIS);
+        draft.analysedFrom(runId, fileId);
+        return document(houseId, versions.saveAndFlush(draft));
+    }
+
+    /**
+     * The house's draft with the plan in it: a new draft (numbered after the
+     * last version) when there is none, otherwise the draft there is, if
+     * {@code version} is the one it has.
+     */
+    private FloorPlanVersionEntity writeDraft(UUID houseId, FloorPlan plan, @Nullable Integer version, FloorPlanOrigin origin) {
         HouseEntity house = editableHouse(houseId);
         LevelEntity level = groundFloor(house);
-        FloorPlan plan = FloorPlanReading.read(form.document());
         String json = FloorPlanReading.json(plan);
 
         FloorPlanVersionEntity draft = versions.findDraft(level.getId()).orElse(null);
         if (draft == null) {
-            if (form.version() != null) {
+            if (version != null) {
                 // The caller was editing a draft that has since been saved as a version.
                 throw ProjectsProblem.conflict("This floor plan was saved as a version since you opened it. Reload to continue from it.");
             }
-            draft = newDraft(level, form.origin() == null ? FloorPlanOrigin.EDITOR : form.origin(), latestCommittedId(level));
+            draft = newDraft(level, origin, latestCommittedId(level));
         } else {
-            EditVersion.requireUnchanged(form.version(), draft.getLockVersion());
+            EditVersion.requireUnchanged(version, draft.getLockVersion());
         }
         draft.replaceDocument(json, FloorPlanReading.figures(plan, json));
-        return document(houseId, versions.saveAndFlush(draft));
+        return draft;
+    }
+
+    /** The storey a house's floor plan belongs to (v1: its ground floor), if the house may be changed. */
+    public UUID editableLevel(UUID houseId) {
+        return groundFloor(editableHouse(houseId)).getId();
     }
 
     /** The draft, frozen as a numbered version: from now on the storey's floor plan. */

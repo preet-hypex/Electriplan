@@ -5,6 +5,28 @@
  * (see contracts/README.md), then run `npm run contracts`.
  */
 export type paths = {
+    "/api/files/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * A file of the company
+         * @description The bytes, with their type. A file's contents never change, so it may be cached.
+         *
+         *     **Permission:** `company.view` (roles: owner, admin, builder, electrician, viewer).
+         */
+        get: operations["getFile"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/houses/{id}": {
         parameters: {
             query?: never;
@@ -89,6 +111,28 @@ export type paths = {
          */
         put: operations["saveFloorPlanDraft"];
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/houses/{id}/floor-plan/uploads": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Upload a floor-plan image and analyse it into the draft
+         * @description The image (JPG or PNG, up to 25 MB) is kept in the company's files; the analyser reads it, and its plan becomes the house's draft, pointing at the kept image. Send the draft's `version` when the house has a draft.
+         *
+         *     **Permission:** `floor-plan.edit` (roles: owner, admin, builder, electrician).
+         */
+        post: operations["uploadFloorPlanImage"];
         delete?: never;
         options?: never;
         head?: never;
@@ -618,6 +662,9 @@ export type components = {
             name: string;
             role: components["schemas"]["MemberRole"];
         };
+        Message: {
+            message: string;
+        };
         /** @enum {string} */
         Permission: "company.view" | "project.edit" | "floor-plan.edit" | "design.edit" | "rule.override" | "review.request" | "design.sign-off" | "quote.edit" | "member.manage" | "company.edit" | "licence.view" | "ownership.transfer";
         Project: {
@@ -766,6 +813,65 @@ export type components = {
 };
 export type $defs = Record<string, never>;
 export interface operations {
+    getFile: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description The company to act in. Needed only when the caller belongs to more than one. */
+                "X-Organisation-Id"?: string;
+            };
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The file */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "image/*": string;
+                };
+            };
+            /** @description No company chosen while the caller belongs to several, or the header is not a company id. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorMessage"];
+                };
+            };
+            /** @description Not signed in, or the access token is invalid or expired. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description The caller is not an active member of that company, or it is closed. Or the caller's role there lacks `company.view`. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorMessage"];
+                };
+            };
+            /** @description No such file in this company. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Message"];
+                };
+            };
+        };
+    };
     getHouse: {
         parameters: {
             query?: never;
@@ -1078,6 +1184,111 @@ export interface operations {
             };
             /** @description Saved by someone else since `version`, or the house is archived. */
             409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorMessage"];
+                };
+            };
+        };
+    };
+    uploadFloorPlanImage: {
+        parameters: {
+            query?: {
+                mmPerPx?: number;
+                version?: number;
+            };
+            header?: {
+                /** @description The company to act in. Needed only when the caller belongs to more than one. */
+                "X-Organisation-Id"?: string;
+            };
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "multipart/form-data": {
+                    /** Format: binary */
+                    file: string;
+                };
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FloorPlanDocument"];
+                };
+            };
+            /** @description Not a valid floor plan, or a field is wrong; `errors` names each problem. Or: No company chosen while the caller belongs to several, or the header is not a company id. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ValidationProblem"];
+                };
+            };
+            /** @description Not signed in, or the access token is invalid or expired. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description The caller is not an active member of that company, or it is closed. Or the caller's role there lacks `floor-plan.edit`. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorMessage"];
+                };
+            };
+            /** @description No such house in this company, or no floor plan (version) yet. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorMessage"];
+                };
+            };
+            /** @description Saved by someone else since `version`, or the house is archived. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorMessage"];
+                };
+            };
+            /** @description The image is larger than 25 MB. */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorMessage"];
+                };
+            };
+            /** @description The analyser could not make a plan from the image; the run is kept with the reason. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorMessage"];
+                };
+            };
+            /** @description The analyser or file storage is not answering. */
+            503: {
                 headers: {
                     [name: string]: unknown;
                 };

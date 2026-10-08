@@ -23,6 +23,7 @@
     <jspecify.version>1.0.0</jspecify.version>
     <json-schema-validator.version>1.5.6</json-schema-validator.version>
     <springdoc.version>2.8.17</springdoc.version>
+    <aws-sdk.version>2.55.12</aws-sdk.version>
 
     <tomcat.version>10.1.60</tomcat.version>
     <postgresql.version>42.7.13</postgresql.version>
@@ -36,6 +37,13 @@
         <groupId>org.springframework.modulith</groupId>
         <artifactId>spring-modulith-bom</artifactId>
         <version>${spring-modulith.version}</version>
+        <type>pom</type>
+        <scope>import</scope>
+      </dependency>
+      <dependency>
+        <groupId>software.amazon.awssdk</groupId>
+        <artifactId>bom</artifactId>
+        <version>${aws-sdk.version}</version>
         <type>pom</type>
         <scope>import</scope>
       </dependency>
@@ -121,6 +129,28 @@
 
     <!-- Validates JSON against the schemas in ../contracts: incoming floor
          plans (FloorPlanReader) and the contract tests. -->
+    <!-- Files (uploaded plans, drawings, quotes) live in S3; the API is the only
+         part of the system that talks to it. The JDK's HTTP client is enough:
+         the SDK's Netty and Apache clients are left out. -->
+    <dependency>
+      <groupId>software.amazon.awssdk</groupId>
+      <artifactId>s3</artifactId>
+      <exclusions>
+        <exclusion>
+          <groupId>software.amazon.awssdk</groupId>
+          <artifactId>netty-nio-client</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>software.amazon.awssdk</groupId>
+          <artifactId>apache-client</artifactId>
+        </exclusion>
+      </exclusions>
+    </dependency>
+    <dependency>
+      <groupId>software.amazon.awssdk</groupId>
+      <artifactId>url-connection-client</artifactId>
+    </dependency>
+
     <!-- Rule packs are YAML (src/main/resources/rulepacks). -->
     <dependency>
       <groupId>com.fasterxml.jackson.dataformat</groupId>

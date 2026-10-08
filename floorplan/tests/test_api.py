@@ -28,16 +28,22 @@ class TestAnalyse:
         body = response.json()
         assert body["units"] == "mm"
         assert body["walls"] and body["rooms"]
-        assert body["source"]["imageUrl"].startswith("/api/floorplan/images/")
+        assert body["source"]["imageUrl"] == "local:uploaded-image"
         assert body["analysis"]["wallCount"] == len(body["walls"])
 
-    def test_the_uploaded_image_can_be_fetched_back(self, synthetic_plan: bytes) -> None:
+    def test_the_plan_points_where_the_caller_keeps_the_image(self, synthetic_plan: bytes) -> None:
         body = client.post(
-            "/api/floorplan/analyse", files={"file": ("plan.png", synthetic_plan, "image/png")}
+            "/api/floorplan/analyse",
+            files={"file": ("plan.png", synthetic_plan, "image/png")},
+            data={"image_url": "/api/files/0d6f2f6e-6c55-4b5a-9a43-3b1f7c1d2e3f"},
         ).json()
-        image = client.get(body["source"]["imageUrl"])
-        assert image.status_code == 200
-        assert image.content == synthetic_plan
+        assert body["source"]["imageUrl"] == "/api/files/0d6f2f6e-6c55-4b5a-9a43-3b1f7c1d2e3f"
+
+    def test_it_keeps_no_files(self, synthetic_plan: bytes, tmp_path, monkeypatch) -> None:
+        monkeypatch.chdir(tmp_path)
+        client.post("/api/floorplan/analyse", files={"file": ("plan.png", synthetic_plan, "image/png")})
+        assert list(tmp_path.iterdir()) == []
+        assert client.get("/api/floorplan/images/anything.png").status_code == 404
 
     def test_an_explicit_scale_is_honoured(self, synthetic_plan: bytes) -> None:
         response = client.post(
@@ -76,12 +82,6 @@ class TestAnalyse:
         )
         assert response.status_code == 422
         assert "No walls" in response.json()["detail"]
-
-    def test_an_unknown_image_id_is_a_404(self) -> None:
-        assert client.get("/api/floorplan/images/does-not-exist.png").status_code == 404
-
-    def test_a_traversal_attempt_is_refused(self) -> None:
-        assert client.get("/api/floorplan/images/..%2F..%2Fmain.py").status_code in (400, 404)
 
 
 class TestCalibrate:
@@ -143,16 +143,3 @@ class TestExport:
         assert response.status_code == 422
 
 
-def test_an_upload_survives_the_store_directory_vanishing(
-    synthetic_plan: bytes, tmp_path
-) -> None:
-    """The upload directory is scratch space; anything may delete it."""
-    import shutil
-
-    from app.api import routes
-
-    shutil.rmtree(routes.store.directory, ignore_errors=True)
-    response = client.post(
-        "/api/floorplan/analyse", files={"file": ("plan.png", synthetic_plan, "image/png")}
-    )
-    assert response.status_code == 200

@@ -1,5 +1,6 @@
 import type { FloorPlan } from '../model/types'
 import { parseFloorPlan } from '../model/serialise'
+import { COMPANY_HEADER, company } from '../../lib/api'
 
 /** Same-origin by default; Vite (dev) and nginx (Docker) proxy /api/floorplan to the analyser. */
 const BASE = import.meta.env.VITE_API_URL ?? ''
@@ -57,7 +58,18 @@ export interface AnalyseOptions {
   mmPerPx?: number
 }
 
-/** Upload an image and get back a FloorPlan reconstructed from its pixels. */
+/**
+ * What the analyser puts in source.imageUrl when it is not told where the
+ * image is kept: it keeps no files, so the caller shows its own copy.
+ */
+export const LOCAL_IMAGE = 'local:uploaded-image'
+
+/**
+ * Upload an image and get back a FloorPlan reconstructed from its pixels, for
+ * the scratch editor (a plan not saved to a house). Nothing keeps the image,
+ * so the plan shows the picked file from the browser; a house's uploads are
+ * kept by the API instead (api/floorPlans uploadFloorPlanImage).
+ */
 export async function analyse(file: File, options: AnalyseOptions = {}): Promise<FloorPlan> {
   const form = new FormData()
   form.append('file', file)
@@ -68,7 +80,11 @@ export async function analyse(file: File, options: AnalyseOptions = {}): Promise
     body: form,
     headers: await authHeaders(),
   })
-  return parseFloorPlan(await unwrap(res))
+  const plan = parseFloorPlan(await unwrap(res))
+  if (plan.source?.imageUrl === LOCAL_IMAGE) {
+    plan.source.imageUrl = URL.createObjectURL(file)
+  }
+  return plan
 }
 
 export interface CalibrateRequest {
@@ -119,7 +135,11 @@ export async function exportPlan(plan: FloorPlan): Promise<string> {
  * revokes it with URL.revokeObjectURL when done.
  */
 export async function fetchImageObjectUrl(path: string): Promise<string> {
-  const res = await fetch(apiUrl(path), { headers: await authHeaders() })
+  // A house's image is one of its company's files: say which company.
+  const chosen = company()
+  const res = await fetch(apiUrl(path), {
+    headers: { ...(await authHeaders()), ...(chosen ? { [COMPANY_HEADER]: chosen } : {}) },
+  })
   if (!res.ok) throw new ApiError(`The plan image could not be loaded (${res.status}).`, res.status)
   return URL.createObjectURL(await res.blob())
 }

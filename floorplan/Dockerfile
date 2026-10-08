@@ -8,9 +8,8 @@ RUN apt-get update \
  && apt-get install -y --no-install-recommends tesseract-ocr tesseract-ocr-eng curl \
  && rm -rf /var/lib/apt/lists/*
 
-RUN useradd --system --uid 10001 --create-home floorplan \
- # Owned by the service user, so a new volume mounted here inherits that.
- && mkdir -p /data/uploads && chown floorplan:floorplan /data/uploads
+# The analyser keeps no files: the Java API stores uploads (in S3).
+RUN useradd --system --uid 10001 --create-home floorplan
 WORKDIR /home/floorplan
 
 COPY requirements.txt .
@@ -19,7 +18,6 @@ RUN --mount=type=cache,target=/root/.cache/pip pip install -r requirements.txt
 COPY --chown=floorplan:floorplan app ./app
 
 USER floorplan
-ENV FLOORPLAN_UPLOAD_DIR=/data/uploads
 EXPOSE 8000
 
 HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \

@@ -58,11 +58,22 @@ services:
       PORT: "8080"
       # Local development designs states whose rules are not signed off yet (Victoria, until E16-S4).
       RULES_ALLOW_UNSIGNED_STATES: ${RULES_ALLOW_UNSIGNED_STATES:-true}
+      # Files go to S3: locally the "s3" service below, which takes any key.
+      FILES_S3_ENDPOINT: http://s3:9090
+      FILES_S3_BUCKET: electriplan-files
+      FILES_S3_ACCESS_KEY: local
+      FILES_S3_SECRET_KEY: local
+      # The floor-plan analyser, which the API calls with each house upload.
+      ANALYSER_URL: http://floorplan:8000
     depends_on:
       db:
         condition: service_healthy
       db-roles:
         condition: service_completed_successfully
+      s3:
+        condition: service_started
+      floorplan:
+        condition: service_healthy
     ports:
       - "127.0.0.1:${API_PORT:-8081}:8080"
     healthcheck:
@@ -82,8 +93,7 @@ services:
     env_file:
       - path: ./frontend/.env
         required: false
-    volumes:
-      - floorplan-uploads:/data/uploads
+    # It only analyses: it keeps no files (the API stores uploads in S3).
     ports:
       - "127.0.0.1:${FLOORPLAN_PORT:-8082}:8000"
     healthcheck:
@@ -93,6 +103,21 @@ services:
       retries: 3
       start_period: 20s
       start_interval: 2s
+    restart: unless-stopped
+
+  # S3 for local development: an S3-compatible store (Adobe's open-source
+  # S3Mock) with the bucket made at start. Files are kept in the s3-files
+  # volume. In AWS the API uses a real bucket instead (README "File storage").
+  s3:
+    image: adobe/s3mock:5.2.3
+    environment:
+      COM_ADOBE_TESTING_S3MOCK_STORE_INITIAL_BUCKETS: electriplan-files
+      COM_ADOBE_TESTING_S3MOCK_STORE_RETAIN_FILES_ON_EXIT: "true"
+      COM_ADOBE_TESTING_S3MOCK_STORE_ROOT: /s3mockroot
+    volumes:
+      - s3-files:/s3mockroot
+    ports:
+      - "127.0.0.1:${S3_PORT:-9090}:9090"
     restart: unless-stopped
 
   web:
@@ -116,4 +141,4 @@ services:
 
 volumes:
   app-data:
-  floorplan-uploads:
+  s3-files:

@@ -7,7 +7,7 @@ import { useEditor } from './state/store'
 import { parseFloorPlanJson, serialiseFloorPlan } from './model/serialise'
 import type { FloorPlan } from './model/types'
 import {
-  floorPlanHistory, openFloorPlan, restoreFloorPlanVersion, saveFloorPlanDraft, saveFloorPlanVersion,
+  floorPlanHistory, openFloorPlan, restoreFloorPlanVersion, saveFloorPlanDraft, saveFloorPlanVersion, uploadFloorPlanImage,
 } from '../api/floorPlans'
 import type { FloorPlanDocument, FloorPlanVersion } from '../api'
 
@@ -97,6 +97,20 @@ export default function HouseFloorPlanEditor({
     )
   }
 
+  /**
+   * An uploaded image: the API keeps it and saves the analysed plan as the
+   * draft, so that plan is already saved when the editor opens it.
+   */
+  const analyse = async (file: File): Promise<FloorPlan> => {
+    if (canEdit) await autosave.flush()
+    const doc = await uploadFloorPlanImage(houseId, file, draftVersion.current)
+    draftVersion.current = doc.version
+    setHasDraft(true)
+    const plan = fromDocument(doc)
+    setSaved(plan)
+    return plan
+  }
+
   const restore = async (versionNo: number) => {
     if (canEdit) await autosave.flush()
     const doc = await restoreFloorPlanVersion(houseId, versionNo, draftVersion.current)
@@ -119,6 +133,7 @@ export default function HouseFloorPlanEditor({
         getAccessToken={getAccessToken}
         house={{
           title,
+          analyse,
           status: <SaveStatus state={autosave.state} canEdit={canEdit} onRetry={() => void autosave.flush().catch(() => {})} />,
           banner: <Banner state={autosave.state} canEdit={canEdit} error={autosave.error} onReload={() => void open()} />,
           actions: (

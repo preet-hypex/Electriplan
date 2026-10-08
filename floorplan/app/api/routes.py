@@ -1,4 +1,10 @@
-"""The HTTP surface: analyse, calibrate, export, plus serving the upload back."""
+"""The HTTP surface: analyse, calibrate, export.
+
+The analyser only analyses. It keeps no files: the caller says where the plan
+should point for its image (``image_url``). The Java API stores house uploads
+in the company's files and passes their URL; the scratch editor keeps the image
+in the browser.
+"""
 
 from __future__ import annotations
 
@@ -6,15 +12,14 @@ import json
 import logging
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
-from fastapi.responses import FileResponse, Response
+from fastapi.responses import Response
 
 from .. import models
-from ..auth import User, current_user
+from ..auth import current_user
 from ..config import DEFAULTS, PipelineConfig
 from ..pipeline import scale as scale_module
 from ..pipeline.orchestrator import AnalysisError, analyse
 from ..pipeline.preprocess import ImageLoadError
-from ..storage import ImageStore, UnsupportedImageType
 
 log = logging.getLogger("floorplan.api")
 
@@ -22,7 +27,14 @@ log = logging.getLogger("floorplan.api")
 # signed-in Supabase user (see app/auth.py).
 public_router = APIRouter(prefix="/api/floorplan")
 router = APIRouter(prefix="/api/floorplan", dependencies=[Depends(current_user)])
-store = ImageStore()
+
+#: The image types the pipeline reads.
+SUPPORTED_TYPES = {"image/jpeg", "image/jpg", "image/png"}
+SUPPORTED_SUFFIXES = (".jpg", ".jpeg", ".png")
+
+#: Where a plan points for its image when the caller does not say: the caller's
+#: own copy (the scratch editor shows the file it picked).
+LOCAL_IMAGE = "local:uploaded-image"
 
 #: Refuse anything larger up front rather than spending a minute on it.
 MAX_UPLOAD_BYTES = 25 * 1024 * 1024
@@ -47,7 +59,12 @@ async def analyse_endpoint(
     mm_per_px: float | None = Form(
         default=None, description="Skip scale estimation and use this instead"
     ),
-    user: User = Depends(current_user),
+    image_url: str = Form(
+        default=LOCAL_IMAGE,
+        description="Where the plan should point for its image (source.imageUrl), e.g. the API's /api/files/{id}",
+        min_length=1,
+        max_length=500,
+    ),
 ) -> models.FloorPlan:
     """Reconstruct an editable FloorPlan from a floor-plan image."""
     data = await file.read()
@@ -61,14 +78,16 @@ async def analyse_endpoint(
     if mm_per_px is not None and mm_per_px <= 0:
         raise HTTPException(status_code=400, detail="mm_per_px must be greater than zero.")
 
-    try:
-        stored = store.save(data, file.content_type, file.filename, owner=user.id)
-    except UnsupportedImageType as exc:
-        raise HTTPException(status_code=415, detail=str(exc)) from exc
+    content_type = (file.content_type or "").lower()
+    if content_type not in SUPPORTED_TYPES and not (file.filename or "").lower().endswith(SUPPORTED_SUFFIXES):
+        raise HTTPException(
+            status_code=415,
+            detail=f"Unsupported image type {file.content_type or file.filename or 'unknown'!r}. Upload a JPG or PNG.",
+        )
 
     config = PipelineConfig(settings=DEFAULTS, mm_per_px_override=mm_per_px)
     try:
-        result = analyse(data, stored.url, config)
+        result = analyse(data, image_url, config)
     except ImageLoadError as exc:
         raise HTTPException(status_code=415, detail=str(exc)) from exc
     except AnalysisError as exc:
@@ -111,15 +130,3 @@ def export_endpoint(request: models.ExportRequest) -> Response:
         media_type="application/json",
         headers={"Content-Disposition": 'attachment; filename="floorplan.json"'},
     )
-
-
-@router.get("/images/{image_id}")
-def image_endpoint(image_id: str, user: User = Depends(current_user)) -> FileResponse:
-    """Serve one of the caller's uploaded images back, so the editor can show it underneath.
-
-    Another user's image is a 404, not a 403: whether it exists is not theirs to know.
-    """
-    path = store.path_for(image_id, owner=user.id)
-    if path is None:
-        raise HTTPException(status_code=404, detail="No such image.")
-    return FileResponse(path)
