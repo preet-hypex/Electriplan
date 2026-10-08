@@ -12,7 +12,6 @@ import jakarta.persistence.Version;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-import lombok.Setter;
 import org.hibernate.annotations.Generated;
 import org.hibernate.generator.EventType;
 import org.jspecify.annotations.Nullable;
@@ -21,7 +20,6 @@ import org.jspecify.annotations.Nullable;
 @Entity
 @Table(schema = "electriplan", name = "plan")
 @Getter
-@Setter(AccessLevel.PACKAGE)
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 class HouseEntity {
 
@@ -72,8 +70,11 @@ class HouseEntity {
     @Column(name = "lock_version", nullable = false)
     private int lockVersion;
 
-    static HouseEntity create(UUID organisationId, UUID projectId, @Nullable UUID createdBy) {
+    static HouseEntity create(UUID organisationId, UUID projectId, String name, DwellingType dwellingType,
+                              @Nullable UUID createdBy) {
         HouseEntity house = new HouseEntity();
+        house.name = name;
+        house.dwellingType = dwellingType;
         house.id = UUID.randomUUID();
         house.organisationId = organisationId;
         house.projectId = projectId;
@@ -85,5 +86,24 @@ class HouseEntity {
 
     boolean archived() {
         return archivedAt != null;
+    }
+
+    void rename(String newName) {
+        name = newName;
+    }
+
+    void changeDwellingType(DwellingType type) {
+        dwellingType = type;
+    }
+
+    /** Archiving twice changes nothing. */
+    void archive() {
+        if (archivedAt == null) {
+            archivedAt = Instant.now();
+        }
+    }
+
+    void restore() {
+        archivedAt = null;
     }
 }

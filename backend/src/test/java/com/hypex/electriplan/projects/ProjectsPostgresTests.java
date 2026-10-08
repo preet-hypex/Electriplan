@@ -324,6 +324,9 @@ class ProjectsPostgresTests extends PostgresApplicationTest {
         assertThat(house.path("stage").asText()).isEqualTo("awaiting_upload");
         assertThat(house.path("storeys").asInt()).isEqualTo(1);
         assertThat(house.path("version").asInt()).isZero();
+        assertThat(house.path("createdAt").asText()).as("what the database filled in comes back").isNotBlank();
+        assertThat(house.path("updatedAt").asText()).isNotBlank();
+        assertThat(house.path("stageChangedAt").asText()).isNotBlank();
         assertThat(house.path("project").path("reference").asText()).isEqualTo(project.path("reference").asText());
         assertThat(house.path("levels")).hasSize(1);
         assertThat(house.path("levels").get(0).path("name").asText()).isEqualTo("Ground floor");

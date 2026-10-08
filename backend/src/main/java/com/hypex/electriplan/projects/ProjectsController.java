@@ -34,7 +34,8 @@ import org.springframework.web.bind.annotation.RestController;
 @Tag(name = "Projects", description = "A company's projects (a job at one site) and their houses.")
 class ProjectsController {
 
-    private final ProjectsService service;
+    private final ProjectsService projects;
+    private final HousesService houses;
 
     /** Declaring error responses stops springdoc adding the 200, so it is declared too (its body from the return type). */
     @Retention(RetentionPolicy.RUNTIME)
@@ -73,7 +74,7 @@ class ProjectsController {
             @Parameter(description = "true: archived projects instead of current ones.") @RequestParam(defaultValue = "false") boolean archived,
             @Parameter(description = "From 0.") @RequestParam(defaultValue = "0") int page,
             @Parameter(description = "1 to 100.") @RequestParam(defaultValue = "25") int size) {
-        return service.list(q, status, archived, page, size);
+        return projects.list(q, status, archived, page, size);
     }
 
     @PostMapping("/projects")
@@ -83,7 +84,7 @@ class ProjectsController {
     @Operation(operationId = "createProject", summary = "Start a project",
             description = "The reference (PRJ-000001...) is assigned in order. The state is required; a distributor must supply that state.")
     ProjectsApi.Project create(@Valid @RequestBody ProjectsApi.ProjectForm form) {
-        return service.create(form);
+        return projects.create(form);
     }
 
     @GetMapping("/projects/{id}")
@@ -92,7 +93,7 @@ class ProjectsController {
     @Ok
     @Operation(operationId = "getProject", summary = "A project with its houses")
     ProjectsApi.Project get(@PathVariable UUID id) {
-        return service.get(id);
+        return projects.get(id);
     }
 
     @PutMapping("/projects/{id}")
@@ -104,7 +105,7 @@ class ProjectsController {
     @Operation(operationId = "updateProject", summary = "Change a project's details",
             description = "Send every field, and the `version` you read. A project changed since then is refused (409), not overwritten.")
     ProjectsApi.Project update(@PathVariable UUID id, @Valid @RequestBody ProjectsApi.ProjectForm form) {
-        return service.update(id, form);
+        return projects.update(id, form);
     }
 
     @PostMapping("/projects/{id}/archive")
@@ -114,7 +115,7 @@ class ProjectsController {
     @Operation(operationId = "archiveProject", summary = "Archive a project",
             description = "It leaves the project list and becomes read-only, with its houses, until restored.")
     ProjectsApi.Project archive(@PathVariable UUID id) {
-        return service.archive(id, true);
+        return projects.archive(id);
     }
 
     @PostMapping("/projects/{id}/restore")
@@ -123,7 +124,7 @@ class ProjectsController {
     @Ok
     @Operation(operationId = "restoreProject", summary = "Restore an archived project")
     ProjectsApi.Project restore(@PathVariable UUID id) {
-        return service.archive(id, false);
+        return projects.restore(id);
     }
 
     // ---- Houses ----
@@ -137,7 +138,7 @@ class ProjectsController {
     @Operation(operationId = "addHouse", summary = "Add a house to a project",
             description = "It starts awaiting its floor plan, with its ground floor ready.")
     ProjectsApi.House addHouse(@PathVariable UUID id, @Valid @RequestBody ProjectsApi.HouseForm form) {
-        return service.addHouse(id, form);
+        return houses.add(id, form);
     }
 
     @GetMapping("/houses/{id}")
@@ -146,7 +147,7 @@ class ProjectsController {
     @Ok
     @Operation(operationId = "getHouse", summary = "A house, with its project and storeys")
     ProjectsApi.House getHouse(@PathVariable UUID id) {
-        return service.getHouse(id);
+        return houses.get(id);
     }
 
     @PutMapping("/houses/{id}")
@@ -158,7 +159,7 @@ class ProjectsController {
     @Operation(operationId = "updateHouse", summary = "Change a house's details",
             description = "Send the `version` you read; a house changed since is refused (409).")
     ProjectsApi.House updateHouse(@PathVariable UUID id, @Valid @RequestBody ProjectsApi.HouseForm form) {
-        return service.updateHouse(id, form);
+        return houses.update(id, form);
     }
 
     @PostMapping("/houses/{id}/archive")
@@ -167,7 +168,7 @@ class ProjectsController {
     @Ok
     @Operation(operationId = "archiveHouse", summary = "Archive a house")
     ProjectsApi.House archiveHouse(@PathVariable UUID id) {
-        return service.archiveHouse(id, true);
+        return houses.archive(id);
     }
 
     @PostMapping("/houses/{id}/restore")
@@ -177,6 +178,6 @@ class ProjectsController {
     @Ok
     @Operation(operationId = "restoreHouse", summary = "Restore an archived house")
     ProjectsApi.House restoreHouse(@PathVariable UUID id) {
-        return service.archiveHouse(id, false);
+        return houses.restore(id);
     }
 }

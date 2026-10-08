@@ -9,6 +9,12 @@ import org.springframework.data.jpa.repository.Query;
 
 interface HouseRepository extends JpaRepository<HouseEntity, UUID> {
 
+    /** The house, or 404: another company's house is not found, as if it did not exist. */
+    default HouseEntity require(UUID id) {
+        return findById(id).orElseThrow(() -> ProjectsProblem.notFound("house"));
+    }
+
+    /** A project's houses, oldest first. */
     List<HouseEntity> findByProjectIdOrderByCreatedAtAscNameAsc(UUID projectId);
 
     /** Houses that are not archived, by project and stage, for the project list. */

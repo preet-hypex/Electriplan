@@ -17,7 +17,6 @@ import jakarta.persistence.Version;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-import lombok.Setter;
 import org.hibernate.annotations.Generated;
 import org.hibernate.generator.EventType;
 import org.jspecify.annotations.Nullable;
@@ -26,7 +25,6 @@ import org.jspecify.annotations.Nullable;
 @Entity
 @Table(schema = "electriplan", name = "project")
 @Getter
-@Setter(AccessLevel.PACKAGE)
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 class ProjectEntity {
 
@@ -112,5 +110,33 @@ class ProjectEntity {
 
     boolean archived() {
         return archivedAt != null;
+    }
+
+    /** Takes on checked details (the status only if one is given). */
+    void changeDetails(ProjectDetails details) {
+        name = details.name();
+        description = details.description();
+        lotNumber = details.lotNumber();
+        siteStreet = details.street();
+        siteSuburb = details.suburb();
+        siteState = details.state();
+        sitePostcode = details.postcode();
+        distributorCode = details.distributor();
+        supplyPhases = (short) details.supplyPhases();
+        dueOn = details.dueOn();
+        if (details.status() != null) {
+            status = details.status();
+        }
+    }
+
+    /** Leaves the project list and becomes read-only. Archiving twice changes nothing. */
+    void archive() {
+        if (archivedAt == null) {
+            archivedAt = Instant.now();
+        }
+    }
+
+    void restore() {
+        archivedAt = null;
     }
 }
