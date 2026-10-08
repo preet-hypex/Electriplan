@@ -164,7 +164,8 @@ of `/api/*` to the API on 8081.
 |---|---|
 | Frontend tests and types | `cd frontend && npm test && npm run typecheck` |
 | Analyser tests (needs Python 3.11+ and `brew install tesseract`) | `floorplan/run.sh test` |
-| API tests, without installing Java | `docker run --rm -v "$PWD":/src -w /src/backend maven:3.9-eclipse-temurin-21 mvn -B test` (the repo root is mounted: the tests read `contracts/`) |
+| API tests, all of them (needs JDK 21, Maven and Docker running) | `./scripts/test-api.sh` — starts a throwaway Postgres, runs `mvn verify` against it as CI does, and removes it afterwards, pass or fail. Extra Maven arguments pass through, e.g. `./scripts/test-api.sh -Dtest=ModularityTests` |
+| API tests, without installing Java (the Postgres tests are skipped) | `docker run --rm -v "$PWD":/src -w /src/backend maven:3.9-eclipse-temurin-21 mvn -B test` (the repo root is mounted: the tests read `contracts/`) |
 | Browse and try the API | **http://localhost:4180/api/docs** (Swagger UI; **Authorize** with an access token) |
 | After changing an API endpoint | regenerate `contracts/openapi.json` and the web app's types: see [contracts/README.md](contracts/README.md#the-api-openapijson) |
 | API outside Docker (needs JDK 21: `brew install openjdk@21`, and Maven) | `backend/run.sh` |
