@@ -178,10 +178,15 @@ WITH u AS (UPDATE electriplan.plan SET name = 'hijacked' RETURNING 1) SELECT pg_
 INSERT INTO electriplan.project (id, organisation_id, reference, name) VALUES ('b0000000-0000-4000-8000-000000000002', 'bbbbbbbb-0000-4000-8000-000000000002', 'PRJ-000001', 'B site');
 SELECT pg_temp.must_fail($$INSERT INTO electriplan.plan (organisation_id, project_id, name) VALUES ('bbbbbbbb-0000-4000-8000-000000000002', 'b0000000-0000-4000-8000-000000000001', 'cross')$$, 'B pointing a plan at A''s project');
 
--- The builder from A, while acting in B's context, still lists their own organisations
+-- The builder from A, while working in B: A is invisible, even to its own member (V5)
 SELECT set_config('electriplan.actor_id', '11111111-1111-4111-8111-111111111111', false);
-SELECT pg_temp.ok((SELECT count(*) FROM electriplan.organisation WHERE id = 'aaaaaaaa-0000-4000-8000-000000000001') = 1, 'a member can always see the organisations they belong to');
+SELECT pg_temp.ok((SELECT count(*) FROM electriplan.organisation WHERE id = 'aaaaaaaa-0000-4000-8000-000000000001') = 0, 'inside a company, the member''s other companies are invisible');
+SELECT pg_temp.ok((SELECT count(*) FROM electriplan.organisation_member WHERE user_id = '11111111-1111-4111-8111-111111111111') = 0, 'and so are their memberships there');
+-- With no company chosen (the company switcher), they list their own companies and memberships
+SELECT set_config('electriplan.organisation_id', '', false);
+SELECT pg_temp.ok((SELECT count(*) FROM electriplan.organisation WHERE id = 'aaaaaaaa-0000-4000-8000-000000000001') = 1, 'with no company chosen, a member sees the companies they belong to');
 SELECT pg_temp.ok((SELECT count(*) FROM electriplan.organisation_member WHERE user_id = '11111111-1111-4111-8111-111111111111') = 1, 'and their own memberships');
+SELECT pg_temp.ok((SELECT count(*) FROM electriplan.organisation WHERE id = 'bbbbbbbb-0000-4000-8000-000000000002') = 0, 'but not companies they do not belong to');
 
 -- No organisation set: nothing at all
 SELECT set_config('electriplan.organisation_id', '', false), set_config('electriplan.actor_id', '', false);

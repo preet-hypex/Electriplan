@@ -3,7 +3,7 @@
 A company buys an Electriplan licence with a fixed number of seats, and its people work together under
 it, each with a role that decides what they may do. One company never sees another's data.
 
-Status: **in progress** — T1 (seats and licence period) and T2 (the API's database role) done. The database already has most of this (see
+Status: **in progress** — T1 (seats and licence period), T2 (the API's database role) and T3 (company context per request) done. The database already has most of this (see
 [database-schema.md](database-schema.md)); the API does not enforce any of it yet: today any person
 Supabase signs in can call every endpoint.
 
@@ -117,7 +117,7 @@ Sizes: **S** ≤ 2 days, **M** 3–5 days, **L** 1–2 weeks.
 |---|---|---|---|
 | T1 | ✅ **Done** — Seats and licence period | Migration V3 adds `seat_limit`, `licence_starts_on`, `licence_ends_on`, `closed_at`; trial defaults (3 seats, 14 days); a trigger refuses a seated member or invitation past the limit, never counts viewers, and checks a viewer promoted to another role; schema-rules tests for at, over and lowered limits, viewers, and promotion | S |
 | T2 | ✅ **Done** — Runtime database role | A `NOSUPERUSER NOBYPASSRLS` role the API connects as, with the grants it needs; Flyway still migrates as the owner; local Docker, CI and README updated | M |
-| T3 | Company context per request | `X-Organisation-Id` resolution, membership and status checks (403), `SET LOCAL` per transaction; JPA entities for organisation and member; Postgres tests prove a query sees only the current company | L |
+| T3 | ✅ **Done** — Company context per request | `X-Organisation-Id` resolution, membership and status checks (403), `SET LOCAL` per transaction; JPA entities for organisation and member; Postgres tests prove a query sees only the current company | L |
 | T4 | Permission model | `Permission` enum and the role matrix in §4 in one place; an annotation on endpoints; a test for **every role × every permission**; the always-rules (last owner, own role) | M |
 | T5 | Licensed sign-off | Record a member's licence; operator verifies it; sign-off requires a verified licence in the project's state | M |
 | T6 | Company onboarding (operator) | Operator endpoint/tool: create a company with its seats, period and first owner; the owner gets the Supabase invitation email | M |
