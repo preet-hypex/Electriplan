@@ -4,107 +4,244 @@
   "description": "An electrical design for one house plan: every point (light, switch, outlet...), wet-area zones, circuits, the switchboard, maximum demand, and what breaks a rule or needs an electrician's decision. Produced by the engine, edited in the editor, stored versioned in electriplan.electrical_design_version.document. See documents/electrical-engine-plan.md section 5.",
   "type": "object",
   "properties": {
-    "version": { "const": 1 },
+    "version": {
+      "const": 1
+    },
     "planRef": {
       "title": "PlanRef",
       "description": "The floor plan this design was made from: its content hash and version, so a stale design can be detected.",
       "type": "object",
       "properties": {
-        "planHash": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" },
-        "planVersion": { "type": "integer", "minimum": 1 }
+        "planHash": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}$"
+        },
+        "planVersion": {
+          "type": "integer",
+          "minimum": 1
+        }
       },
-      "required": ["planHash", "planVersion"],
+      "required": [
+        "planHash",
+        "planVersion"
+      ],
       "additionalProperties": false
     },
     "rulePack": {
       "title": "RulePackRef",
-      "description": "The rules the design was made and checked with.",
+      "description": "The rules the design was made and checked with: the rule pack release, and the state whose rules were applied on top of the national ones (each state adds its own, e.g. Queensland's smoke alarm in every bedroom). Together they say exactly which rules made the design.",
       "type": "object",
       "properties": {
-        "id": { "type": "string", "pattern": "^[a-z0-9-]+$" },
-        "version": { "type": "string", "minLength": 1 },
-        "standards": { "type": "array", "items": { "type": "string", "minLength": 1 } }
+        "id": {
+          "type": "string",
+          "pattern": "^[a-z0-9-]+$"
+        },
+        "version": {
+          "type": "string",
+          "minLength": 1
+        },
+        "state": {
+          "$ref": "common.schema.json#/$defs/australianState"
+        },
+        "standards": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
       },
-      "required": ["id", "version", "standards"],
+      "required": [
+        "id",
+        "version",
+        "state",
+        "standards"
+      ],
       "additionalProperties": false
     },
-    "points": { "type": "array", "items": { "$ref": "#/$defs/designPoint" } },
-    "zones": { "type": "array", "items": { "$ref": "#/$defs/zone" } },
-    "circuits": { "type": "array", "items": { "$ref": "#/$defs/circuit" } },
-    "switchboard": { "$ref": "#/$defs/switchboard" },
-    "maxDemand": { "$ref": "#/$defs/maxDemand" },
-    "violations": { "type": "array", "items": { "$ref": "#/$defs/violation" } },
-    "decisionsRequired": { "type": "array", "items": { "$ref": "#/$defs/decisionRequired" } }
+    "points": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/designPoint"
+      }
+    },
+    "zones": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/zone"
+      }
+    },
+    "circuits": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/circuit"
+      }
+    },
+    "switchboard": {
+      "$ref": "#/$defs/switchboard"
+    },
+    "maxDemand": {
+      "$ref": "#/$defs/maxDemand"
+    },
+    "violations": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/violation"
+      }
+    },
+    "decisionsRequired": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/decisionRequired"
+      }
+    }
   },
-  "required": ["version", "planRef", "rulePack", "points", "zones", "circuits", "violations", "decisionsRequired"],
+  "required": [
+    "version",
+    "planRef",
+    "rulePack",
+    "points",
+    "zones",
+    "circuits",
+    "violations",
+    "decisionsRequired"
+  ],
   "additionalProperties": false,
-
   "$defs": {
     "designPoint": {
       "title": "DesignPoint",
       "description": "One electrical item, on a wall or on the ceiling.",
       "type": "object",
       "properties": {
-        "id": { "$ref": "common.schema.json#/$defs/id" },
+        "id": {
+          "$ref": "common.schema.json#/$defs/id"
+        },
         "kind": {
           "title": "PointKind",
           "type": "string",
           "enum": [
-            "downlight", "oyster", "batten", "pendant", "wall-light", "exterior-light",
-            "exhaust-fan", "ceiling-fan", "smoke-alarm",
-            "switch", "dimmer",
-            "gpo-single", "gpo-double", "gpo-weatherproof", "appliance-outlet", "isolator",
-            "data", "tv"
+            "downlight",
+            "oyster",
+            "batten",
+            "pendant",
+            "wall-light",
+            "exterior-light",
+            "exhaust-fan",
+            "ceiling-fan",
+            "smoke-alarm",
+            "switch",
+            "dimmer",
+            "gpo-single",
+            "gpo-double",
+            "gpo-weatherproof",
+            "appliance-outlet",
+            "isolator",
+            "data",
+            "tv"
           ]
         },
-        "roomId": { "$ref": "common.schema.json#/$defs/id" },
+        "roomId": {
+          "$ref": "common.schema.json#/$defs/id"
+        },
         "placement": {
           "title": "Placement",
-          "oneOf": [{ "$ref": "#/$defs/wallPlacement" }, { "$ref": "#/$defs/ceilingPlacement" }]
+          "oneOf": [
+            {
+              "$ref": "#/$defs/wallPlacement"
+            },
+            {
+              "$ref": "#/$defs/ceilingPlacement"
+            }
+          ]
         },
-        "spec": { "$ref": "#/$defs/pointSpec" },
-        "circuitId": { "$ref": "common.schema.json#/$defs/id" },
+        "spec": {
+          "$ref": "#/$defs/pointSpec"
+        },
+        "circuitId": {
+          "$ref": "common.schema.json#/$defs/id"
+        },
         "controlledBy": {
           "description": "Lights and fans: the switches that control them.",
           "type": "array",
-          "items": { "$ref": "common.schema.json#/$defs/id" }
+          "items": {
+            "$ref": "common.schema.json#/$defs/id"
+          }
         },
         "controls": {
           "description": "Switches: for each gang, the points it controls.",
           "type": "array",
-          "items": { "type": "array", "items": { "$ref": "common.schema.json#/$defs/id" } }
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "common.schema.json#/$defs/id"
+            }
+          }
         },
         "rationale": {
           "description": "Why it is here, in the engine's words, citing the rules it applied.",
           "type": "array",
-          "items": { "type": "string" }
+          "items": {
+            "type": "string"
+          }
         },
-        "source": { "$ref": "common.schema.json#/$defs/source" }
+        "source": {
+          "$ref": "common.schema.json#/$defs/source"
+        }
       },
-      "required": ["id", "kind", "placement", "spec", "rationale", "source"],
+      "required": [
+        "id",
+        "kind",
+        "placement",
+        "spec",
+        "rationale",
+        "source"
+      ],
       "additionalProperties": false
     },
     "wallPlacement": {
       "title": "WallPlacement",
       "type": "object",
       "properties": {
-        "type": { "const": "wall" },
-        "wallId": { "$ref": "common.schema.json#/$defs/id" },
-        "position": { "$ref": "common.schema.json#/$defs/millimetres" },
-        "side": { "$ref": "common.schema.json#/$defs/side" },
-        "height": { "$ref": "common.schema.json#/$defs/millimetres" }
+        "type": {
+          "const": "wall"
+        },
+        "wallId": {
+          "$ref": "common.schema.json#/$defs/id"
+        },
+        "position": {
+          "$ref": "common.schema.json#/$defs/millimetres"
+        },
+        "side": {
+          "$ref": "common.schema.json#/$defs/side"
+        },
+        "height": {
+          "$ref": "common.schema.json#/$defs/millimetres"
+        }
       },
-      "required": ["type", "wallId", "position", "side", "height"],
+      "required": [
+        "type",
+        "wallId",
+        "position",
+        "side",
+        "height"
+      ],
       "additionalProperties": false
     },
     "ceilingPlacement": {
       "title": "CeilingPlacement",
       "type": "object",
       "properties": {
-        "type": { "const": "ceiling" },
-        "at": { "$ref": "common.schema.json#/$defs/point" }
+        "type": {
+          "const": "ceiling"
+        },
+        "at": {
+          "$ref": "common.schema.json#/$defs/point"
+        }
       },
-      "required": ["type", "at"],
+      "required": [
+        "type",
+        "at"
+      ],
       "additionalProperties": false
     },
     "pointSpec": {
@@ -112,16 +249,51 @@
       "description": "What the item is. Which properties apply depends on the kind; the catalogue item code ties it to the bill of materials.",
       "type": "object",
       "properties": {
-        "itemCode": { "type": "string", "pattern": "^[A-Z0-9][A-Z0-9.-]*$" },
-        "watts": { "type": "number", "minimum": 0 },
-        "lumens": { "type": "number", "minimum": 0 },
-        "ic": { "description": "Recessed luminaire insulation-contact rating.", "type": "string", "enum": ["IC-4", "IC", "non-IC"] },
-        "ip": { "description": "Ingress protection, e.g. IP44.", "type": "string", "pattern": "^IP[0-9X][0-9X]$" },
-        "ratingA": { "type": "number", "exclusiveMinimum": 0 },
-        "gangs": { "type": "integer", "minimum": 1, "maximum": 6 },
+        "itemCode": {
+          "type": "string",
+          "pattern": "^[A-Z0-9][A-Z0-9.-]*$"
+        },
+        "watts": {
+          "type": "number",
+          "minimum": 0
+        },
+        "lumens": {
+          "type": "number",
+          "minimum": 0
+        },
+        "ic": {
+          "description": "Recessed luminaire insulation-contact rating.",
+          "type": "string",
+          "enum": [
+            "IC-4",
+            "IC",
+            "non-IC"
+          ]
+        },
+        "ip": {
+          "description": "Ingress protection, e.g. IP44.",
+          "type": "string",
+          "pattern": "^IP[0-9X][0-9X]$"
+        },
+        "ratingA": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
+        "gangs": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 6
+        },
         "ways": {
           "type": "array",
-          "items": { "type": "string", "enum": ["1-way", "2-way", "intermediate"] }
+          "items": {
+            "type": "string",
+            "enum": [
+              "1-way",
+              "2-way",
+              "intermediate"
+            ]
+          }
         }
       },
       "additionalProperties": false
@@ -131,87 +303,189 @@
       "description": "A keep-out volume from a fixture, for drawing and for validation: its outline on plan and its height from the floor.",
       "type": "object",
       "properties": {
-        "id": { "$ref": "common.schema.json#/$defs/id" },
+        "id": {
+          "$ref": "common.schema.json#/$defs/id"
+        },
         "kind": {
           "title": "ZoneKind",
           "type": "string",
           "enum": [
-            "bath-zone-0", "bath-zone-1", "bath-zone-2", "bath-zone-3",
-            "basin-zone", "sink-zone", "tub-zone",
-            "pool-zone-0", "pool-zone-1", "pool-zone-2"
+            "bath-zone-0",
+            "bath-zone-1",
+            "bath-zone-2",
+            "bath-zone-3",
+            "basin-zone",
+            "sink-zone",
+            "tub-zone",
+            "pool-zone-0",
+            "pool-zone-1",
+            "pool-zone-2"
           ]
         },
-        "fixtureId": { "$ref": "common.schema.json#/$defs/id" },
+        "fixtureId": {
+          "$ref": "common.schema.json#/$defs/id"
+        },
         "polygon": {
           "type": "array",
           "minItems": 3,
-          "items": { "$ref": "common.schema.json#/$defs/point" }
+          "items": {
+            "$ref": "common.schema.json#/$defs/point"
+          }
         },
-        "floorToHeight": { "$ref": "common.schema.json#/$defs/millimetres" },
-        "rule": { "description": "The clause the zone comes from.", "type": "string", "minLength": 1 }
+        "floorToHeight": {
+          "$ref": "common.schema.json#/$defs/millimetres"
+        },
+        "rule": {
+          "description": "The clause the zone comes from.",
+          "type": "string",
+          "minLength": 1
+        }
       },
-      "required": ["id", "kind", "fixtureId", "polygon", "floorToHeight", "rule"],
+      "required": [
+        "id",
+        "kind",
+        "fixtureId",
+        "polygon",
+        "floorToHeight",
+        "rule"
+      ],
       "additionalProperties": false
     },
     "circuit": {
       "title": "Circuit",
       "type": "object",
       "properties": {
-        "id": { "$ref": "common.schema.json#/$defs/id" },
+        "id": {
+          "$ref": "common.schema.json#/$defs/id"
+        },
         "type": {
           "title": "CircuitType",
           "type": "string",
-          "enum": ["lighting", "power", "dedicated", "smoke-alarm"]
+          "enum": [
+            "lighting",
+            "power",
+            "dedicated",
+            "smoke-alarm"
+          ]
         },
-        "label": { "type": "string", "minLength": 1 },
-        "points": { "type": "array", "items": { "$ref": "common.schema.json#/$defs/id" } },
-        "protectionId": { "$ref": "common.schema.json#/$defs/id" },
-        "demandA": { "type": "number", "minimum": 0 },
+        "label": {
+          "type": "string",
+          "minLength": 1
+        },
+        "points": {
+          "type": "array",
+          "items": {
+            "$ref": "common.schema.json#/$defs/id"
+          }
+        },
+        "protectionId": {
+          "$ref": "common.schema.json#/$defs/id"
+        },
+        "demandA": {
+          "type": "number",
+          "minimum": 0
+        },
         "cable": {
           "title": "CableSpec",
           "type": "object",
           "properties": {
-            "csaMm2": { "description": "Conductor cross-section, mm².", "type": "number", "exclusiveMinimum": 0 },
-            "type": { "type": "string", "minLength": 1 },
-            "lengthM": { "type": "number", "minimum": 0 }
+            "csaMm2": {
+              "description": "Conductor cross-section, mm\u00b2.",
+              "type": "number",
+              "exclusiveMinimum": 0
+            },
+            "type": {
+              "type": "string",
+              "minLength": 1
+            },
+            "lengthM": {
+              "type": "number",
+              "minimum": 0
+            }
           },
-          "required": ["csaMm2", "type", "lengthM"],
+          "required": [
+            "csaMm2",
+            "type",
+            "lengthM"
+          ],
           "additionalProperties": false
         },
-        "voltageDropPct": { "type": "number", "minimum": 0, "maximum": 100 },
-        "zsOhm": { "type": "number", "minimum": 0 },
-        "zsMaxOhm": { "type": "number", "minimum": 0 },
+        "voltageDropPct": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 100
+        },
+        "zsOhm": {
+          "type": "number",
+          "minimum": 0
+        },
+        "zsMaxOhm": {
+          "type": "number",
+          "minimum": 0
+        },
         "route": {
           "type": "array",
           "items": {
             "title": "RouteSegment",
             "type": "object",
             "properties": {
-              "from": { "type": "string", "minLength": 1 },
-              "to": { "type": "string", "minLength": 1 },
-              "lengthM": { "type": "number", "minimum": 0 }
+              "from": {
+                "type": "string",
+                "minLength": 1
+              },
+              "to": {
+                "type": "string",
+                "minLength": 1
+              },
+              "lengthM": {
+                "type": "number",
+                "minimum": 0
+              }
             },
-            "required": ["from", "to", "lengthM"],
+            "required": [
+              "from",
+              "to",
+              "lengthM"
+            ],
             "additionalProperties": false
           }
         }
       },
-      "required": ["id", "type", "label", "points"],
+      "required": [
+        "id",
+        "type",
+        "label",
+        "points"
+      ],
       "additionalProperties": false
     },
     "switchboard": {
       "title": "Switchboard",
       "type": "object",
       "properties": {
-        "location": { "$ref": "common.schema.json#/$defs/wallAnchor" },
+        "location": {
+          "$ref": "common.schema.json#/$defs/wallAnchor"
+        },
         "mainSwitch": {
           "title": "MainSwitch",
           "type": "object",
           "properties": {
-            "ratingA": { "type": "number", "exclusiveMinimum": 0 },
-            "poles": { "type": "integer", "enum": [1, 3] }
+            "ratingA": {
+              "type": "number",
+              "exclusiveMinimum": 0
+            },
+            "poles": {
+              "type": "integer",
+              "enum": [
+                1,
+                3
+              ]
+            }
           },
-          "required": ["ratingA", "poles"],
+          "required": [
+            "ratingA",
+            "poles"
+          ],
           "additionalProperties": false
         },
         "devices": {
@@ -220,14 +494,48 @@
             "title": "ProtectiveDevice",
             "type": "object",
             "properties": {
-              "id": { "$ref": "common.schema.json#/$defs/id" },
-              "kind": { "title": "DeviceKind", "type": "string", "enum": ["RCBO", "RCD", "MCB"] },
-              "ratingA": { "type": "number", "exclusiveMinimum": 0 },
-              "curve": { "title": "TripCurve", "type": "string", "enum": ["B", "C", "D"] },
-              "rcdMa": { "type": "number", "exclusiveMinimum": 0 },
-              "circuits": { "type": "array", "items": { "$ref": "common.schema.json#/$defs/id" } }
+              "id": {
+                "$ref": "common.schema.json#/$defs/id"
+              },
+              "kind": {
+                "title": "DeviceKind",
+                "type": "string",
+                "enum": [
+                  "RCBO",
+                  "RCD",
+                  "MCB"
+                ]
+              },
+              "ratingA": {
+                "type": "number",
+                "exclusiveMinimum": 0
+              },
+              "curve": {
+                "title": "TripCurve",
+                "type": "string",
+                "enum": [
+                  "B",
+                  "C",
+                  "D"
+                ]
+              },
+              "rcdMa": {
+                "type": "number",
+                "exclusiveMinimum": 0
+              },
+              "circuits": {
+                "type": "array",
+                "items": {
+                  "$ref": "common.schema.json#/$defs/id"
+                }
+              }
             },
-            "required": ["id", "kind", "ratingA", "circuits"],
+            "required": [
+              "id",
+              "kind",
+              "ratingA",
+              "circuits"
+            ],
             "additionalProperties": false
           }
         },
@@ -235,36 +543,79 @@
           "title": "SurgeProtection",
           "type": "object",
           "properties": {
-            "fitted": { "type": "boolean" },
-            "reason": { "type": "string", "minLength": 1 }
+            "fitted": {
+              "type": "boolean"
+            },
+            "reason": {
+              "type": "string",
+              "minLength": 1
+            }
           },
-          "required": ["fitted", "reason"],
+          "required": [
+            "fitted",
+            "reason"
+          ],
           "additionalProperties": false
         },
-        "polesUsed": { "type": "integer", "minimum": 0 },
-        "polesTotal": { "type": "integer", "minimum": 0 }
+        "polesUsed": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "polesTotal": {
+          "type": "integer",
+          "minimum": 0
+        }
       },
-      "required": ["location", "mainSwitch", "devices", "polesUsed", "polesTotal"],
+      "required": [
+        "location",
+        "mainSwitch",
+        "devices",
+        "polesUsed",
+        "polesTotal"
+      ],
       "additionalProperties": false
     },
     "maxDemand": {
       "title": "MaxDemand",
       "type": "object",
       "properties": {
-        "method": { "type": "string", "minLength": 1 },
-        "perPhaseA": { "type": "array", "minItems": 1, "maxItems": 3, "items": { "type": "number", "minimum": 0 } },
+        "method": {
+          "type": "string",
+          "minLength": 1
+        },
+        "perPhaseA": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 3,
+          "items": {
+            "type": "number",
+            "minimum": 0
+          }
+        },
         "consumerMains": {
           "title": "ConsumerMains",
           "type": "object",
           "properties": {
-            "csaMm2": { "type": "number", "exclusiveMinimum": 0 },
-            "type": { "type": "string", "minLength": 1 }
+            "csaMm2": {
+              "type": "number",
+              "exclusiveMinimum": 0
+            },
+            "type": {
+              "type": "string",
+              "minLength": 1
+            }
           },
-          "required": ["csaMm2", "type"],
+          "required": [
+            "csaMm2",
+            "type"
+          ],
           "additionalProperties": false
         }
       },
-      "required": ["method", "perPhaseA"],
+      "required": [
+        "method",
+        "perPhaseA"
+      ],
       "additionalProperties": false
     },
     "violation": {
@@ -272,12 +623,35 @@
       "description": "A rule the design breaks. An error (a mandatory rule) blocks committing the design.",
       "type": "object",
       "properties": {
-        "ruleId": { "type": "string", "pattern": "^[a-z0-9]+(\\.[a-z0-9-]+)*$" },
-        "severity": { "title": "Severity", "type": "string", "enum": ["error", "warning"] },
-        "itemIds": { "type": "array", "items": { "$ref": "common.schema.json#/$defs/id" } },
-        "message": { "type": "string", "minLength": 1 }
+        "ruleId": {
+          "type": "string",
+          "pattern": "^[a-z0-9]+(\\.[a-z0-9-]+)*$"
+        },
+        "severity": {
+          "title": "Severity",
+          "type": "string",
+          "enum": [
+            "error",
+            "warning"
+          ]
+        },
+        "itemIds": {
+          "type": "array",
+          "items": {
+            "$ref": "common.schema.json#/$defs/id"
+          }
+        },
+        "message": {
+          "type": "string",
+          "minLength": 1
+        }
       },
-      "required": ["ruleId", "severity", "itemIds", "message"],
+      "required": [
+        "ruleId",
+        "severity",
+        "itemIds",
+        "message"
+      ],
       "additionalProperties": false
     },
     "decisionRequired": {
@@ -285,11 +659,25 @@
       "description": "Something the engine could not decide and assumed instead, for the electrician to confirm.",
       "type": "object",
       "properties": {
-        "id": { "$ref": "common.schema.json#/$defs/id" },
-        "itemIds": { "type": "array", "items": { "$ref": "common.schema.json#/$defs/id" } },
-        "question": { "type": "string", "minLength": 1 }
+        "id": {
+          "$ref": "common.schema.json#/$defs/id"
+        },
+        "itemIds": {
+          "type": "array",
+          "items": {
+            "$ref": "common.schema.json#/$defs/id"
+          }
+        },
+        "question": {
+          "type": "string",
+          "minLength": 1
+        }
       },
-      "required": ["id", "itemIds", "question"],
+      "required": [
+        "id",
+        "itemIds",
+        "question"
+      ],
       "additionalProperties": false
     }
   }

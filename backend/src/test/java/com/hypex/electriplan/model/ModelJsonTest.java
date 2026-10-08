@@ -16,7 +16,7 @@ class ModelJsonTest {
     private static final String HASH = "sha256:" + "a".repeat(64);
     private static final String EMPTY_DESIGN = """
             {"version":1,"planRef":{"planHash":"%s","planVersion":1},
-             "rulePack":{"id":"au-residential","version":"2026.1","standards":[]},
+             "rulePack":{"id":"au-residential","version":"2026.1","state":"VIC","standards":[]},
              "points":[],"zones":[],"circuits":[],"violations":[],"decisionsRequired":[]}""".formatted(HASH);
 
     @Test
@@ -78,7 +78,7 @@ class ModelJsonTest {
 
     @Test
     void leavesOutAbsentOptionalValuesButKeepsRequiredEmptyLists() {
-        ElectricalDesign design = ElectricalDesign.empty(new PlanRef(HASH, 1), new RulePackRef("au-residential", "2026.1", java.util.List.of()));
+        ElectricalDesign design = ElectricalDesign.empty(new PlanRef(HASH, 1), new RulePackRef("au-residential", "2026.1", com.hypex.electriplan.model.common.AustralianState.VIC, java.util.List.of()));
         String json = ModelJson.write(design);
         assertThat(json).doesNotContain("null").doesNotContain("switchboard").doesNotContain("maxDemand");
         assertThat(json).contains("\"points\":[]").contains("\"violations\":[]").contains("\"decisionsRequired\":[]");

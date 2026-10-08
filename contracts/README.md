@@ -18,6 +18,11 @@ without new logic is configurable: the **distributor** is a code (`jemena`) chec
 `electricity_distributor` table, listed by `GET /api/reference/distributors?state=VIC`. Adding a
 distributor is a database row, not a release. The schema only checks such codes are well formed.
 
+**States.** The contracts are national: every Australian state is allowed, and nothing is limited to
+Victoria. A design records which state's rules made it (`rulePack.state`); which states the engine
+actually designs is decided by the rule pack, not the contracts (see "Expanding beyond Victoria" in
+the engine plan).
+
 Java packages are under `com.hypex.electriplan` in `backend/`; the TypeScript types are generated
 into `frontend/src/electrical/contracts.ts`. Lengths are millimetres unless the property name says
 otherwise (`lengthM` metres, `demandA` amperes, `csaMm2` mm²).

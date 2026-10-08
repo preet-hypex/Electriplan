@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.util.List;
 
+import com.hypex.electriplan.model.common.AustralianState;
 import com.hypex.electriplan.model.common.Point;
 import com.hypex.electriplan.model.design.CableSpec;
 import com.hypex.electriplan.model.design.CeilingPlacement;
@@ -79,9 +80,18 @@ class DesignModelTest {
 
     @Test
     void rulePackIdsAreLowercaseAndVersionsNotBlank() {
-        assertThatThrownBy(() -> new RulePackRef("AU", "1", List.of())).hasMessageContaining("rulePack.id");
-        assertThatThrownBy(() -> new RulePackRef("au", " ", List.of())).hasMessageContaining("rulePack.version");
-        assertThatThrownBy(() -> new RulePackRef("au", "1", List.of(""))).hasMessageContaining("standards[]");
+        assertThatThrownBy(() -> new RulePackRef("AU", "1", AustralianState.VIC, List.of())).hasMessageContaining("rulePack.id");
+        assertThatThrownBy(() -> new RulePackRef("au", " ", AustralianState.VIC, List.of())).hasMessageContaining("rulePack.version");
+        assertThatThrownBy(() -> new RulePackRef("au", "1", AustralianState.VIC, List.of(""))).hasMessageContaining("standards[]");
+    }
+
+    @Test
+    void aDesignRecordsWhichStatesRulesMadeIt() {
+        assertThat(design.rulePack().state()).isEqualTo(AustralianState.VIC);
+        assertThatThrownBy(() -> design.rulePack().withState(null)).hasMessage("rulePack.state is required");
+        RulePackRef queensland = design.rulePack().withState(AustralianState.QLD);
+        assertThat(design.withRulePack(queensland).rulePack().state()).isEqualTo(AustralianState.QLD);
+        assertThat(design.rulePack().state()).isEqualTo(AustralianState.VIC);
     }
 
     @Test

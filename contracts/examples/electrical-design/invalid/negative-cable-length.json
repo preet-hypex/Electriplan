@@ -7,6 +7,7 @@
   "rulePack": {
     "id": "au-residential",
     "version": "2026.1",
+    "state": "VIC",
     "standards": [
       "AS/NZS 3000:2018+A3",
       "VIC SIR 2024"

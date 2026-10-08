@@ -128,7 +128,7 @@ public final class Samples {
     public static ElectricalDesign fullDesign() {
         return ElectricalDesign.builder()
                 .planRef(new PlanRef(HASH, 2))
-                .rulePack(RulePackRef.builder().id("au-residential").version("2026.1").standard("AS/NZS 3000:2018+A3").build())
+                .rulePack(RulePackRef.builder().id("au-residential").version("2026.1").state(AustralianState.VIC).standard("AS/NZS 3000:2018+A3").build())
                 .point(downlight("lt_001", 1200, 1050))
                 .point(downlight("lt_002", 3300, 1050))
                 .point(switchFor("lt_001", "lt_002"))

@@ -39,6 +39,15 @@ const generated = await compile(bundle, 'Contracts', {
   style: { semi: false, singleQuote: true },
 })
 
+// json-schema-to-typescript makes a numbered copy (Point1) of a type when a
+// property puts its own keywords (description...) beside a $ref. Refuse that,
+// so every contract type exists once.
+const duplicates = [...generated.matchAll(/^export (?:interface|type) (\w+?\d+)\b/gm)].map((m) => m[1])
+if (duplicates.length) {
+  console.error(`Duplicate contract types: ${duplicates.join(', ')}. A $ref in contracts/*.schema.json has sibling keywords; move them (e.g. the description) to the referenced definition or the parent.`)
+  process.exit(1)
+}
+
 if (process.argv.includes('--check')) {
   let current = ''
   try { current = readFileSync(out, 'utf8') } catch { /* missing */ }

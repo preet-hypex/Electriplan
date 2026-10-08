@@ -4,9 +4,6 @@
  * Do not edit by hand: change the schema and run `npm run contracts`.
  */
 
-/**
- * Selects the state rule pack. v1 designs Victoria only; the engine refuses other states.
- */
 export type AustralianState = 'NSW' | 'VIC' | 'QLD' | 'WA' | 'SA' | 'TAS' | 'ACT' | 'NT'
 /**
  * The electricity distributor (DNSP), by code: jemena, citipower... Configurable reference data, not a fixed list: the codes are rows of the database table electriplan.electricity_distributor (GET /api/reference/distributors), and the API checks a brief's code exists there and belongs to the brief's state. Same format as that table's code column.
@@ -97,7 +94,7 @@ export interface Contracts {
   electricalDesign?: ElectricalDesign
 }
 /**
- * What the floor plan cannot say about a house but its electrical design needs: supply, construction, appliances and the builder's preferences. See documents/electrical-engine-plan.md section 4.3.
+ * What the floor plan cannot say about a house but its electrical design needs: supply, construction, appliances and the builder's preferences. See documents/electrical-engine-plan.md section 4.3. state selects the state rules applied on top of the national ones; which states the engine designs is decided by the rule pack.
  */
 export interface ProjectBrief {
   version: 1
@@ -212,11 +209,12 @@ export interface PlanRef {
   planVersion: number
 }
 /**
- * The rules the design was made and checked with.
+ * The rules the design was made and checked with: the rule pack release, and the state whose rules were applied on top of the national ones (each state adds its own, e.g. Queensland's smoke alarm in every bedroom). Together they say exactly which rules made the design.
  */
 export interface RulePackRef {
   id: string
   version: string
+  state: AustralianState
   standards: string[]
 }
 /**

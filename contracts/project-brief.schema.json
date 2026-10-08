@@ -1,14 +1,13 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "title": "ProjectBrief",
-  "description": "What the floor plan cannot say about a house but its electrical design needs: supply, construction, appliances and the builder's preferences. See documents/electrical-engine-plan.md section 4.3.",
+  "description": "What the floor plan cannot say about a house but its electrical design needs: supply, construction, appliances and the builder's preferences. See documents/electrical-engine-plan.md section 4.3. state selects the state rules applied on top of the national ones; which states the engine designs is decided by the rule pack.",
   "type": "object",
   "properties": {
     "version": {
       "const": 1
     },
     "state": {
-      "description": "Selects the state rule pack. v1 designs Victoria only; the engine refuses other states.",
       "$ref": "common.schema.json#/$defs/australianState"
     },
     "distributor": {

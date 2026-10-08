@@ -61,7 +61,7 @@ describe('generated types', () => {
     const design: ElectricalDesign = {
       version: 1,
       planRef: { planHash: `sha256:${'a'.repeat(64)}`, planVersion: 1 },
-      rulePack: { id: 'au-residential', version: '2026.1', standards: [] },
+      rulePack: { id: 'au-residential', version: '2026.1', state: 'VIC', standards: [] },
       points: [point],
       zones: [],
       circuits: [],
