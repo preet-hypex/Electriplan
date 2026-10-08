@@ -147,6 +147,7 @@ asks it on the browser's behalf (`GET /api/reference/addresses`).
 |---|---|---|
 | `ADDRESS_FINDER_URL` | `https://photon.komoot.io` | The public server: fine for development, under a fair-use policy. Production should run its own Photon (Docker image, Australia extract) and point this at it |
 | `ADDRESS_FINDER_ENABLED` | `true` | `false` turns suggestions off; people type the address |
+| `ADDRESS_FINDER_TIMEOUT` | `10s` | How long to wait for an answer. The public server often takes 3–6 s per search; recent searches are remembered, so repeats are instant |
 
 OpenStreetMap does not have every house number (new estates especially), so a suggestion fills street,
 suburb, state and postcode and the person checks the number. For complete Australian coverage the

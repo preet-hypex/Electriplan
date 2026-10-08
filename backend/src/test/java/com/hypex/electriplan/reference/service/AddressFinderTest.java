@@ -105,6 +105,17 @@ class AddressFinderTest {
     }
 
     @Test
+    void remembersRecentAnswersSoTheSameSearchIsNotAskedAgain() {
+        answer(feature("""
+                "type": "house", "housenumber": "12", "street": "Glenlyon Road", "district": "Brunswick",
+                "state": "Victoria", "postcode": "3056", "countrycode": "AU\"""", 144.96, -37.77));
+
+        List<AddressSuggestion> first = finder.find("12 Glenlyon");
+        assertThat(finder.find("  12   glenlyon ")).as("same words, other case and spaces").isEqualTo(first);
+        photon.verify(); // asked once
+    }
+
+    @Test
     void waitsForThreeCharactersBeforeAsking() {
         assertThat(finder.find("12")).isEmpty();
         assertThat(finder.find("   ")).isEmpty();

@@ -1,6 +1,6 @@
 package com.hypex.electriplan.reference.service;
 
-import java.util.ArrayList;
+import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -37,8 +37,18 @@ public class AddressFinder {
     /** Mainland Australia and Tasmania, as west, south, east, north. */
     static final String AUSTRALIA = "112.9,-43.7,153.7,-10.6";
 
+    /** Recent answers, by what was typed: retyping or going back is instant, and the provider is asked less. */
+    static final int CACHED_SEARCHES = 500;
+
     private final RestClient photon;
     private final boolean enabled;
+    private final Map<String, List<AddressSuggestion>> recent = Collections.synchronizedMap(
+            new LinkedHashMap<>(64, 0.75f, true) {
+                @Override
+                protected boolean removeEldestEntry(Map.Entry<String, List<AddressSuggestion>> eldest) {
+                    return size() > CACHED_SEARCHES;
+                }
+            });
 
     public AddressFinder(@Qualifier(AddressFinderConfiguration.CLIENT) RestClient photon,
                          @Value("${electriplan.addresses.enabled:true}") boolean enabled) {
@@ -60,8 +70,17 @@ public class AddressFinder {
         if (!enabled) {
             throw new AddressSearchUnavailableException("Address search is turned off. Type the address instead.");
         }
-        JsonNode found = ask(text);
+        String key = text.toLowerCase(java.util.Locale.ROOT).replaceAll("\\s+", " ");
+        List<AddressSuggestion> cached = recent.get(key);
+        if (cached != null) {
+            return cached;
+        }
+        List<AddressSuggestion> found = suggestions(ask(text));
+        recent.put(key, found);
+        return found;
+    }
 
+    private static List<AddressSuggestion> suggestions(JsonNode found) {
         // Several map features can share one address (a building and its entrance): keep the first.
         Map<String, AddressSuggestion> byLabel = new LinkedHashMap<>();
         for (JsonNode feature : found.path("features")) {
@@ -70,7 +89,7 @@ public class AddressFinder {
                 break;
             }
         }
-        return new ArrayList<>(byLabel.values());
+        return List.copyOf(byLabel.values());
     }
 
     private JsonNode ask(String text) {

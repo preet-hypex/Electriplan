@@ -38,6 +38,17 @@ describe('AddressSearch', () => {
     expect(screen.getByText('Check the house number.')).toBeInTheDocument()
   })
 
+  it('says it is searching while the finder is answering', async () => {
+    let answer
+    mocks.findAddresses.mockImplementation(() => new Promise(resolve => { answer = resolve }))
+    render(<AddressSearch onPick={vi.fn()} />)
+    await userEvent.type(screen.getByRole('combobox', { name: 'Find the address' }), 'glenlyon')
+    expect(await screen.findByRole('status')).toHaveTextContent('Searching addresses…')
+    answer([GLENLYON])
+    expect(await screen.findByRole('option', { name: GLENLYON.label })).toBeInTheDocument()
+    expect(screen.queryByRole('status')).toBeNull()
+  })
+
   it('is used from the keyboard', async () => {
     const onPick = vi.fn()
     render(<AddressSearch onPick={onPick} />)

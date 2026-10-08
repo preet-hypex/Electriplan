@@ -17,30 +17,35 @@ export default function AddressSearch({ onPick }) {
   const [open, setOpen] = useState(false)
   const [active, setActive] = useState(-1)
   const [note, setNote] = useState(null)
+  const [searching, setSearching] = useState(false)
   const listId = useId()
   const latest = useRef(0)
 
   // Ask once typing has settled; only the newest answer counts.
   useEffect(() => {
     const typed = text.trim()
+    const ask = ++latest.current
     if (typed.length < MIN_CHARACTERS) {
       setSuggestions([])
       setNote(null)
+      setSearching(false)
       return undefined
     }
-    const ask = ++latest.current
     const timer = setTimeout(() => {
+      setSearching(true)
       findAddresses(typed)
         .then(found => {
           if (ask !== latest.current) return
           setSuggestions(found)
           setActive(-1)
           setNote(found.length === 0 ? 'No matching address found. Type it into the fields below.' : null)
+          setSearching(false)
         })
         .catch(e => {
           if (ask !== latest.current) return
           setSuggestions([])
           setNote(e.message)
+          setSearching(false)
         })
     }, 300)
     return () => clearTimeout(timer)
@@ -101,7 +106,9 @@ export default function AddressSearch({ onPick }) {
           ))}
         </ul>
       )}
-      {note
+      {searching
+        ? <span className="fld-hint" role="status">Searching addresses…</span>
+        : note
         ? <span className="fld-hint">{note}</span>
         : <span className="fld-hint">Addresses from OpenStreetMap. Or fill in the fields below.</span>}
     </div>
