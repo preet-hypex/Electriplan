@@ -35,6 +35,17 @@ class CompanyContextInterceptorTest {
     static class Endpoints {
         @CompanyScoped public void scoped() { }
         public void open() { }
+        @RequiresPermission(Permission.LICENCE_VIEW) public void licence() { }
+    }
+
+    @RequiresPermission(Permission.MEMBER_MANAGE)
+    static class MembersController {
+        public void list() { }
+        @RequiresPermission(Permission.COMPANY_VIEW) public void view() { }
+    }
+
+    private CompanyContext as(MemberRole role) {
+        return new CompanyContext(ACME.organisationId(), ME, role, LicenceStatus.ACTIVE);
     }
 
     @CompanyScoped
@@ -122,6 +133,48 @@ class CompanyContextInterceptorTest {
         assertThatThrownBy(() -> new TenantSessionFilter().doFilter(request, response, failing)).hasMessage("endpoint blew up");
         assertThat(TenantSession.company()).isNull();
         assertThat(TenantSession.actorId()).isNull();
+    }
+
+    @Test
+    void aPermissionImpliesTheCompanyAndIsGrantedByTheRole() throws Exception {
+        signedIn();
+        given(resolver.resolve(ME, null)).willReturn(as(MemberRole.ADMIN));
+        interceptor.preHandle(request, response, handler(new Endpoints(), "licence"));
+        assertThat(TenantSession.company()).isEqualTo(as(MemberRole.ADMIN));
+        assertThat(new CurrentCompany().can(Permission.LICENCE_VIEW)).isTrue();
+        assertThat(new CurrentCompany().can(Permission.OWNERSHIP_TRANSFER)).isFalse();
+    }
+
+    @Test
+    void aRoleWithoutThePermissionIsRefusedAndToldWhoCan() throws Exception {
+        signedIn();
+        given(resolver.resolve(ME, null)).willReturn(as(MemberRole.BUILDER));
+        assertThatThrownBy(() -> interceptor.preHandle(request, response, handler(new Endpoints(), "licence")))
+                .isInstanceOfSatisfying(CompanyAccessException.class, e -> {
+                    assertThat(e.status()).isEqualTo(org.springframework.http.HttpStatus.FORBIDDEN);
+                    assertThat(e.getMessage()).isEqualTo("As a builder you cannot do this (licence.view). Roles that can: owner, admin.");
+                });
+        assertThat(TenantSession.company()).isNull();
+        assertThat(TenantSession.actorId()).isNull();
+    }
+
+    @Test
+    void aMethodsPermissionOverridesItsControllers() throws Exception {
+        signedIn();
+        given(resolver.resolve(ME, null)).willReturn(as(MemberRole.VIEWER));
+        interceptor.preHandle(request, response, handler(new MembersController(), "view"));
+        assertThat(TenantSession.company()).isNotNull();
+        TenantSession.clear();
+        assertThatThrownBy(() -> interceptor.preHandle(request, response, handler(new MembersController(), "list")))
+                .hasMessageContaining("member.manage");
+    }
+
+    @Test
+    void servicesCanCheckAPermissionThemselves() {
+        TenantSession.company(as(MemberRole.ELECTRICIAN));
+        new CurrentCompany().require(Permission.DESIGN_SIGN_OFF);
+        assertThatThrownBy(() -> new CurrentCompany().require(Permission.QUOTE_EDIT))
+                .hasMessage("As an electrician you cannot do this (quote.edit). Roles that can: owner, admin, builder.");
     }
 
     @Test

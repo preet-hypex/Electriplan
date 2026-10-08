@@ -59,11 +59,18 @@ say so here. For those:
 |---|---|
 | `400` | The header is not a company id, or it is missing and the caller belongs to several companies |
 | `403` | The caller is not an active member of that company, the company is closed or does not exist (one message for all three, so nothing is learned about other companies), or the caller belongs to no company |
+| `403` | The caller's role lacks the endpoint's permission. The message names it and the roles that have it: *"As a builder you cannot do this (licence.view). Roles that can: owner, admin."* |
+
+**Permissions.** An endpoint that needs one says so below (`@RequiresPermission` in the code). Which
+role has which is in the table in
+[teams-and-licences-plan.md §4](teams-and-licences-plan.md#4-roles-and-permissions), generated from
+`PermissionMatrix`.
 
 Errors are `{"message": "..."}`.
 
 | Endpoint | Method | Company-scoped | Returns |
 |---|---|:-:|---|
 | `/api/organisations` | GET | no | The caller's companies, for the company switcher: `[{id, name, role, licence}]` — active memberships of companies that are not closed |
-| `/api/organisations/current` | GET | **yes** | The company the request acts in: `{id, name, slug, role, licence, seatLimit, licenceStartsOn, licenceEndsOn}` |
+| `/api/organisations/current` | GET | **yes** | The company the request acts in, the caller's role and what it may do: `{id, name, slug, role, licence, permissions: ["company.view", ...]}`. The web app shows only actions in `permissions` |
+| `/api/organisations/current/licence` | GET | **yes**, needs `licence.view` | The licence and seat use: `{status, seatLimit, seatsInUse, licenceStartsOn, licenceEndsOn}` |
 | `/api/reference/distributors?state=VIC` | GET | no | Electricity distributors: `[{code, name, state}]` |

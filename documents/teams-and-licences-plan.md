@@ -3,7 +3,7 @@
 A company buys an Electriplan licence with a fixed number of seats, and its people work together under
 it, each with a role that decides what they may do. One company never sees another's data.
 
-Status: **in progress** — T1 (seats and licence period), T2 (the API's database role) and T3 (company context per request) done. The database already has most of this (see
+Status: **in progress** — T1–T4 done (seats, the API's database role, company context, permissions). The electrical engine's endpoints can now be built on them. The database already has most of this (see
 [database-schema.md](database-schema.md)); the API does not enforce any of it yet: today any person
 Supabase signs in can call every endpoint.
 
@@ -66,24 +66,27 @@ deletes companies `closed` for more than 90 days (`closed_at` records when).
 
 ## 4. Roles and permissions
 
-Permissions are named actions the code checks (`member.invite`, `design.run`...); roles are sets of
-them. The matrix lives in code (one place, tested exhaustively), not in the database: changing what a
-role may do is a reviewed change.
+Permissions are named actions the code checks (`member.manage`, `design.edit`...); roles are sets of
+them. The matrix lives in code (`PermissionMatrix`, one place, tested cell by cell), not in the
+database: changing what a role may do is a reviewed change. **The table below is generated from that
+code** (`PermissionMatrix.markdown()`); `PermissionMatrixTest` fails if the two differ.
 
+<!-- permission-matrix:start -->
 | Permission | Owner | Admin | Builder | Electrician | Viewer |
 |---|:-:|:-:|:-:|:-:|:-:|
-| View projects, plans, designs, quotes | ✓ | ✓ | ✓ | ✓ | ✓ |
-| Create / edit projects and clients | ✓ | ✓ | ✓ | | |
-| Upload and edit floor plans, fixtures, briefs | ✓ | ✓ | ✓ | ✓ | |
-| Run the engine; edit electrical designs | ✓ | ✓ | ✓ | ✓ | |
-| Override a **mandatory** rule (with a recorded reason) | | | | ✓ ¹ | |
-| Request a review | ✓ | ✓ | ✓ | ✓ | |
-| **Approve / sign off a design** | ✓ ¹ | ✓ ¹ | | ✓ ¹ | |
-| Create and send quotes | ✓ | ✓ | ✓ | | |
-| Invite members, change roles, suspend, remove | ✓ | ✓ ² | | | |
-| Edit company details | ✓ | ✓ | | | |
-| See the licence and seat use | ✓ | ✓ | | | |
-| Transfer ownership; close the company | ✓ | | | | |
+| View projects, plans, designs, quotes `company.view` | ✓ | ✓ | ✓ | ✓ | ✓ |
+| Create / edit projects and clients `project.edit` | ✓ | ✓ | ✓ |  |  |
+| Upload and edit floor plans, fixtures, briefs `floor-plan.edit` | ✓ | ✓ | ✓ | ✓ |  |
+| Run the engine; edit electrical designs `design.edit` | ✓ | ✓ | ✓ | ✓ |  |
+| Override a **mandatory** rule (with a recorded reason) `rule.override` |  |  |  | ✓ ¹ |  |
+| Request a review `review.request` | ✓ | ✓ | ✓ | ✓ |  |
+| **Approve / sign off a design** `design.sign-off` | ✓ ¹ | ✓ ¹ |  | ✓ ¹ |  |
+| Create and send quotes `quote.edit` | ✓ | ✓ | ✓ |  |  |
+| Invite members, change roles, suspend, remove `member.manage` | ✓ | ✓ ² |  |  |  |
+| Edit company details `company.edit` | ✓ | ✓ |  |  |  |
+| See the licence and seat use `licence.view` | ✓ | ✓ |  |  |  |
+| Transfer ownership; close the company `ownership.transfer` | ✓ |  |  |  |  |
+<!-- permission-matrix:end -->
 
 ¹ Only a person with a **verified electrical licence** in the project's state, whatever their role.
 An owner who is a licensed electrician can sign off; a builder never can.
@@ -118,7 +121,7 @@ Sizes: **S** ≤ 2 days, **M** 3–5 days, **L** 1–2 weeks.
 | T1 | ✅ **Done** — Seats and licence period | Migration V3 adds `seat_limit`, `licence_starts_on`, `licence_ends_on`, `closed_at`; trial defaults (3 seats, 14 days); a trigger refuses a seated member or invitation past the limit, never counts viewers, and checks a viewer promoted to another role; schema-rules tests for at, over and lowered limits, viewers, and promotion | S |
 | T2 | ✅ **Done** — Runtime database role | A `NOSUPERUSER NOBYPASSRLS` role the API connects as, with the grants it needs; Flyway still migrates as the owner; local Docker, CI and README updated | M |
 | T3 | ✅ **Done** — Company context per request | `X-Organisation-Id` resolution, membership and status checks (403), `SET LOCAL` per transaction; JPA entities for organisation and member; Postgres tests prove a query sees only the current company | L |
-| T4 | Permission model | `Permission` enum and the role matrix in §4 in one place; an annotation on endpoints; a test for **every role × every permission**; the always-rules (last owner, own role) | M |
+| T4 | ✅ **Done** — Permission model | `Permission` enum and the role matrix in §4 in one place; an annotation on endpoints; a test for **every role × every permission**; the always-rules (last owner, own role) | M |
 | T5 | Licensed sign-off | Record a member's licence; operator verifies it; sign-off requires a verified licence in the project's state | M |
 | T6 | Company onboarding (operator) | Operator endpoint/tool: create a company with its seats, period and first owner; the owner gets the Supabase invitation email | M |
 | T7 | Invitations | Invite by email with a role (seat checked), accept (joins the company), revoke, resend, expire after 7 days; uses Supabase's invite email | L |

@@ -18,6 +18,8 @@ interface MembershipRepository extends JpaRepository<MemberEntity, MemberId> {
     List<MemberEntity> findByIdUserIdAndStatusAndOrganisationStatusNotOrderByOrganisationNameAsc(
             UUID userId, MemberStatus status, LicenceStatus excluded);
 
+    long countByIdOrganisationIdAndStatusAndRoleNot(UUID organisationId, MemberStatus status, MemberRole notRole);
+
     default List<MemberEntity> usableBy(UUID userId) {
         return findByIdUserIdAndStatusAndOrganisationStatusNotOrderByOrganisationNameAsc(
                 userId, MemberStatus.ACTIVE, LicenceStatus.CLOSED);

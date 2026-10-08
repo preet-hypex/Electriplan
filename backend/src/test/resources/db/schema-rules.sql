@@ -164,6 +164,44 @@ SELECT pg_temp.must_fail($$UPDATE electriplan.organisation SET status = 'closed'
 UPDATE electriplan.organisation SET seat_limit = 5, status = 'active', licence_ends_on = NULL WHERE id = 'aaaaaaaa-0000-4000-8000-000000000001';
 SELECT pg_temp.ok((SELECT licence_ends_on IS NULL FROM electriplan.organisation WHERE id = 'aaaaaaaa-0000-4000-8000-000000000001'), 'an active licence may have no end date');
 
+-- Membership rules (V6), acting as people in company A: alice (u1) owner, u3 electrician, u5 viewer
+SELECT set_config('electriplan.actor_id', '11111111-1111-4111-8111-111111111111', false);
+SELECT pg_temp.must_fail($$UPDATE electriplan.organisation_member SET role = 'admin' WHERE user_id = '11111111-1111-4111-8111-111111111111'$$, 'changing your own role');
+SELECT pg_temp.must_fail($$UPDATE electriplan.organisation_member SET status = 'suspended' WHERE user_id = '11111111-1111-4111-8111-111111111111'$$, 'suspending yourself');
+UPDATE electriplan.organisation_member SET role = 'admin' WHERE user_id = '33333333-3333-4333-8333-333333333333';
+SELECT pg_temp.ok(true, 'an owner can change someone else''s role');
+-- now as u3, an admin
+SELECT set_config('electriplan.actor_id', '33333333-3333-4333-8333-333333333333', false);
+SELECT pg_temp.must_fail($$UPDATE electriplan.organisation_member SET role = 'builder' WHERE user_id = '11111111-1111-4111-8111-111111111111'$$, 'an admin demoting an owner');
+SELECT pg_temp.must_fail($$UPDATE electriplan.organisation_member SET status = 'suspended' WHERE user_id = '11111111-1111-4111-8111-111111111111'$$, 'an admin suspending an owner');
+SELECT pg_temp.must_fail($$DELETE FROM electriplan.organisation_member WHERE user_id = '11111111-1111-4111-8111-111111111111'$$, 'an admin removing an owner');
+SELECT pg_temp.must_fail($$UPDATE electriplan.organisation_member SET role = 'owner' WHERE user_id = '55555555-5555-4555-8555-555555555555'$$, 'an admin making someone an owner');
+UPDATE electriplan.organisation_member SET status = 'suspended' WHERE user_id = '55555555-5555-4555-8555-555555555555';
+UPDATE electriplan.organisation_member SET status = 'active' WHERE user_id = '55555555-5555-4555-8555-555555555555';
+SELECT pg_temp.ok(true, 'an admin manages members who are not owners');
+-- back as alice: a second owner, then the last-owner rule
+SELECT set_config('electriplan.actor_id', '11111111-1111-4111-8111-111111111111', false);
+UPDATE electriplan.organisation_member SET role = 'owner' WHERE user_id = '33333333-3333-4333-8333-333333333333';
+SELECT pg_temp.ok((SELECT count(*) FROM electriplan.organisation_member WHERE organisation_id = 'aaaaaaaa-0000-4000-8000-000000000001' AND role = 'owner') = 2, 'an owner can make someone an owner');
+SELECT set_config('electriplan.actor_id', '33333333-3333-4333-8333-333333333333', false);
+UPDATE electriplan.organisation_member SET role = 'admin' WHERE user_id = '11111111-1111-4111-8111-111111111111';
+SELECT pg_temp.ok(true, 'one owner can demote another while an owner remains');
+SELECT pg_temp.must_fail($$DELETE FROM electriplan.organisation_member WHERE user_id = '33333333-3333-4333-8333-333333333333'$$, 'the last owner leaving');
+SELECT set_config('electriplan.actor_id', '', false);
+SELECT pg_temp.must_fail($$UPDATE electriplan.organisation_member SET role = 'admin' WHERE user_id = '33333333-3333-4333-8333-333333333333'$$, 'even the operator demoting the last owner');
+SELECT pg_temp.must_fail($$UPDATE electriplan.organisation_member SET status = 'suspended' WHERE user_id = '33333333-3333-4333-8333-333333333333'$$, 'suspending the last owner');
+UPDATE electriplan.organisation_member SET role = 'owner' WHERE user_id = '11111111-1111-4111-8111-111111111111';
+SELECT pg_temp.ok(true, 'the operator (no actor) may manage owners');
+-- deleting a whole company takes its memberships with it
+SELECT set_config('electriplan.organisation_id', 'eeeeeeee-0000-4000-8000-00000000000e', false),
+       set_config('electriplan.actor_id', '11111111-1111-4111-8111-111111111111', false);
+INSERT INTO electriplan.organisation (id, name, slug) VALUES ('eeeeeeee-0000-4000-8000-00000000000e', 'Short Lived', 'short-lived');
+INSERT INTO electriplan.organisation_member (organisation_id, user_id, role) VALUES ('eeeeeeee-0000-4000-8000-00000000000e', '11111111-1111-4111-8111-111111111111', 'owner');
+SELECT pg_temp.ok(true, 'a new company''s first owner can be added by anyone');
+DELETE FROM electriplan.organisation WHERE id = 'eeeeeeee-0000-4000-8000-00000000000e';
+SELECT pg_temp.ok(true, 'deleting a company deletes its last owner''s membership with it');
+SELECT set_config('electriplan.organisation_id', 'aaaaaaaa-0000-4000-8000-000000000001', false), set_config('electriplan.actor_id', '11111111-1111-4111-8111-111111111111', false);
+
 -- Organisation B
 SELECT set_config('electriplan.organisation_id', 'bbbbbbbb-0000-4000-8000-000000000002', false),
        set_config('electriplan.actor_id', '22222222-2222-4222-8222-222222222222', false);

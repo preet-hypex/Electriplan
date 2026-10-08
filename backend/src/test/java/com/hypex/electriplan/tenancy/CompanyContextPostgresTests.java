@@ -142,7 +142,9 @@ class CompanyContextPostgresTests extends PostgresApplicationTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value(ACME.toString()))
                 .andExpect(jsonPath("$.name").value("Acme Homes"))
-                .andExpect(jsonPath("$.role").value("owner"))
+                .andExpect(jsonPath("$.role").value("owner"));
+        mvc.perform(get("/api/organisations/current/licence").header("X-Organisation-Id", ACME.toString()).with(as(ALICE)))
+                .andExpect(status().isOk())
                 .andExpect(jsonPath("$.seatLimit").value(5));
         mvc.perform(current(BOLT).with(as(ALICE)))
                 .andExpect(status().isOk())
