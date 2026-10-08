@@ -11,7 +11,10 @@ import java.util.List;
 
 import com.hypex.electriplan.model.brief.DistributorCode;
 import com.hypex.electriplan.model.common.AustralianState;
+import com.hypex.electriplan.reference.domain.AddressSearchUnavailableException;
+import com.hypex.electriplan.reference.dto.AddressSuggestion;
 import com.hypex.electriplan.reference.dto.Distributor;
+import com.hypex.electriplan.reference.service.AddressFinder;
 import com.hypex.electriplan.reference.service.DistributorDirectory;
 import com.hypex.electriplan.users.service.SupabaseUsers;
 
@@ -31,6 +34,7 @@ class ReferenceControllerTests {
     @Autowired MockMvc mvc;
     @MockitoBean DistributorDirectory directory;
     @MockitoBean SupabaseUsers users;
+    @MockitoBean AddressFinder addresses;
 
     private static final Distributor JEMENA = new Distributor(DistributorCode.of("jemena"), "Jemena", AustralianState.VIC);
     private static final Distributor AUSGRID = new Distributor(DistributorCode.of("ausgrid"), "Ausgrid", AustralianState.NSW);
@@ -79,5 +83,27 @@ class ReferenceControllerTests {
         mvc.perform(get("/api/reference/distributors").param("state", "Victoria").with(signedIn()))
                 .andExpect(status().isBadRequest());
         verifyNoInteractions(directory);
+    }
+
+    @Test
+    void findsAddressesForSignedInPeople() throws Exception {
+        given(addresses.find("12 glen")).willReturn(List.of(new AddressSuggestion("12 Glenlyon Road, Brunswick VIC 3056",
+                "12 Glenlyon Road", "Brunswick", AustralianState.VIC, "3056", -37.77, 144.96)));
+        mvc.perform(get("/api/reference/addresses").param("q", "12 glen").with(signedIn()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].label").value("12 Glenlyon Road, Brunswick VIC 3056"))
+                .andExpect(jsonPath("$[0].street").value("12 Glenlyon Road"))
+                .andExpect(jsonPath("$[0].suburb").value("Brunswick"))
+                .andExpect(jsonPath("$[0].state").value("VIC"))
+                .andExpect(jsonPath("$[0].postcode").value("3056"));
+        mvc.perform(get("/api/reference/addresses").param("q", "12 glen")).andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void anUnavailableFinderIsA503WithWhatToDo() throws Exception {
+        given(addresses.find("12 glen")).willThrow(new AddressSearchUnavailableException("Address search is not available right now. Type the address instead."));
+        mvc.perform(get("/api/reference/addresses").param("q", "12 glen").with(signedIn()))
+                .andExpect(status().isServiceUnavailable())
+                .andExpect(jsonPath("$.message").value("Address search is not available right now. Type the address instead."));
     }
 }

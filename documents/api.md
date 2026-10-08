@@ -90,6 +90,7 @@ Errors are `{"message": "..."}`.
 | `/api/organisations/current` | GET | **yes** | The company the request acts in, the caller's role and what it may do: `{id, name, slug, role, licence, permissions: ["company.view", ...]}`. The web app shows only actions in `permissions` |
 | `/api/organisations/current/licence` | GET | **yes**, needs `licence.view` | The licence and seat use: `{status, seatLimit, seatsInUse, licenceStartsOn, licenceEndsOn}` |
 | `/api/reference/distributors?state=VIC` | GET | no | Electricity distributors: `[{code, name, state}]` |
+| `/api/reference/addresses?q=12 glenlyon` | GET | no | Address suggestions while typing a site address (3+ characters): `[{label, street, suburb, state, postcode, latitude, longitude}]`, at most 8. From a Photon geocoder (OpenStreetMap data); `503` with a message when it is off or does not answer, and the address is typed instead |
 
 ## Projects and houses
 
@@ -106,6 +107,7 @@ company-scoped. Seeing needs `company.view`; creating, changing, archiving and r
 | `/api/projects/{id}` | PUT | Change its details: send every field and the `version` you read |
 | `/api/projects/{id}/archive`, `/restore` | POST | Archive (leaves the list, read-only with its houses) or restore |
 | `/api/projects/{id}/houses` | POST | Add a house (201): it starts `awaiting_upload`, with its ground floor (`levels[0]`) |
+| `/api/houses/recent?size=` | GET | The houses changed most recently (not archived, in projects that are not), newest first, each with its project's id, reference and name: "continue where you left off". `size` 1–20 (default 6) |
 | `/api/houses/{id}` | GET | The house with its project's id, reference and name, its storeys and stage |
 | `/api/houses/{id}` | PUT | Change its name or dwelling type, with its `version` |
 | `/api/houses/{id}/archive`, `/restore` | POST | Archive or restore a house (not while its project is archived) |

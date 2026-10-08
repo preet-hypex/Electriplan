@@ -1,0 +1,110 @@
+/* Projects workspace: the project list, project page and project form. */
+
+/* Sidebar: the company you are working in */
+.side-company { margin: -6px 2px 14px; padding: 6px 8px; border-radius: var(--r); background: rgba(255, 255, 255, .06); }
+.side-company-name { display: block; font-size: 12.5px; font-weight: 600; color: #fff; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.side-company-pick {
+  width: 100%; background: transparent; border: 0; color: #fff; font: inherit; font-size: 12.5px; font-weight: 600; cursor: pointer;
+}
+.side-company-pick option { color: var(--text); }
+.shell.collapsed .side-company { display: none; }
+
+/* Welcome line */
+.welcome .eyebrow { margin: 0; font-size: 12.5px; font-weight: 600; color: var(--accent-text); }
+.welcome h2 { margin: 4px 0 0; font-size: 20px; font-weight: 600; color: var(--ink); letter-spacing: -.015em; }
+
+/* Breadcrumbs */
+.crumbs { display: flex; gap: 6px; font-size: 12.5px; color: var(--muted); }
+.crumbs a { color: var(--accent-text); font-weight: 500; }
+
+/* Continue where you left off */
+.recent { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+.recent-card {
+  display: flex; flex-direction: column; gap: 6px; padding: 12px 14px; height: 100%;
+  background: var(--surface); border: 1px solid var(--line); border-radius: 10px; color: inherit; text-decoration: none;
+}
+.recent-card:hover { border-color: var(--accent-b); box-shadow: 0 1px 3px rgba(15, 29, 69, .06); }
+.recent-card:focus-visible { outline: none; box-shadow: 0 0 0 3px var(--accent-t); }
+.recent-project { font-size: 11.5px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.recent-house { font-size: 13.5px; font-weight: 600; color: var(--ink); }
+.recent-foot { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: auto; }
+
+/* List toolbar */
+.toolbar { display: flex; gap: 8px; align-items: center; padding: 10px 16px; border-bottom: 1px solid var(--hair); }
+.toolbar .search { flex: 1; min-width: 160px; }
+.toolbar select.in { width: auto; }
+.check { display: inline-flex; align-items: center; gap: 6px; font-size: 12.5px; color: var(--body); white-space: nowrap; }
+
+/* Tables */
+.table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+.table th {
+  text-align: left; font-size: 11px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .04em;
+  padding: 8px 16px; border-bottom: 1px solid var(--hair); background: var(--sub);
+}
+.table td { padding: 10px 16px; border-bottom: 1px solid var(--hair); vertical-align: middle; }
+.table tr:last-child td { border-bottom: 0; }
+.table tbody tr:hover { background: var(--sub); }
+.table .right { text-align: right; }
+.table .mono { font-variant-numeric: tabular-nums; color: var(--body); white-space: nowrap; }
+.row-link { font-weight: 600; color: var(--ink); }
+.row-link:hover { color: var(--accent-text); }
+.meta { color: var(--muted); font-size: 12px; }
+.status-tag {
+  margin-left: 8px; font-size: 11px; padding: 1px 7px; border-radius: 999px; background: var(--hair); color: var(--muted);
+}
+.stages { display: flex; flex-wrap: wrap; gap: 4px; }
+.pager { display: flex; gap: 8px; align-items: center; justify-content: flex-end; padding: 10px 16px; border-top: 1px solid var(--hair); }
+.pager .meta { margin-right: auto; }
+.pad { padding: 12px 16px; }
+
+/* Stage badges */
+.stage {
+  display: inline-flex; align-items: center; gap: 5px; height: 22px; padding: 0 8px; border-radius: 999px;
+  font-size: 11.5px; font-weight: 500; white-space: nowrap; border: 1px solid transparent;
+}
+.stage b { font-weight: 700; }
+.stage.todo { background: var(--hair); border-color: var(--line); color: var(--body); }
+.stage.active { background: var(--accent-t); border-color: var(--accent-b); color: var(--accent-deep); }
+.stage.done { background: var(--ok-t); border-color: var(--ok-b); color: #0F5A34; }
+.stage.warn { background: var(--warn-t); border-color: var(--warn-b); color: #6B4100; }
+.stage.muted { background: var(--sub); border-color: var(--line); color: var(--faint); }
+
+/* Forms */
+/* The form uses the page's width: sections side by side on wide screens, stacked on narrow ones. */
+.form { padding: 18px 20px; }
+.form-sections { display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 0 32px; align-items: start; }
+.form-section { border: 0; padding: 0; margin: 0 0 18px; }
+.form-section legend { font-size: 13px; font-weight: 600; color: var(--ink); margin-bottom: 10px; padding: 0; }
+.form-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 0 12px; }
+.in.area { height: auto; padding: 8px 10px; resize: vertical; }
+select.in { appearance: auto; }
+.fld-error { font-size: 11.5px; color: var(--bad); }
+.fld-hint { font-size: 11.5px; color: var(--faint); }
+.fld.has-error .in { border-color: var(--bad); }
+.form-actions { display: flex; justify-content: flex-end; gap: 8px; padding-top: 6px; border-top: 1px solid var(--hair); margin-top: 4px; padding-top: 14px; }
+.callout .btn { margin-left: auto; height: 28px; }
+
+/* Address finder */
+.address-search { position: relative; }
+.suggestions {
+  position: absolute; z-index: 20; top: 58px; left: 0; right: 0; margin: 0; padding: 4px; list-style: none;
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); box-shadow: var(--sh-pop);
+  max-height: 280px; overflow: auto;
+}
+.suggestions li { padding: 8px 10px; border-radius: var(--rs); font-size: 12.5px; color: var(--text); cursor: pointer; }
+.suggestions li:hover, .suggestions li.active { background: var(--accent-t); color: var(--accent-deep); }
+
+/* Adding a house */
+.add-row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; padding: 12px 16px; border-top: 1px solid var(--hair); background: var(--sub); }
+.add-row .in:first-child { flex: 1; min-width: 200px; }
+.add-row select.in { width: auto; }
+.add-row .fld-error { flex-basis: 100%; }
+
+@media (max-width: 1100px) {
+  .recent { grid-template-columns: repeat(2, 1fr); }
+}
+@media (max-width: 640px) {
+  .recent { grid-template-columns: 1fr; }
+  .toolbar { flex-wrap: wrap; }
+  .table th:nth-child(3), .table td:nth-child(3), .table th:nth-child(5), .table td:nth-child(5) { display: none; }
+}

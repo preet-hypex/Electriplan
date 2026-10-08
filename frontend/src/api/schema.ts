@@ -71,6 +71,28 @@ export type paths = {
         patch?: never;
         trace?: never;
     };
+    "/api/houses/recent": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Houses worked on lately
+         * @description Not archived, in projects that are not archived, most recently changed first: "continue where you left off".
+         *
+         *     **Permission:** `company.view` (roles: owner, admin, builder, electrician, viewer).
+         */
+        get: operations["listRecentHouses"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/me": {
         parameters: {
             query?: never;
@@ -269,6 +291,26 @@ export type paths = {
         patch?: never;
         trace?: never;
     };
+    "/api/reference/addresses": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Find an Australian address
+         * @description Suggestions while typing a site address, from an OpenStreetMap geocoder (Photon). Fewer than 3 characters: none. House numbers are not always known: the person checks the suggestion.
+         */
+        get: operations["findAddresses"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/reference/distributors": {
         parameters: {
             query?: never;
@@ -293,6 +335,17 @@ export type paths = {
 export type webhooks = Record<string, never>;
 export type components = {
     schemas: {
+        AddressSuggestion: {
+            label: string;
+            /** Format: double */
+            latitude: number;
+            /** Format: double */
+            longitude: number;
+            postcode: string | null;
+            state: components["schemas"]["AustralianState"];
+            street: string | null;
+            suburb: string | null;
+        };
         /** @enum {string} */
         AustralianState: "NSW" | "VIC" | "QLD" | "WA" | "SA" | "TAS" | "ACT" | "NT";
         Current: {
@@ -472,6 +525,15 @@ export type components = {
             state: components["schemas"]["AustralianState"];
             status: components["schemas"]["ProjectStatus"];
             suburb: string | null;
+        };
+        RecentHouse: {
+            /** Format: uuid */
+            id: string;
+            name: string;
+            project: components["schemas"]["ProjectRef"];
+            stage: components["schemas"]["HouseStage"];
+            /** Format: date-time */
+            updatedAt: string;
         };
         Site: {
             postcode: string | null;
@@ -778,6 +840,57 @@ export interface operations {
             };
             /** @description Changed by someone else since `version`, or archived. */
             409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorMessage"];
+                };
+            };
+        };
+    };
+    listRecentHouses: {
+        parameters: {
+            query?: {
+                /** @description 1 to 20. */
+                size?: number;
+            };
+            header?: {
+                /** @description The company to act in. Needed only when the caller belongs to more than one. */
+                "X-Organisation-Id"?: string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RecentHouse"][];
+                };
+            };
+            /** @description No company chosen while the caller belongs to several, or the header is not a company id. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorMessage"];
+                };
+            };
+            /** @description Not signed in, or the access token is invalid or expired. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description The caller is not an active member of that company, or it is closed. Or the caller's role there lacks `company.view`. */
+            403: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -1359,6 +1472,45 @@ export interface operations {
             };
             /** @description No such project or house in this company. */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorMessage"];
+                };
+            };
+        };
+    };
+    findAddresses: {
+        parameters: {
+            query: {
+                /** @description What has been typed so far. */
+                q: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AddressSuggestion"][];
+                };
+            };
+            /** @description Not signed in, or the access token is invalid or expired. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Address search is off or its provider did not answer: type the address. */
+            503: {
                 headers: {
                     [name: string]: unknown;
                 };

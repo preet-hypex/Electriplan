@@ -1,6 +1,46 @@
 {
   "components": {
     "schemas": {
+      "AddressSuggestion": {
+        "properties": {
+          "label": {
+            "type": "string"
+          },
+          "latitude": {
+            "format": "double",
+            "type": "number"
+          },
+          "longitude": {
+            "format": "double",
+            "type": "number"
+          },
+          "postcode": {
+            "nullable": true,
+            "type": "string"
+          },
+          "state": {
+            "$ref": "#/components/schemas/AustralianState"
+          },
+          "street": {
+            "nullable": true,
+            "type": "string"
+          },
+          "suburb": {
+            "nullable": true,
+            "type": "string"
+          }
+        },
+        "required": [
+          "label",
+          "latitude",
+          "longitude",
+          "postcode",
+          "state",
+          "street",
+          "suburb"
+        ],
+        "type": "object"
+      },
       "AustralianState": {
         "enum": [
           "NSW",
@@ -648,6 +688,35 @@
         ],
         "type": "object"
       },
+      "RecentHouse": {
+        "properties": {
+          "id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "project": {
+            "$ref": "#/components/schemas/ProjectRef"
+          },
+          "stage": {
+            "$ref": "#/components/schemas/HouseStage"
+          },
+          "updatedAt": {
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "project",
+          "stage",
+          "updatedAt"
+        ],
+        "type": "object"
+      },
       "Site": {
         "properties": {
           "postcode": {
@@ -822,6 +891,85 @@
   },
   "openapi": "3.0.1",
   "paths": {
+    "/api/houses/recent": {
+      "get": {
+        "description": "Not archived, in projects that are not archived, most recently changed first: \"continue where you left off\".\n\n**Permission:** `company.view` (roles: owner, admin, builder, electrician, viewer).",
+        "operationId": "listRecentHouses",
+        "parameters": [
+          {
+            "description": "1 to 20.",
+            "in": "query",
+            "name": "size",
+            "required": false,
+            "schema": {
+              "default": 6,
+              "format": "int32",
+              "type": "integer"
+            }
+          },
+          {
+            "description": "The company to act in. Needed only when the caller belongs to more than one.",
+            "in": "header",
+            "name": "X-Organisation-Id",
+            "required": false,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/RecentHouse"
+                  },
+                  "type": "array"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorMessage"
+                }
+              }
+            },
+            "description": "No company chosen while the caller belongs to several, or the header is not a company id."
+          },
+          "401": {
+            "description": "Not signed in, or the access token is invalid or expired."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorMessage"
+                }
+              }
+            },
+            "description": "The caller is not an active member of that company, or it is closed. Or the caller's role there lacks `company.view`."
+          }
+        },
+        "summary": "Houses worked on lately",
+        "tags": [
+          "Projects"
+        ],
+        "x-permission": "company.view",
+        "x-roles": [
+          "owner",
+          "admin",
+          "builder",
+          "electrician",
+          "viewer"
+        ]
+      }
+    },
     "/api/houses/{id}": {
       "get": {
         "description": "**Permission:** `company.view` (roles: owner, admin, builder, electrician, viewer).",
@@ -1987,6 +2135,55 @@
         ]
       }
     },
+    "/api/reference/addresses": {
+      "get": {
+        "description": "Suggestions while typing a site address, from an OpenStreetMap geocoder (Photon). Fewer than 3 characters: none. House numbers are not always known: the person checks the suggestion.",
+        "operationId": "findAddresses",
+        "parameters": [
+          {
+            "description": "What has been typed so far.",
+            "in": "query",
+            "name": "q",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/AddressSuggestion"
+                  },
+                  "type": "array"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "401": {
+            "description": "Not signed in, or the access token is invalid or expired."
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorMessage"
+                }
+              }
+            },
+            "description": "Address search is off or its provider did not answer: type the address."
+          }
+        },
+        "summary": "Find an Australian address",
+        "tags": [
+          "Reference data"
+        ]
+      }
+    },
     "/api/reference/distributors": {
       "get": {
         "description": "Every distributor, or only those in one state, for the project brief's distributor field.",
@@ -2044,12 +2241,12 @@
       "name": "Projects"
     },
     {
-      "description": "The signed-in user.",
-      "name": "Me"
+      "description": "Lists for the app's choices, such as distributors, and finding addresses.",
+      "name": "Reference data"
     },
     {
-      "description": "Lists for the app's choices, such as distributors.",
-      "name": "Reference data"
+      "description": "The signed-in user.",
+      "name": "Me"
     },
     {
       "description": "The caller's companies, and the company a request acts in.",

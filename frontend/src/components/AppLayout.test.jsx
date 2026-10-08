@@ -40,6 +40,6 @@ describe('AppLayout menu button', () => {
   it('keeps every link named when only icons show', async () => {
     renderLayout()
     await userEvent.click(screen.getByRole('button', { name: 'Collapse the menu' }))
-    expect(screen.getByRole('link', { name: /floor plans/i })).toHaveAttribute('title', 'Floor plans')
+    expect(screen.getByRole('link', { name: /floor-plan editor/i })).toHaveAttribute('title', 'Floor-plan editor')
   })
 })

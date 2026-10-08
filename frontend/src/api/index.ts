@@ -34,6 +34,9 @@ export type HouseForm = Schemas['HouseForm']
 export type HouseStage = Schemas['HouseStage']
 export type DwellingType = Schemas['DwellingType']
 export type ValidationProblem = Schemas['ValidationProblem']
+export type RecentHouse = Schemas['RecentHouse']
+export type SiteForm = Schemas['SiteForm']
+export type AddressSuggestion = Schemas['AddressSuggestion']
 
 /** The header that picks the company a company-scoped request acts in. */
 export const COMPANY_HEADER = 'X-Organisation-Id'

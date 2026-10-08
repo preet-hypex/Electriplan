@@ -12,6 +12,19 @@ const FALLBACK_MESSAGES = {
   502: 'A service the app depends on did not answer. Try again in a moment.',
 }
 
+// The company the signed-in person is working in (CompanyContext sets it).
+// Sent with every call as X-Organisation-Id, so the API acts in that company.
+export const COMPANY_HEADER = 'X-Organisation-Id'
+let currentCompany = null
+
+export function setCompany(id) {
+  currentCompany = id || null
+}
+
+export function company() {
+  return currentCompany
+}
+
 export async function api(path, options = {}) {
   const { json, headers, ...rest } = options
   const { data } = await supabase.auth.getSession()
@@ -23,6 +36,7 @@ export async function api(path, options = {}) {
     headers: {
       'Content-Type': 'application/json',
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      ...(currentCompany ? { [COMPANY_HEADER]: currentCompany } : {}),
       ...(headers || {}),
     },
   })

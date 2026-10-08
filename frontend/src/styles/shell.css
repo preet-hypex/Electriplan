@@ -50,7 +50,7 @@ a.side-link.active { background: rgba(255, 255, 255, .1); color: #fff; box-shado
 }
 .bar h1 { margin: 0; font-size: 16px; font-weight: 600; color: var(--ink); letter-spacing: -.01em; }
 .bar .grow { flex: 1; }
-.content { padding: 24px 28px 40px; display: flex; flex-direction: column; gap: 24px; max-width: 1200px; width: 100%; }
+.content { padding: 24px 28px 40px; display: flex; flex-direction: column; gap: 24px; width: 100%; }
 
 /* The menu button, and the sidebar collapsed to a rail of icons. */
 .burger {
