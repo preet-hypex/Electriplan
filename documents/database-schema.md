@@ -3,7 +3,7 @@
 The Postgres schema behind Electriplan: who the customers are, what they work on, and where every
 house plan is in its journey from an uploaded image to a quote.
 
-- **DDL:** [`backend/src/main/resources/db/migration/V2__core_domain.sql`](../backend/src/main/resources/db/migration/V2__core_domain.sql) (Flyway, applied when the API starts)
+- **DDL:** [`V2__core_domain.sql`](../backend/src/main/resources/db/migration/V2__core_domain.sql) and [`V3__licences_and_seats.sql`](../backend/src/main/resources/db/migration/V3__licences_and_seats.sql) in `backend/src/main/resources/db/migration` (Flyway, applied when the API starts)
 - **Visual atlas:** [`documents/schema-atlas.html`](schema-atlas.html) — open it in a browser for an interactive diagram of every table, key and constraint ([how to rebuild it](../tools/schema-atlas/README.md))
 - **Executable rules:** [`backend/src/test/resources/db/schema-rules.sql`](../backend/src/test/resources/db/schema-rules.sql), run in CI by `SchemaRulesPostgresTests`
 - **Postgres:** 17 (uses `UNIQUE NULLS NOT DISTINCT`, so 15 or later)
@@ -173,6 +173,8 @@ Things that must never be wrong are constraints or triggers, so no code path can
 | A rule pack is only released once a licensed electrician signed it off | `CHECK` on `rule_pack` |
 | A quote is for one house and prices a committed design **of that house** | foreign key `(organisation_id, plan_id, design_version_id)`, trigger `quote_requires_committed_design` |
 | One live (draft or sent) quote per house; revisions supersede | partial unique index `ux_quote_one_live_per_plan` |
+| A company never uses more seats than its licence covers; viewers never use one; two requests cannot both take the last seat | trigger `enforce_seat_limit` (V3), `seats_in_use()` |
+| A licence ends on or after it starts; a closed licence records when | `CHECK` on `organisation` (V3) |
 | Quote totals = sum of lines, GST at the quote's rate | trigger `quote_recalculate`, `CHECK (total = subtotal + gst)` |
 | A sent quote's lines never change; a sent quote is never deleted | triggers `quote_line_guard`, `quote_guard` |
 | A house that has been quoted cannot be deleted (archive it) | foreign keys from `quote` |
@@ -203,7 +205,7 @@ Every one of these is exercised by `schema-rules.sql` in CI.
 | Table | What it is |
 |---|---|
 | `supabase_user` *(V1)* | Read-only copy of Supabase Auth users. Supabase stays the source of truth for sign-in |
-| `organisation` | A customer: name, slug, ABN, home state, subscription status, settings |
+| `organisation` | A customer: name, slug, ABN, home state, settings, and its **licence**: status (trial / active / suspended / closed), `seat_limit`, licence period (`licence_starts_on`, `licence_ends_on`), `closed_at`. A trial is 3 seats for 14 days (V3) |
 | `organisation_member` | User × organisation × role: `owner`, `admin`, `builder`, `electrician`, `viewer` |
 | `organisation_invitation` | Pending invitations; only the SHA-256 of the token is stored |
 | `user_profile` | Display name, default organisation, preferences |
