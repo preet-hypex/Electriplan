@@ -349,7 +349,7 @@ Matched to Planna One's backend so the two share skills, tooling and deployment.
 | API | REST + springdoc-openapi | OpenAPI published for the editor and, later, Planna |
 | Auth | Supabase JWT verification, as in Planna One | One identity across products; roles builder / electrician (E14-S7) |
 | Output | Apache PDFBox (PDF), generated SVG (drawings, single-line diagram), DXF writer (R12 ASCII is simple enough to write directly) | E15 |
-| Tests | JUnit 5, AssertJ, **jqwik** (property tests), Testcontainers (Postgres), Spring Modulith `ApplicationModules.verify()` + `@ApplicationModuleTest` | §11 |
+| Tests | JUnit 5, AssertJ, **jqwik** (property tests), a real Postgres (CI's Postgres service; locally opt-in with `APP_TEST_DB_URL`), Spring Modulith `ApplicationModules.verify()` + `@ApplicationModuleTest` | §11 |
 
 ### 6.3 Modules
 
@@ -365,6 +365,9 @@ backend/
   src/main/java/com/hypex/electriplan/
     security/      (exists) Supabase JWT verification
     users/         (exists) Copy of Supabase's users
+    tenancy/       (exists) Which company a request is for; row-level security per company
+    reference/     (exists) Reference data, e.g. electricity distributors
+    model/         (exists) FloorPlan, ProjectBrief, Fixture and ElectricalDesign records — shared module (OPEN) (E0-S2)
     plan/          FloorPlan intake & validation, fixtures, room types, readiness check   (E1)
     rules/         Rule-pack loading, tiers & precedence, company overrides, standards register (E0)
     catalogue/     Item kinds and specs (luminaires, GPOs, devices, cables) with stable item codes (E4, E15)
@@ -393,6 +396,11 @@ backend/
   src/test/java/…                Per-module tests; reference plans under src/test/resources/plans/
 ```
 
+Since E0-S1 every engine module above except `quoting` exists, empty but for
+its `package-info.java`: what it will own, its epic, and the modules it may
+depend on (`allowedDependencies`), so `verify()` already holds the shape.
+`design` also has the stage contract and orchestrator (§6.4).
+
 National, state and neutral-default rule packs ship **inside the service**, so a
 rule change is a reviewed, versioned release. Company overrides
 (`company/<company>.yaml` in §E0-S7) are stored **in the database**, because
@@ -408,11 +416,25 @@ repositories, event listeners and configuration.
 Every stage has the same shape, so stages can be tested, replaced and re-run alone:
 
 ```java
+// As built in E0-S1 (package com.hypex.electriplan.design):
 public interface DesignStage {
-    StageResult run(FloorPlan plan, ProjectBrief brief,
-                    ElectricalDesign design, RulePack rules);
+    ElectricalDesign apply(DesignContext context);   // the design so far, with this stage's additions
 }
 
+public record DesignContext(DesignInput input,       // FloorPlan, plan revision, ProjectBrief,
+                            ElectricalDesign design) // fixtures, RulePackRef; the design so far
+
+new DesignOrchestrator(List.of(stage1, stage2, …)).design(input)
+```
+
+The orchestrator starts from `ElectricalDesign.empty(planRef, rulePack)`, where
+`planRef` is `sha256:` + the SHA-256 of the plan's canonical JSON (keys sorted,
+no whitespace) and the saved plan revision (`PlanFingerprint`). A stage may not
+change `planRef` or `rulePack`. Still to come: the loaded `RulePack` in the
+context (E0-S3), and per-stage rationale, decisions and a `StageReport` (E0-S4) —
+the planned shape:
+
+```java
 public record StageResult(ElectricalDesign design,          // design with this stage's additions
                           List<Rationale> rationale,
                           List<Decision> decisionsRequired,
@@ -827,7 +849,7 @@ a rule-pack entry where it touches a rule.
 
 | ID | Story | Acceptance criteria | Size |
 |---|---|---|---|
-| E0-S1 | Add the electrical modules to the Electriplan API | ~~Rename the application package~~ (done: `com.hypex.electriplan`); empty modules from §6.3 beside `security` and `users`; `ApplicationModules.verify()` test passes; health endpoint; Postgres + Flyway via Testcontainers; CI build; `DesignStage` contract and an orchestrator that runs an empty stage list and returns an empty valid design | M |
+| E0-S1 | ✅ **Done** — Add the electrical modules to the Electriplan API ([`design`](../backend/src/main/java/com/hypex/electriplan/design/package-info.java)) | Application package renamed to `com.hypex.electriplan`; empty modules from §6.3 beside `security` and `users`; `ApplicationModules.verify()` test passes; health endpoint; Postgres + Flyway migrations, tested against a real Postgres service in CI (opt-in locally by setting `APP_TEST_DB_URL`; skipped otherwise); CI build; `DesignStage` contract and an orchestrator that runs an empty stage list and returns an empty valid design | M |
 | E0-S2 | ✅ **Done** — `ElectricalDesign`, `ProjectBrief`, `Fixture` JSON Schemas + Java records ([contracts/](../contracts/README.md)) | Schemas in `contracts/`; Java records with unit types; contract tests validate serialised output against the schemas; TS types generated for the editor | M |
 | E0-S2a | ✅ **Done** — FloorPlan schema as the shared contract ([contracts/](../contracts/README.md)) | `contracts/floor-plan.schema.json`; Python and TS checked against it in CI; engine reads it into Java records and rejects unsupported versions | M |
 | E0-S3 | Rule-pack format, loader and schema validation | Loads YAML packs; rejects a rule without `id`, `tier`, `kind`, `cite`; tier precedence (state overrides national, company overrides policy only — never mandatory) tested; **supported states = states with a signed-off state file** (no hard-coded VIC; see *Expanding beyond Victoria*) | M |
