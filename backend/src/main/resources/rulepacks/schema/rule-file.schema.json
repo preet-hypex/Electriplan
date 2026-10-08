@@ -1,0 +1,58 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://electriplan.hypex.com.au/rulepacks/rule-file.schema.json",
+  "title": "Rule file",
+  "description": "One file of a rule pack (national, or state/<STATE>.yaml): a list of rules. Every rule has an id, a tier, a kind and a citation; anything else on a rule is a parameter of its kind (value_mm, applies_to, zone...). See documents/electrical-engine-plan.md §6.9.",
+  "type": "object",
+  "required": ["rules"],
+  "additionalProperties": false,
+  "properties": {
+    "rules": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/rule" }
+    }
+  },
+  "$defs": {
+    "rule": {
+      "type": "object",
+      "required": ["id", "tier", "kind", "cite"],
+      "properties": {
+        "id": {
+          "description": "Unique in the pack: area, then what it governs, dot-separated (wet.gpo.zone2).",
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9_-]*(\\.[a-z0-9][a-z0-9_-]*)+$",
+          "maxLength": 100
+        },
+        "tier": {
+          "description": "mandatory: the Wiring Rules, NCC, state law (a violation is an error). regulatory: state variations and distributor rules, only in state files. policy: good practice and company preference (a violation is a warning; companies may change the values).",
+          "enum": ["mandatory", "regulatory", "policy"]
+        },
+        "kind": {
+          "description": "How the engine evaluates the rule (§6.9).",
+          "enum": ["exclusion", "clearance", "count_per", "value", "table", "limit", "requires"]
+        },
+        "cite": {
+          "description": "Where the value comes from: a clause number, or 'Company standard'. Never the standard's text.",
+          "type": "string",
+          "minLength": 1,
+          "pattern": "\\S"
+        },
+        "message": {
+          "description": "What a violation says to the user.",
+          "type": "string",
+          "minLength": 1
+        },
+        "verified": {
+          "description": "Checked against the licensed standard (false: a working assumption, the plan's ⚠). Defaults to false.",
+          "type": "boolean"
+        },
+        "override": {
+          "description": "State files only: this rule replaces the national rule with the same id.",
+          "type": "boolean"
+        }
+      },
+      "propertyNames": { "pattern": "^[a-z][a-z0-9_]*$" },
+      "additionalProperties": { "not": { "type": "null" } }
+    }
+  }
+}

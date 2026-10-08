@@ -14,6 +14,10 @@ import com.hypex.electriplan.model.common.AustralianState;
 import com.hypex.electriplan.model.design.DecisionRequired;
 import com.hypex.electriplan.model.design.ElectricalDesign;
 import com.hypex.electriplan.model.design.RulePackRef;
+import com.hypex.electriplan.rules.Rule;
+import com.hypex.electriplan.rules.RuleKind;
+import com.hypex.electriplan.rules.RuleSet;
+import com.hypex.electriplan.rules.Tier;
 import org.junit.jupiter.api.Test;
 
 class DesignOrchestratorTest {
@@ -21,8 +25,13 @@ class DesignOrchestratorTest {
     static final RulePackRef VIC_RULES = RulePackRef.builder()
             .id("au-residential").version("2026.1").state(AustralianState.VIC).standard("AS/NZS 3000:2018+A3").build();
 
+    static final Rule SWITCH_HEIGHT = Rule.builder().id("policy.switch.height").tier(Tier.POLICY).kind(RuleKind.VALUE)
+            .cite("Company standard").parameter("value_mm", 1100).source("au-residential/switches.yaml").build();
+
+    static final RuleSet VIC = new RuleSet(VIC_RULES, true, List.of(SWITCH_HEIGHT));
+
     static DesignInput input() {
-        return new DesignInput(Samples.floorPlan(), 3, Samples.brief(), List.of(Samples.shower(), Samples.cooktop()), VIC_RULES);
+        return new DesignInput(Samples.floorPlan(), 3, Samples.brief(), List.of(Samples.shower(), Samples.cooktop()), VIC);
     }
 
     /** A stage that adds one decision, so its effect and its order are visible. */
@@ -72,6 +81,8 @@ class DesignOrchestratorTest {
             assertThat(context.brief()).isEqualTo(Samples.brief());
             assertThat(context.fixtures()).containsExactly(Samples.shower(), Samples.cooktop());
             assertThat(context.rulePack()).isEqualTo(VIC_RULES);
+            assertThat(context.rules()).isEqualTo(VIC);
+            assertThat(context.rules().rule("policy.switch.height").number("value_mm")).isEqualTo(1100);
             return new AddDecision("d_second").apply(context);
         };
         DesignStage recordThird = context -> {
@@ -114,14 +125,14 @@ class DesignOrchestratorTest {
     @Test
     void theRulePackMustBeForTheBriefsState() {
         assertThatThrownBy(() -> new DesignInput(Samples.floorPlan(), 1, Samples.brief(), List.of(),
-                VIC_RULES.withState(AustralianState.QLD)))
+                new RuleSet(VIC_RULES.withState(AustralianState.QLD), true, List.of())))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("QLD");
     }
 
     @Test
     void thePlanRevisionStartsAtOne() {
-        assertThatThrownBy(() -> new DesignInput(Samples.floorPlan(), 0, Samples.brief(), List.of(), VIC_RULES))
+        assertThatThrownBy(() -> new DesignInput(Samples.floorPlan(), 0, Samples.brief(), List.of(), VIC))
                 .isInstanceOf(IllegalArgumentException.class);
     }
 

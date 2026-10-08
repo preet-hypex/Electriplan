@@ -1,0 +1,8 @@
+# Victoria: variations on the national rules and the Victorian Service &
+# Installation Rules. Rules here are added to the national ones; a rule with a
+# national rule's id must say `override: true` and replaces it.
+#
+# Empty until the Victorian stories encode them: smoke alarm variation (E5-S2),
+# single-phase supply limit (E8-S4), consumer mains (E11-S5), main switch (E12).
+# Changing this file voids its sign-off in meta.yaml.
+rules: []

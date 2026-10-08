@@ -170,6 +170,7 @@ of `/api/*` to the API on 8081.
 | After changing an API endpoint | regenerate `contracts/openapi.json` and the web app's types: see [contracts/README.md](contracts/README.md#the-api-openapijson) |
 | API outside Docker (needs JDK 21: `brew install openjdk@21`, and Maven) | `backend/run.sh` |
 | Analyser outside Docker | `floorplan/run.sh` (port 8082) |
+| Change the engine's rules (YAML rule packs) | see [documents/rule-packs.md](documents/rule-packs.md). Locally the API designs states whose rules are not signed off yet (`RULES_ALLOW_UNSIGNED_STATES=true` in `docker-compose.yml`); production never does |
 
 ## Continuous integration
 

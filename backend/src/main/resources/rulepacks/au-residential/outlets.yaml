@@ -1,0 +1,25 @@
+# Socket outlets: placement policy (good practice; companies may change the values).
+rules:
+  - id: policy.gpo.height
+    tier: policy
+    kind: value
+    value_mm: 300
+    cite: "Company standard: common practice"
+    verified: false
+
+  - id: policy.gpo.bench-height
+    tier: policy
+    kind: value
+    above_bench_mm: 150
+    cite: "Company standard: common practice"
+    verified: false
+
+  - id: policy.gpo.corner-clearance
+    tier: policy
+    kind: clearance
+    applies_to: [gpo-single, gpo-double]
+    from: [corner]
+    distance_mm: 300
+    cite: "Company standard: common practice"
+    message: "Keep socket outlets away from corners"
+    verified: false
