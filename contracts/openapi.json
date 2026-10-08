@@ -1,0 +1,534 @@
+{
+  "components": {
+    "schemas": {
+      "AustralianState": {
+        "enum": [
+          "NSW",
+          "VIC",
+          "QLD",
+          "WA",
+          "SA",
+          "TAS",
+          "ACT",
+          "NT"
+        ],
+        "type": "string"
+      },
+      "Current": {
+        "properties": {
+          "id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "licence": {
+            "$ref": "#/components/schemas/LicenceStatus"
+          },
+          "name": {
+            "type": "string"
+          },
+          "permissions": {
+            "items": {
+              "$ref": "#/components/schemas/Permission"
+            },
+            "type": "array",
+            "uniqueItems": true
+          },
+          "role": {
+            "$ref": "#/components/schemas/MemberRole"
+          },
+          "slug": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "licence",
+          "name",
+          "permissions",
+          "role",
+          "slug"
+        ],
+        "type": "object"
+      },
+      "Distributor": {
+        "properties": {
+          "code": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "state": {
+            "$ref": "#/components/schemas/AustralianState"
+          }
+        },
+        "required": [
+          "code",
+          "name",
+          "state"
+        ],
+        "type": "object"
+      },
+      "ErrorMessage": {
+        "properties": {
+          "message": {
+            "description": "What went wrong, in words to show the user.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "message"
+        ],
+        "type": "object"
+      },
+      "Licence": {
+        "properties": {
+          "licenceEndsOn": {
+            "format": "date",
+            "nullable": true,
+            "type": "string"
+          },
+          "licenceStartsOn": {
+            "format": "date",
+            "type": "string"
+          },
+          "seatLimit": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "seatsInUse": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "status": {
+            "$ref": "#/components/schemas/LicenceStatus"
+          }
+        },
+        "required": [
+          "licenceEndsOn",
+          "licenceStartsOn",
+          "seatLimit",
+          "seatsInUse",
+          "status"
+        ],
+        "type": "object"
+      },
+      "LicenceStatus": {
+        "enum": [
+          "trial",
+          "active",
+          "suspended",
+          "closed"
+        ],
+        "type": "string"
+      },
+      "Me": {
+        "properties": {
+          "copy": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/SupabaseUser"
+              }
+            ],
+            "nullable": true
+          },
+          "email": {
+            "nullable": true,
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "tokenExpiresAt": {
+            "format": "date-time",
+            "nullable": true,
+            "type": "string"
+          }
+        },
+        "required": [
+          "copy",
+          "email",
+          "id",
+          "tokenExpiresAt"
+        ],
+        "type": "object"
+      },
+      "MemberRole": {
+        "enum": [
+          "owner",
+          "admin",
+          "builder",
+          "electrician",
+          "viewer"
+        ],
+        "type": "string"
+      },
+      "Membership": {
+        "properties": {
+          "id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "licence": {
+            "$ref": "#/components/schemas/LicenceStatus"
+          },
+          "name": {
+            "type": "string"
+          },
+          "role": {
+            "$ref": "#/components/schemas/MemberRole"
+          }
+        },
+        "required": [
+          "id",
+          "licence",
+          "name",
+          "role"
+        ],
+        "type": "object"
+      },
+      "Permission": {
+        "enum": [
+          "company.view",
+          "project.edit",
+          "floor-plan.edit",
+          "design.edit",
+          "rule.override",
+          "review.request",
+          "design.sign-off",
+          "quote.edit",
+          "member.manage",
+          "company.edit",
+          "licence.view",
+          "ownership.transfer"
+        ],
+        "type": "string"
+      },
+      "SupabaseUser": {
+        "properties": {
+          "appMetadata": {
+            "additionalProperties": true,
+            "type": "object"
+          },
+          "bannedUntil": {
+            "format": "date-time",
+            "nullable": true,
+            "type": "string"
+          },
+          "copiedAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "createdAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "email": {
+            "nullable": true,
+            "type": "string"
+          },
+          "emailConfirmedAt": {
+            "format": "date-time",
+            "nullable": true,
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "invitedAt": {
+            "format": "date-time",
+            "nullable": true,
+            "type": "string"
+          },
+          "lastSignInAt": {
+            "format": "date-time",
+            "nullable": true,
+            "type": "string"
+          },
+          "phone": {
+            "nullable": true,
+            "type": "string"
+          },
+          "updatedAt": {
+            "format": "date-time",
+            "nullable": true,
+            "type": "string"
+          },
+          "userMetadata": {
+            "additionalProperties": true,
+            "type": "object"
+          }
+        },
+        "required": [
+          "appMetadata",
+          "bannedUntil",
+          "copiedAt",
+          "createdAt",
+          "email",
+          "emailConfirmedAt",
+          "id",
+          "invitedAt",
+          "lastSignInAt",
+          "phone",
+          "updatedAt",
+          "userMetadata"
+        ],
+        "type": "object"
+      }
+    },
+    "securitySchemes": {
+      "supabase": {
+        "bearerFormat": "JWT",
+        "description": "A Supabase access token for the signed-in user.",
+        "scheme": "bearer",
+        "type": "http"
+      }
+    }
+  },
+  "info": {
+    "description": "The Electriplan web app's API. Every endpoint needs a Supabase access token (`Authorization: Bearer ...`). Endpoints that work inside one company take the `X-Organisation-Id` header and say which permission they need; errors come back as `{\"message\": \"...\"}`.\n\nThe floor-plan analyser (`/api/floorplan/...`) is a separate service and is not described here.",
+    "title": "Electriplan API",
+    "version": "v1"
+  },
+  "openapi": "3.0.1",
+  "paths": {
+    "/api/me": {
+      "get": {
+        "description": "Who the access token is for, and the API's copy of their Supabase account (null until the next sync).",
+        "operationId": "getMe",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Me"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "401": {
+            "description": "Not signed in, or the access token is invalid or expired."
+          }
+        },
+        "summary": "The signed-in user",
+        "tags": [
+          "Me"
+        ]
+      }
+    },
+    "/api/organisations": {
+      "get": {
+        "description": "Active memberships of companies that are not closed, by name: what the company switcher offers.",
+        "operationId": "listMyCompanies",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/Membership"
+                  },
+                  "type": "array"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "401": {
+            "description": "Not signed in, or the access token is invalid or expired."
+          }
+        },
+        "summary": "The caller's companies",
+        "tags": [
+          "Companies"
+        ]
+      }
+    },
+    "/api/organisations/current": {
+      "get": {
+        "description": "With the caller's role there and the permissions that role has, so the app shows only actions that will work.",
+        "operationId": "getCurrentCompany",
+        "parameters": [
+          {
+            "description": "The company to act in. Needed only when the caller belongs to more than one.",
+            "in": "header",
+            "name": "X-Organisation-Id",
+            "required": false,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Current"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorMessage"
+                }
+              }
+            },
+            "description": "No company chosen while the caller belongs to several, or the header is not a company id."
+          },
+          "401": {
+            "description": "Not signed in, or the access token is invalid or expired."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorMessage"
+                }
+              }
+            },
+            "description": "The caller is not an active member of that company, or it is closed."
+          }
+        },
+        "summary": "The company this request acts in",
+        "tags": [
+          "Companies"
+        ]
+      }
+    },
+    "/api/organisations/current/licence": {
+      "get": {
+        "description": "**Permission:** `licence.view` (roles: owner, admin).",
+        "operationId": "getCurrentLicence",
+        "parameters": [
+          {
+            "description": "The company to act in. Needed only when the caller belongs to more than one.",
+            "in": "header",
+            "name": "X-Organisation-Id",
+            "required": false,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Licence"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorMessage"
+                }
+              }
+            },
+            "description": "No company chosen while the caller belongs to several, or the header is not a company id."
+          },
+          "401": {
+            "description": "Not signed in, or the access token is invalid or expired."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorMessage"
+                }
+              }
+            },
+            "description": "The caller is not an active member of that company, or it is closed. Or the caller's role there lacks `licence.view`."
+          }
+        },
+        "summary": "The company's licence and seats in use",
+        "tags": [
+          "Companies"
+        ],
+        "x-permission": "licence.view",
+        "x-roles": [
+          "owner",
+          "admin"
+        ]
+      }
+    },
+    "/api/reference/distributors": {
+      "get": {
+        "description": "Every distributor, or only those in one state, for the project brief's distributor field.",
+        "operationId": "listDistributors",
+        "parameters": [
+          {
+            "description": "Only distributors in this state.",
+            "in": "query",
+            "name": "state",
+            "required": false,
+            "schema": {
+              "$ref": "#/components/schemas/AustralianState"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/Distributor"
+                  },
+                  "type": "array"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "401": {
+            "description": "Not signed in, or the access token is invalid or expired."
+          }
+        },
+        "summary": "Electricity distributors",
+        "tags": [
+          "Reference data"
+        ]
+      }
+    }
+  },
+  "security": [
+    {
+      "supabase": []
+    }
+  ],
+  "servers": [
+    {
+      "description": "The web app's origin (it proxies /api to this service)",
+      "url": "/"
+    }
+  ],
+  "tags": [
+    {
+      "description": "The signed-in user.",
+      "name": "Me"
+    },
+    {
+      "description": "Lists for the app's choices, such as distributors.",
+      "name": "Reference data"
+    },
+    {
+      "description": "The caller's companies, and the company a request acts in.",
+      "name": "Companies"
+    }
+  ]
+}

@@ -24,6 +24,8 @@ class WebSecurityConfiguration {
             .authorizeHttpRequests(auth -> auth
                 .dispatcherTypeMatchers(DispatcherType.ERROR).permitAll()
                 .requestMatchers("/actuator/health", "/actuator/health/**", "/actuator/modulith").permitAll()
+                // The API's description and Swagger UI; each endpoint still needs a sign-in.
+                .requestMatchers("/api/docs", "/api/docs/**", "/api/swagger-ui/**").permitAll()
                 .requestMatchers("/api/**").authenticated()
                 .anyRequest().denyAll())
             .oauth2ResourceServer(o -> o.jwt(Customizer.withDefaults()));
@@ -35,7 +37,7 @@ class WebSecurityConfiguration {
         CorsConfiguration cfg = new CorsConfiguration();
         cfg.setAllowedOrigins(settings.allowedOrigins());
         cfg.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
-        cfg.setAllowedHeaders(List.of("Authorization", "Content-Type"));
+        cfg.setAllowedHeaders(List.of("Authorization", "Content-Type", "X-Organisation-Id"));
         cfg.setAllowCredentials(true);
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/api/**", cfg);

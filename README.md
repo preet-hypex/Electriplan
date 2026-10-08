@@ -164,7 +164,9 @@ of `/api/*` to the API on 8081.
 |---|---|
 | Frontend tests and types | `cd frontend && npm test && npm run typecheck` |
 | Analyser tests (needs Python 3.11+ and `brew install tesseract`) | `floorplan/run.sh test` |
-| API tests, without installing Java | `docker run --rm -v "$PWD/backend":/src -w /src maven:3.9-eclipse-temurin-21 mvn -B test` |
+| API tests, without installing Java | `docker run --rm -v "$PWD":/src -w /src/backend maven:3.9-eclipse-temurin-21 mvn -B test` (the repo root is mounted: the tests read `contracts/`) |
+| Browse and try the API | **http://localhost:4180/api/docs** (Swagger UI; **Authorize** with an access token) |
+| After changing an API endpoint | regenerate `contracts/openapi.json` and the web app's types: see [contracts/README.md](contracts/README.md#the-api-openapijson) |
 | API outside Docker (needs JDK 21: `brew install openjdk@21`, and Maven) | `backend/run.sh` |
 | Analyser outside Docker | `floorplan/run.sh` (port 8082) |
 
@@ -175,9 +177,9 @@ GitHub Actions. Its jobs run in parallel:
 
 | Job | Checks |
 |---|---|
-| Frontend | `npm ci`, contract types up to date, typecheck, tests, production build, and the setup script's tests |
+| Frontend | `npm ci`, contract and API types up to date (from `contracts/`), typecheck, tests, production build, and the setup script's tests |
 | Floor-plan analyser | the Python tests, with Tesseract installed |
-| API | `mvn verify`, against a real Postgres, so the Postgres tests run too |
+| API | `mvn verify`, against a real Postgres, so the Postgres tests run too; fails if `contracts/openapi.json` is out of date with the API |
 | Docker images | `docker compose build` (the web image with placeholder Supabase settings) |
 | **CI passed** | passes only if every job above passed |
 

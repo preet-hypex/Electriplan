@@ -53,7 +53,7 @@ class CompanyContextInterceptor implements HandlerInterceptor {
         TenantSession.clear();
     }
 
-    private static boolean isCompanyScoped(HandlerMethod method) {
+    static boolean isCompanyScoped(HandlerMethod method) {
         return method.hasMethodAnnotation(CompanyScoped.class)
                 || AnnotatedElementUtils.hasAnnotation(method.getBeanType(), CompanyScoped.class)
                 || requiredPermission(method) != null;

@@ -4,12 +4,15 @@ import java.time.Instant;
 import java.util.UUID;
 import com.hypex.electriplan.security.AuthenticatedUser;
 import com.hypex.electriplan.security.AuthenticatedUsers;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import org.jspecify.annotations.Nullable;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
+@Tag(name = "Me", description = "The signed-in user.")
 @RequestMapping("/api/me")
 class MeController {
 
@@ -22,6 +25,8 @@ class MeController {
     }
 
     @GetMapping
+    @Operation(operationId = "getMe", summary = "The signed-in user",
+            description = "Who the access token is for, and the API's copy of their Supabase account (null until the next sync).")
     Me me() {
         AuthenticatedUser caller = callers.require();
         return new Me(caller.id(), caller.email(), caller.tokenExpiresAt(), users.find(caller.id()).orElse(null));
