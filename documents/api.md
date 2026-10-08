@@ -1,12 +1,28 @@
 # API
 
-Every `/api/**` call needs `Authorization: Bearer <Supabase access token>`. Any account Supabase
-signs in gets through: the API has no roles, permissions or invitation list of its own.
+Every `/api/**` call needs `Authorization: Bearer <Supabase access token>`. What a signed-in person
+may then do depends on their role in the company the request acts in (see [Companies](#companies)).
+
+**The full, current description is the API's own OpenAPI document**, which springdoc builds from the
+code:
+
+| | Where |
+|---|---|
+| Swagger UI (try calls with your access token: **Authorize**, paste it) | **http://localhost:4180/api/docs** (or `:5180` with Vite, `:8081` direct) |
+| OpenAPI document | `/api/docs/openapi.json`, committed as [`contracts/openapi.json`](../contracts/openapi.json) |
+| TypeScript types for the web app | `frontend/src/api/schema.ts` (generated), used through `frontend/src/api/index.ts` (`apiGet`) |
+
+Both are open without a sign-in (each endpoint still needs one); `API_DOCS_ENABLED=false` turns them
+off. Company-scoped endpoints list the `X-Organisation-Id` header and their 400/403 answers, and an
+endpoint that needs a permission says which and the roles that have it (also as `x-permission` and
+`x-roles`). The floor-plan analyser is a separate service with its own description (FastAPI's
+`/docs` on port 8082). This page explains the rules; the tables below are a summary.
 
 | Endpoint | Method | Access |
 |---|---|---|
 | `/actuator/health` | GET | public |
 | `/actuator/modulith` | GET | public, the module structure |
+| `/api/docs`, `/api/docs/openapi.json` | GET | public, this API's description |
 | `/api/me` | GET | any Supabase account: the token's `id`, `email` and `tokenExpiresAt`, and `copy`, this user's row in `electriplan.supabase_user` (`null` until it has been copied) |
 
 The first call from a user the copy does not have yet copies them from Supabase before the endpoint
