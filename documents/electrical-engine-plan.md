@@ -1020,6 +1020,12 @@ a rule-pack entry where it touches a rule.
   (AS/NZS 4777), batteries (AS/NZS 5139), EV chargers, pools and spas,
   smart-home/automation, commercial (Class 2–9).
 
+### Before the engine's first endpoint
+
+Teams, licences and roles (Epic T, [teams-and-licences-plan.md](teams-and-licences-plan.md)), stories
+T1–T4, come first: every engine endpoint needs to know which company a request is for and what the
+person may do.
+
 ## 10. Milestones
 
 Each milestone ends with something an electrician can look at.
