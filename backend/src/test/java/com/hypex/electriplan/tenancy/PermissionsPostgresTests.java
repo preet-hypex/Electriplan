@@ -19,7 +19,12 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.hypex.electriplan.PostgresApplicationTest;
 import com.hypex.electriplan.TestDatabase;
-import com.hypex.electriplan.users.SupabaseUsers;
+import com.hypex.electriplan.tenancy.domain.MemberRole;
+import com.hypex.electriplan.tenancy.domain.Permission;
+import com.hypex.electriplan.tenancy.domain.PermissionMatrix;
+import com.hypex.electriplan.tenancy.service.Seats;
+import com.hypex.electriplan.users.service.SupabaseUsers;
+
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;

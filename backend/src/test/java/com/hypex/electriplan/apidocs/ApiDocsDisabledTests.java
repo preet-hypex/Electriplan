@@ -3,7 +3,7 @@ package com.hypex.electriplan.apidocs;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-import com.hypex.electriplan.users.SupabaseUsers;
+import com.hypex.electriplan.users.service.SupabaseUsers;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;

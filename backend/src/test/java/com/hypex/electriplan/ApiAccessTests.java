@@ -14,8 +14,10 @@ import java.time.Instant;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
-import com.hypex.electriplan.users.SupabaseUser;
-import com.hypex.electriplan.users.SupabaseUsers;
+
+import com.hypex.electriplan.users.entity.SupabaseUser;
+import com.hypex.electriplan.users.service.SupabaseUsers;
+
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
