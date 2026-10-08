@@ -20,6 +20,24 @@ services:
       retries: 10
     restart: unless-stopped
 
+  # Creates (or updates) electriplan_api, the login the API connects as, before
+  # the API starts. Runs on every `up`, so existing databases get it too.
+  db-roles:
+    image: postgres:17-alpine
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      PGHOST: db
+      PGDATABASE: ${DB_NAME:-electriplan}
+      PGUSER: ${DB_USER:-electriplan}
+      PGPASSWORD: ${DB_PASSWORD:-electriplan}
+      API_DB_PASSWORD: ${DB_API_PASSWORD:-electriplan_api}
+    volumes:
+      - ./infra/postgres/application-login.sql:/application-login.sql:ro
+    entrypoint: ["sh", "-c", "psql -q -v api_password=\"$$API_DB_PASSWORD\" -f /application-login.sql"]
+    restart: "no"
+
   api:
     build:
       context: ./backend
@@ -32,12 +50,17 @@ services:
         required: false
     environment:
       APP_DB_URL: jdbc:postgresql://db:5432/${DB_NAME:-electriplan}
-      APP_DB_USER: ${DB_USER:-electriplan}
-      APP_DB_PASSWORD: ${DB_PASSWORD:-electriplan}
+      # The API works as electriplan_api; Flyway migrates as the owner.
+      APP_DB_USER: electriplan_api
+      APP_DB_PASSWORD: ${DB_API_PASSWORD:-electriplan_api}
+      APP_DB_OWNER_USER: ${DB_USER:-electriplan}
+      APP_DB_OWNER_PASSWORD: ${DB_PASSWORD:-electriplan}
       PORT: "8080"
     depends_on:
       db:
         condition: service_healthy
+      db-roles:
+        condition: service_completed_successfully
     ports:
       - "127.0.0.1:${API_PORT:-8081}:8080"
     healthcheck:

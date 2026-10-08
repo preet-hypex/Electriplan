@@ -28,9 +28,10 @@ class SupabaseUserPostgresTests {
 
     @BeforeAll
     static void migrate() {
-        DataSource source = new DriverManagerDataSource(System.getenv("APP_TEST_DB_URL"), TestDatabase.user(), TestDatabase.password());
-        Flyway.configure().dataSource(source).schemas("electriplan").defaultSchema("electriplan")
-                .locations("classpath:db/migration").load().migrate();
+        // Migrate as the owner, then work as the API does: as its own login.
+        Flyway.configure().dataSource(System.getenv("APP_TEST_DB_URL"), TestDatabase.user(), TestDatabase.password())
+                .schemas("electriplan").defaultSchema("electriplan").locations("classpath:db/migration").load().migrate();
+        DataSource source = new DriverManagerDataSource(System.getenv("APP_TEST_DB_URL"), TestDatabase.apiUser(), TestDatabase.apiPassword());
         db = JdbcClient.create(source);
         copies = new SupabaseUserRepository(db, new ObjectMapper());
     }

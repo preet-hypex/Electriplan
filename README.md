@@ -138,6 +138,13 @@ TablePlus) connects with:
 | User | `electriplan` |
 | Password | `electriplan` |
 
+That is the **owner** of the schema: it sees every company's rows (row-level security does not apply
+to it) and is what Flyway migrates as. The API itself connects as **`electriplan_api`** (password
+`electriplan_api` locally), a member of `electriplan_app`: data access only, row-level security
+always applies, no schema changes, reference tables read-only, history append-only (migration V4).
+The `db-roles` service in `docker-compose.yml` creates that login before the API starts, from
+`infra/postgres/application-login.sql`. To see what the API sees, connect as `electriplan_api`.
+
 The tables are in the `electriplan` schema. These are local development credentials; override them with
 `DB_NAME`, `DB_USER` and `DB_PASSWORD` before the first `docker compose up` (Postgres only reads
 them when it creates its data volume, so changing them later needs `docker compose down -v`).
@@ -188,6 +195,7 @@ and add **CI passed**. A pull request then cannot be merged until the whole buil
 | "Invalid login credentials" | The account does not exist or is unconfirmed. In Supabase → Authentication → Users, add the user and tick **Auto confirm** |
 | Sign-in worked yesterday, fails today | Free Supabase projects pause after a week idle. Restore it from the dashboard |
 | "Port is already allocated" | Something else uses 4180, 8081, 8082 or 5433. Stop it, or set `WEB_PORT`, `API_PORT`, `FLOORPLAN_PORT` or `DB_PORT` before `docker compose up` |
+| `api` does not start; `db-roles` exited with an error | The API's database login could not be created. `docker compose logs db-roles`; usually the owner password in `DB_PASSWORD` does not match the existing database |
 | Analysis fails with "Sign in first" or "not valid" | The analyser could not verify your sign-in. Sign out and in again; if it persists, check `docker compose logs floorplan` and that `frontend/.env` has `VITE_SUPABASE_URL`, then `docker compose up -d --build --wait floorplan` |
 | Floor plans says the analyser is not answering | `docker compose ps floorplan`; restart with `docker compose up -d floorplan` |
 | Rooms come back unnamed | Only outside Docker: install Tesseract (`brew install tesseract`) |

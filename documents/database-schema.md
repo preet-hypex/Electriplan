@@ -85,11 +85,11 @@ Two deliberate exceptions to "only the current organisation":
 - the **platform catalogue** (`catalogue_item` with no organisation) is readable by everyone and
   writable only in a transaction that sets `electriplan.platform_admin = 'on'`.
 
-> **Required before the API uses these tables: connect as an ordinary role.** Superusers bypass
-> row-level security, and the local and CI databases connect as `electriplan`, which Docker creates as
-> a superuser. The API's runtime connection must use a role with `NOSUPERUSER NOBYPASSRLS` that owns
-> nothing (Flyway keeps the owner role). `SchemaRulesPostgresTests` shows the grants it needs. Until
-> then the policies exist but do not bind the API.
+> **The API connects as an ordinary role** (since V4). Superusers bypass row-level security, so the
+> API never uses the owner: it logs in as `electriplan_api`, a member of `electriplan_app`, which is
+> `NOSUPERUSER NOBYPASSRLS`, owns nothing and cannot change the schema. Reference tables are
+> read-only to it and history (`plan_stage_event`, `audit_event`) append-only. Flyway alone
+> migrates as the owner. `ApplicationRolePostgresTests` proves each of these.
 
 ### 2.2 No cross-tenant references, by construction
 

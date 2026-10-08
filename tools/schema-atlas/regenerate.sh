@@ -30,19 +30,16 @@ done
 echo "2/4  Applying the migrations…"
 {
   echo 'CREATE SCHEMA electriplan;'
+  # Flyway's history table, as Flyway would create it (V4 locks the API out of it).
+  echo 'CREATE TABLE electriplan.flyway_schema_history (installed_rank int PRIMARY KEY);'
   for f in $(ls "$MIGRATIONS"/V*__*.sql | sort -t V -k2 -n); do cat "$f"; echo; done
 } | docker exec -i "$CTR" psql -U electriplan -d electriplan -q -v ON_ERROR_STOP=1 >/dev/null
 
 echo "3/4  Loading sample data…"
-# The rules script runs as an ordinary role (row-level security applies) and,
-# unlike in the test, is committed here so the atlas has rows to count.
-docker exec -i "$CTR" psql -U electriplan -d electriplan -q -v ON_ERROR_STOP=1 >/dev/null 2>&1 <<SQL
-CREATE ROLE electriplan_runtime NOSUPERUSER NOBYPASSRLS;
-GRANT USAGE ON SCHEMA electriplan TO electriplan_runtime;
-GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA electriplan TO electriplan_runtime;
-GRANT USAGE ON ALL SEQUENCES IN SCHEMA electriplan TO electriplan_runtime;
-SQL
-{ echo 'SET ROLE electriplan_runtime;'; cat "$SAMPLE"; } \
+# The rules script runs as electriplan_app, the role migration V4 gives the API
+# (so row-level security applies), and, unlike in the test, is committed here
+# so the atlas has rows to count.
+{ echo 'SET ROLE electriplan_app;'; cat "$SAMPLE"; } \
   | docker exec -i "$CTR" psql -U electriplan -d electriplan -q -v ON_ERROR_STOP=1 >/dev/null 2>&1
 
 echo "4/4  Building the atlas…"

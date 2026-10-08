@@ -94,6 +94,14 @@ else
   fail '/api/floorplan is proxied' "GET /api/floorplan/health through the web container returned $status"
 fi
 
+echo "DB   roles"
+
+if who=$(docker compose -f "$ROOT/docker-compose.yml" exec -T db psql -U electriplan -d electriplan -qtA -c "select string_agg(distinct usename, ',') from pg_stat_activity where application_name like 'PostgreSQL JDBC%' or usename = 'electriplan_api'" 2>&1) && [ "$who" = electriplan_api ]; then
+  pass 'the API is connected as electriplan_api (not the owner), so row-level security applies'
+else
+  fail 'the API connects as electriplan_api' "API database sessions are: ${who:-none}"
+fi
+
 echo "DB   electriplan.supabase_user"
 
 if copied=$(docker compose -f "$ROOT/docker-compose.yml" exec -T db psql -U electriplan -d electriplan -qtA -c 'select count(*) from electriplan.supabase_user' 2>&1); then
