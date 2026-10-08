@@ -168,6 +168,7 @@ of `/api/*` to the API on 8081.
 | API tests, without installing Java (the Postgres tests are skipped) | `docker run --rm -v "$PWD/backend":/src -w /src maven:3.9-eclipse-temurin-21 mvn -B test` |
 | API outside Docker (needs JDK 21: `brew install openjdk@21`, and Maven) | `backend/run.sh` |
 | Analyser outside Docker | `floorplan/run.sh` (port 8082) |
+| Change the engine's rules (YAML rule packs) | see [documents/rule-packs.md](documents/rule-packs.md). Locally the API designs states whose rules are not signed off yet (`RULES_ALLOW_UNSIGNED_STATES=true` in `docker-compose.yml`); production never does |
 
 ## Continuous integration
 

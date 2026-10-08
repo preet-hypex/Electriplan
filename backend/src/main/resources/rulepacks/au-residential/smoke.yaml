@@ -1,0 +1,18 @@
+# Smoke alarms: NCC and AS 3786; states vary (their own files override).
+rules:
+  - id: smoke.ceiling.wall-clearance
+    tier: mandatory
+    kind: clearance
+    applies_to: [smoke-alarm]
+    from: [wall, corner]
+    distance_mm: 300
+    cite: "NCC 2022 Vol. 2 / AS 3786"         # ⚠ verify
+    verified: false
+
+  - id: policy.smoke.every-bedroom
+    tier: policy
+    kind: value
+    enabled: false
+    cite: "Company standard: goes beyond the minimum when enabled"
+    message: "A smoke alarm in every bedroom"
+    verified: false

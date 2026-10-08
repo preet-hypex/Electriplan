@@ -11,9 +11,10 @@
  * {@link com.hypex.electriplan.design.DesignInput}. All are plain Java with no
  * Spring and no I/O, so the same input always gives the same design.
  *
- * <p>The allowed dependencies grow as the stage modules gain stages; for now
- * the module needs only the model.
+ * <p>A design is made with a {@link com.hypex.electriplan.rules.RuleSet} from
+ * the rules module. The allowed dependencies grow as the stage modules gain
+ * stages.
  */
-@org.springframework.modulith.ApplicationModule(displayName = "Design", allowedDependencies = "model")
+@org.springframework.modulith.ApplicationModule(displayName = "Design", allowedDependencies = {"model", "rules"})
 @org.jspecify.annotations.NullMarked
 package com.hypex.electriplan.design;
