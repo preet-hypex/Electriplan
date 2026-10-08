@@ -86,6 +86,8 @@ jobs:
       APP_TEST_DB_URL: jdbc:postgresql://localhost:5432/electriplan
       APP_TEST_DB_USER: electriplan
       APP_TEST_DB_PASSWORD: electriplan
+      APP_TEST_DB_API_USER: electriplan_api
+      APP_TEST_DB_API_PASSWORD: electriplan_api
     defaults:
       run:
         working-directory: backend
@@ -96,6 +98,14 @@ jobs:
           distribution: temurin
           java-version: '21'
           cache: maven
+      - name: Create the API's database login
+        working-directory: .
+        env:
+          PGHOST: localhost
+          PGUSER: electriplan
+          PGPASSWORD: electriplan
+          PGDATABASE: electriplan
+        run: psql -q -v api_password=electriplan_api -f infra/postgres/application-login.sql
       - name: Build and test
         run: mvn --batch-mode --no-transfer-progress verify
 

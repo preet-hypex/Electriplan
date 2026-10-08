@@ -145,6 +145,11 @@ SELECT json_build_object(
  )
 )""".replace('__SCHEMA__', SCHEMA)))
 
+# Flyway's bookkeeping is not part of the data model.
+HIDDEN = {'flyway_schema_history'}
+model['tables'] = [t for t in model['tables'] if t['name'] not in HIDDEN]
+model['fks'] = [f for f in (model['fks'] or []) if f['child'] not in HIDDEN and f['parent'] not in HIDDEN]
+
 # live row counts (exact; a few dozen tables is cheap)
 counts_sql = ' UNION ALL '.join(
     f"SELECT '{t['name']}', count(*) FROM {SCHEMA}.{t['name']}" for t in model['tables'])

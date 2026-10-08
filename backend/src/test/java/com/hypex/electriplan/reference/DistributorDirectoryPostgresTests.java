@@ -35,9 +35,12 @@ class DistributorDirectoryPostgresTests {
     @DynamicPropertySource
     static void postgres(DynamicPropertyRegistry registry) {
         registry.add("spring.datasource.url", () -> System.getenv("APP_TEST_DB_URL"));
-        registry.add("spring.datasource.username", TestDatabase::user);
-        registry.add("spring.datasource.password", TestDatabase::password);
+        // As in production: the API works as its own login, Flyway as the owner.
+        registry.add("spring.datasource.username", TestDatabase::apiUser);
+        registry.add("spring.datasource.password", TestDatabase::apiPassword);
         registry.add("spring.flyway.enabled", () -> "true");
+        registry.add("spring.flyway.user", TestDatabase::user);
+        registry.add("spring.flyway.password", TestDatabase::password);
         registry.add("spring.flyway.schemas", () -> "electriplan");
         registry.add("spring.flyway.default-schema", () -> "electriplan");
         registry.add("spring.jpa.hibernate.ddl-auto", () -> "validate");
