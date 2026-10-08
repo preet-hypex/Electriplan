@@ -119,11 +119,57 @@ INSERT INTO electriplan.quote (organisation_id, plan_id, design_version_id, refe
           'Q-000001', 2, 'a6000000-0000-4000-8000-000000000001');
 SELECT pg_temp.ok((SELECT count(*) FROM electriplan.quote WHERE plan_id = 'd0000000-0000-4000-8000-000000000001') = 2, 'a revision supersedes the quote before it, which stays as history');
 
+-- Licences and seats (V3): owners, admins, builders and electricians use a seat; viewers never do
+INSERT INTO electriplan.supabase_user (id, email, created_at) VALUES
+  ('44444444-4444-4444-8444-444444444444', 'newbuilder@a.com', now()),
+  ('55555555-5555-4555-8555-555555555555', 'homeowner@a.com', now());
+SELECT pg_temp.ok((SELECT seat_limit = 3 AND licence_ends_on - licence_starts_on = 14 AND status = 'trial'
+                     FROM electriplan.organisation WHERE id = 'aaaaaaaa-0000-4000-8000-000000000001'), 'a new company is a trial: 3 seats for 14 days');
+SELECT pg_temp.ok(electriplan.seats_in_use('aaaaaaaa-0000-4000-8000-000000000001') = 2, 'the owner and the electrician use 2 seats');
+INSERT INTO electriplan.organisation_invitation (id, organisation_id, email, role, token_sha256, invited_by, expires_at)
+  VALUES ('a7000000-0000-4000-8000-000000000001', 'aaaaaaaa-0000-4000-8000-000000000001', 'newbuilder@a.com', 'builder', sha256('t1'), '11111111-1111-4111-8111-111111111111', now() + interval '7 days');
+SELECT pg_temp.ok(electriplan.seats_in_use('aaaaaaaa-0000-4000-8000-000000000001') = 3, 'a pending invitation holds a seat');
+SELECT pg_temp.must_fail($$INSERT INTO electriplan.organisation_invitation (organisation_id, email, role, token_sha256, invited_by, expires_at)
+  VALUES ('aaaaaaaa-0000-4000-8000-000000000001', 'fourth@a.com', 'electrician', sha256('t2'), '11111111-1111-4111-8111-111111111111', now() + interval '7 days')$$, 'inviting past the seat limit');
+INSERT INTO electriplan.organisation_invitation (organisation_id, email, role, token_sha256, invited_by, expires_at)
+  VALUES ('aaaaaaaa-0000-4000-8000-000000000001', 'homeowner@a.com', 'viewer', sha256('t3'), '11111111-1111-4111-8111-111111111111', now() + interval '7 days');
+INSERT INTO electriplan.organisation_member (organisation_id, user_id, role) VALUES ('aaaaaaaa-0000-4000-8000-000000000001', '55555555-5555-4555-8555-555555555555', 'viewer');
+SELECT pg_temp.ok(electriplan.seats_in_use('aaaaaaaa-0000-4000-8000-000000000001') = 3, 'viewers, invited or joined, are free');
+SELECT pg_temp.must_fail($$UPDATE electriplan.organisation_member SET role = 'builder' WHERE user_id = '55555555-5555-4555-8555-555555555555'$$,
+                         'promoting a viewer when every seat is taken');
+INSERT INTO electriplan.organisation_invitation (organisation_id, email, role, token_sha256, invited_by, expires_at, created_at)
+  VALUES ('aaaaaaaa-0000-4000-8000-000000000001', 'late@a.com', 'builder', sha256('t4'), '11111111-1111-4111-8111-111111111111', now() - interval '1 day', now() - interval '8 days');
+SELECT pg_temp.ok(electriplan.seats_in_use('aaaaaaaa-0000-4000-8000-000000000001') = 3, 'an expired invitation holds no seat');
+-- Accepting: mark the invitation accepted, then add the member, in one transaction
+UPDATE electriplan.organisation_invitation SET accepted_at = now(), accepted_user_id = '44444444-4444-4444-8444-444444444444'
+ WHERE id = 'a7000000-0000-4000-8000-000000000001';
+INSERT INTO electriplan.organisation_member (organisation_id, user_id, role) VALUES ('aaaaaaaa-0000-4000-8000-000000000001', '44444444-4444-4444-8444-444444444444', 'builder');
+SELECT pg_temp.ok(electriplan.seats_in_use('aaaaaaaa-0000-4000-8000-000000000001') = 3, 'accepting an invitation moves its seat to the new member');
+UPDATE electriplan.organisation_member SET status = 'suspended' WHERE user_id = '44444444-4444-4444-8444-444444444444';
+SELECT pg_temp.ok(electriplan.seats_in_use('aaaaaaaa-0000-4000-8000-000000000001') = 2, 'suspending a member frees their seat');
+UPDATE electriplan.organisation_member SET role = 'builder' WHERE user_id = '55555555-5555-4555-8555-555555555555';
+SELECT pg_temp.ok(electriplan.seats_in_use('aaaaaaaa-0000-4000-8000-000000000001') = 3, 'a viewer can be promoted into a free seat');
+SELECT pg_temp.must_fail($$UPDATE electriplan.organisation_member SET status = 'active' WHERE user_id = '44444444-4444-4444-8444-444444444444'$$,
+                         'reactivating a member when every seat is taken');
+UPDATE electriplan.organisation SET seat_limit = 1 WHERE id = 'aaaaaaaa-0000-4000-8000-000000000001';
+SELECT pg_temp.ok(electriplan.seats_in_use('aaaaaaaa-0000-4000-8000-000000000001') = 3, 'the operator may lower the limit below current use');
+SELECT pg_temp.must_fail($$INSERT INTO electriplan.organisation_invitation (organisation_id, email, role, token_sha256, invited_by, expires_at)
+  VALUES ('aaaaaaaa-0000-4000-8000-000000000001', 'more@a.com', 'admin', sha256('t5'), '11111111-1111-4111-8111-111111111111', now() + interval '7 days')$$, 'a new seat while over a lowered limit');
+INSERT INTO electriplan.organisation_invitation (organisation_id, email, role, token_sha256, invited_by, expires_at)
+  VALUES ('aaaaaaaa-0000-4000-8000-000000000001', 'site@a.com', 'viewer', sha256('t6'), '11111111-1111-4111-8111-111111111111', now() + interval '7 days');
+UPDATE electriplan.organisation_member SET role = 'viewer' WHERE user_id = '55555555-5555-4555-8555-555555555555';
+SELECT pg_temp.ok(electriplan.seats_in_use('aaaaaaaa-0000-4000-8000-000000000001') = 2, 'freeing seats and adding viewers still work while over the limit');
+SELECT pg_temp.must_fail($$UPDATE electriplan.organisation SET licence_ends_on = licence_starts_on - 1 WHERE id = 'aaaaaaaa-0000-4000-8000-000000000001'$$, 'a licence that ends before it starts');
+SELECT pg_temp.must_fail($$UPDATE electriplan.organisation SET status = 'closed' WHERE id = 'aaaaaaaa-0000-4000-8000-000000000001'$$, 'closing a licence without recording when');
+UPDATE electriplan.organisation SET seat_limit = 5, status = 'active', licence_ends_on = NULL WHERE id = 'aaaaaaaa-0000-4000-8000-000000000001';
+SELECT pg_temp.ok((SELECT licence_ends_on IS NULL FROM electriplan.organisation WHERE id = 'aaaaaaaa-0000-4000-8000-000000000001'), 'an active licence may have no end date');
+
 -- Organisation B
 SELECT set_config('electriplan.organisation_id', 'bbbbbbbb-0000-4000-8000-000000000002', false),
        set_config('electriplan.actor_id', '22222222-2222-4222-8222-222222222222', false);
 INSERT INTO electriplan.organisation (id, name, slug) VALUES ('bbbbbbbb-0000-4000-8000-000000000002', 'Bolt Electrical', 'bolt-electrical');
 INSERT INTO electriplan.organisation_member VALUES ('bbbbbbbb-0000-4000-8000-000000000002', '22222222-2222-4222-8222-222222222222', 'owner');
+SELECT pg_temp.ok(electriplan.seats_in_use('bbbbbbbb-0000-4000-8000-000000000002') = 1, 'each company counts only its own seats');
 SELECT pg_temp.ok((SELECT count(*) FROM electriplan.project) = 0, 'organisation B sees none of A''s projects');
 SELECT pg_temp.ok((SELECT count(*) FROM electriplan.quote) = 0, 'organisation B sees none of A''s quotes');
 SELECT pg_temp.ok((SELECT count(*) FROM electriplan.organisation) = 1, 'organisation B sees only itself');
