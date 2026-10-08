@@ -1,0 +1,32 @@
+# The au-residential rule pack: Australian houses, single-phase.
+# Format: rulepacks/schema/meta.schema.json; documents/electrical-engine-plan.md §6.9.
+#
+# The engine designs only the states whose file is signed off below and
+# unchanged since (sha256 of the file as signed). Nothing in the code names a
+# state: adding one is a new state/<STATE>.yaml, a sign-off here, and a release.
+id: au-residential
+version: 2026.1-dev
+# draft: values are working assumptions (verified: false) until checked
+# against licensed copies of the standards (E0-S8) and signed off (E16-S4).
+status: draft
+
+standards:
+  - code: AS/NZS 3000
+    edition: 2018+A3          # ⚠ confirm the current edition and amendments
+  - code: AS/NZS 3008.1.1
+    edition: "2017"           # ⚠ confirm
+  - code: NCC
+    edition: "2022"           # ⚠ confirm
+
+national:
+  - wet-areas.yaml
+  - protection.yaml
+  - outlets.yaml
+  - switches.yaml
+  - smoke.yaml
+
+states:
+  VIC:
+    file: state/VIC.yaml
+    # No sign-off yet: a Victorian licensed electrician from the panel signs
+    # this file off (E16-S4), recording by, licence, date and the file's sha256.

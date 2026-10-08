@@ -56,6 +56,8 @@ services:
       APP_DB_OWNER_USER: ${DB_USER:-electriplan}
       APP_DB_OWNER_PASSWORD: ${DB_PASSWORD:-electriplan}
       PORT: "8080"
+      # Local development designs states whose rules are not signed off yet (Victoria, until E16-S4).
+      RULES_ALLOW_UNSIGNED_STATES: ${RULES_ALLOW_UNSIGNED_STATES:-true}
     depends_on:
       db:
         condition: service_healthy

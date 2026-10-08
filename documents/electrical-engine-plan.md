@@ -422,7 +422,7 @@ public interface DesignStage {
 }
 
 public record DesignContext(DesignInput input,       // FloorPlan, plan revision, ProjectBrief,
-                            ElectricalDesign design) // fixtures, RulePackRef; the design so far
+                            ElectricalDesign design) // fixtures, RuleSet (E0-S3); the design so far
 
 new DesignOrchestrator(List.of(stage1, stage2, …)).design(input)
 ```
@@ -430,9 +430,10 @@ new DesignOrchestrator(List.of(stage1, stage2, …)).design(input)
 The orchestrator starts from `ElectricalDesign.empty(planRef, rulePack)`, where
 `planRef` is `sha256:` + the SHA-256 of the plan's canonical JSON (keys sorted,
 no whitespace) and the saved plan revision (`PlanFingerprint`). A stage may not
-change `planRef` or `rulePack`. Still to come: the loaded `RulePack` in the
-context (E0-S3), and per-stage rationale, decisions and a `StageReport` (E0-S4) —
-the planned shape:
+change `planRef` or `rulePack`. Since E0-S3 the input carries the loaded rules
+for the brief's state (`context.rules()`, a `RuleSet` from `RuleBook.rulesFor(state)`;
+see [rule-packs.md](rule-packs.md)). Still to come: per-stage rationale, decisions
+and a `StageReport` (E0-S4) — the planned shape:
 
 ```java
 public record StageResult(ElectricalDesign design,          // design with this stage's additions
@@ -852,7 +853,7 @@ a rule-pack entry where it touches a rule.
 | E0-S1 | ✅ **Done** — Add the electrical modules to the Electriplan API ([`design`](../backend/src/main/java/com/hypex/electriplan/design/package-info.java)) | Application package renamed to `com.hypex.electriplan`; empty modules from §6.3 beside `security` and `users`; `ApplicationModules.verify()` test passes; health endpoint; Postgres + Flyway migrations, tested against a real Postgres service in CI (opt-in locally by setting `APP_TEST_DB_URL`; skipped otherwise); CI build; `DesignStage` contract and an orchestrator that runs an empty stage list and returns an empty valid design | M |
 | E0-S2 | ✅ **Done** — `ElectricalDesign`, `ProjectBrief`, `Fixture` JSON Schemas + Java records ([contracts/](../contracts/README.md)) | Schemas in `contracts/`; Java records with unit types; contract tests validate serialised output against the schemas; TS types generated for the editor | M |
 | E0-S2a | ✅ **Done** — FloorPlan schema as the shared contract ([contracts/](../contracts/README.md)) | `contracts/floor-plan.schema.json`; Python and TS checked against it in CI; engine reads it into Java records and rejects unsupported versions | M |
-| E0-S3 | Rule-pack format, loader and schema validation | Loads YAML packs; rejects a rule without `id`, `tier`, `kind`, `cite`; tier precedence (state overrides national, company overrides policy only — never mandatory) tested; **supported states = states with a signed-off state file** (no hard-coded VIC; see *Expanding beyond Victoria*) | M |
+| E0-S3 | ✅ **Done** — Rule-pack format, loader and schema validation ([rule-packs.md](rule-packs.md)) | Loads YAML packs; rejects a rule without `id`, `tier`, `kind`, `cite`; tier precedence (state overrides national, company overrides policy only — never mandatory) tested; **supported states = states with a signed-off state file** (no hard-coded VIC; see *Expanding beyond Victoria*) | M |
 | E0-S4 | Rationale & decision-required plumbing | Any stage can attach rationale lines and decisions; they appear in the output and in the `validation` module's compliance report | S |
 | E0-S5 | Reference plan set | 10 typical Victorian single-storey, single-phase plans as FloorPlan + brief + fixtures: studio, 2-bed unit, 3-bed, 4-bed with ensuite, L-shaped living, open-plan kitchen with island, two bathrooms back-to-back, large garage, all-electric home (induction + heat pump, tests the single-phase demand limit), one plan per Victorian distributor across the set. Each designed independently by ≥ 2 electricians from the panel. Stored under `backend/src/test/resources/plans/` | M |
 | E0-S6 | Standards register | `meta.yaml` pins editions; a script lists every rule with its citation and ⚠ status; CI fails if a mandatory rule is unverified in a "release" pack | S |

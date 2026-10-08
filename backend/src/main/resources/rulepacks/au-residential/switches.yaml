@@ -1,0 +1,17 @@
+# Switches: placement policy.
+rules:
+  - id: policy.switch.height
+    tier: policy
+    kind: value
+    value_mm: 1100
+    cite: "Company standard; AS 1428.1 range 900–1100 mm where accessible"
+    verified: false
+
+  - id: policy.switch.door-offset
+    tier: policy
+    kind: clearance
+    applies_to: [switch]
+    from: [door-frame]
+    distance_mm: 100
+    cite: "Company standard: common practice"
+    verified: false

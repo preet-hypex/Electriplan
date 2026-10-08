@@ -1,0 +1,28 @@
+# RCD protection and circuit separation: AS/NZS 3000 cl. 2.6.
+rules:
+  - id: rcd.required
+    tier: mandatory
+    kind: requires
+    when: final-subcircuit-supplies
+    supplies: [socket-outlets, lighting, hand-held-equipment]
+    then: rcd-30ma
+    cite: "AS/NZS 3000:2018 cl. 2.6.3"        # ⚠ verify
+    message: "Socket-outlet and lighting circuits need 30 mA RCD protection"
+    verified: false
+
+  - id: rcd.minimum-count
+    tier: mandatory
+    kind: limit
+    at_least: 2
+    when_circuits_more_than: 1
+    cite: "AS/NZS 3000:2018 cl. 2.6.2"        # ⚠ verify wording
+    message: "Spread the RCD-protected circuits over at least two RCDs"
+    verified: false
+
+  - id: rcd.circuits-per-rcd
+    tier: mandatory
+    kind: limit
+    at_most: 3
+    cite: "AS/NZS 3000:2018 cl. 2.6.2"        # ⚠ verify wording
+    message: "No more than three final subcircuits on one RCD"
+    verified: false
