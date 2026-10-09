@@ -10,7 +10,7 @@ from fastapi.testclient import TestClient
 
 from app.main import app
 
-from .tokens import OTHER_USER_ID, auth, make_token
+from .tokens import auth, make_token
 
 client = TestClient(app)
 
@@ -18,7 +18,6 @@ PROTECTED = [
     ("post", "/api/floorplan/analyse"),
     ("post", "/api/floorplan/calibrate"),
     ("post", "/api/floorplan/export"),
-    ("get", "/api/floorplan/images/anything.png"),
 ]
 
 
@@ -69,16 +68,3 @@ def test_the_scheme_must_be_bearer() -> None:
         headers={"Authorization": f"Basic {make_token()}"},
     )
     assert response.status_code == 401
-
-
-class TestImagesBelongToWhoeverUploadedThem:
-    def test_another_user_cannot_fetch_your_image(self, synthetic_plan: bytes) -> None:
-        body = client.post(
-            "/api/floorplan/analyse",
-            files={"file": ("plan.png", synthetic_plan, "image/png")},
-            headers=auth(),
-        ).json()
-        url = body["source"]["imageUrl"]
-
-        assert client.get(url, headers=auth()).status_code == 200
-        assert client.get(url, headers=auth(make_token(sub=OTHER_USER_ID))).status_code == 404

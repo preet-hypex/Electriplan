@@ -211,8 +211,21 @@ SELECT set_config('electriplan.organisation_id', 'eeeeeeee-0000-4000-8000-000000
 INSERT INTO electriplan.organisation (id, name, slug) VALUES ('eeeeeeee-0000-4000-8000-00000000000e', 'Short Lived', 'short-lived');
 INSERT INTO electriplan.organisation_member (organisation_id, user_id, role) VALUES ('eeeeeeee-0000-4000-8000-00000000000e', '11111111-1111-4111-8111-111111111111', 'owner');
 SELECT pg_temp.ok(true, 'a new company''s first owner can be added by anyone');
+-- ...and its work: a house whose plan came from an uploaded image (V9: the pointers to the file are checked at the end)
+INSERT INTO electriplan.project (id, organisation_id, name, site_state) VALUES ('eeeeeeee-0000-4000-8000-0000000000e1', 'eeeeeeee-0000-4000-8000-00000000000e', 'Gone', 'VIC');
+INSERT INTO electriplan.plan (id, organisation_id, project_id, name) VALUES ('eeeeeeee-0000-4000-8000-0000000000e2', 'eeeeeeee-0000-4000-8000-00000000000e', 'eeeeeeee-0000-4000-8000-0000000000e1', 'Gone house');
+INSERT INTO electriplan.plan_level (id, organisation_id, plan_id, name, ordinal) VALUES ('eeeeeeee-0000-4000-8000-0000000000e3', 'eeeeeeee-0000-4000-8000-00000000000e', 'eeeeeeee-0000-4000-8000-0000000000e2', 'Ground', 0);
+INSERT INTO electriplan.stored_file (id, organisation_id, purpose, storage_backend, storage_key, content_type, byte_size, sha256)
+  VALUES ('eeeeeeee-0000-4000-8000-0000000000e4', 'eeeeeeee-0000-4000-8000-00000000000e', 'floor_plan_source', 's3', 'organisations/e/files/x.png', 'image/png', 1, sha256('x'));
+INSERT INTO electriplan.analysis_run (id, organisation_id, plan_level_id, source_file_id, status)
+  VALUES ('eeeeeeee-0000-4000-8000-0000000000e5', 'eeeeeeee-0000-4000-8000-00000000000e', 'eeeeeeee-0000-4000-8000-0000000000e3', 'eeeeeeee-0000-4000-8000-0000000000e4', 'succeeded');
+INSERT INTO electriplan.floor_plan_version (organisation_id, plan_level_id, version_no, origin, analysis_run_id, source_file_id, document)
+  VALUES ('eeeeeeee-0000-4000-8000-00000000000e', 'eeeeeeee-0000-4000-8000-0000000000e3', 1, 'analysis', 'eeeeeeee-0000-4000-8000-0000000000e5', 'eeeeeeee-0000-4000-8000-0000000000e4', '{}');
 DELETE FROM electriplan.organisation WHERE id = 'eeeeeeee-0000-4000-8000-00000000000e';
 SELECT pg_temp.ok(true, 'deleting a company deletes its last owner''s membership with it');
+SELECT pg_temp.ok((SELECT count(*) FROM electriplan.stored_file WHERE id = 'eeeeeeee-0000-4000-8000-0000000000e4') = 0
+                  AND (SELECT count(*) FROM electriplan.analysis_run WHERE id = 'eeeeeeee-0000-4000-8000-0000000000e5') = 0,
+                  'deleting a company deletes its files, analysis runs and floor plans together');
 SELECT set_config('electriplan.organisation_id', 'aaaaaaaa-0000-4000-8000-000000000001', false), set_config('electriplan.actor_id', '11111111-1111-4111-8111-111111111111', false);
 
 -- Organisation B

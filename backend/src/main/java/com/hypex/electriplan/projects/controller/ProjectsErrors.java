@@ -11,7 +11,10 @@ import com.hypex.electriplan.projects.dto.ValidationProblem;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
+import com.hypex.electriplan.files.domain.UnsupportedFileException;
 import org.springframework.orm.ObjectOptimisticLockingFailureException;
+import org.springframework.web.multipart.MaxUploadSizeExceededException;
+import org.springframework.web.multipart.support.MissingServletRequestPartException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
@@ -50,6 +53,21 @@ public class ProjectsErrors {
     @ExceptionHandler(MethodArgumentTypeMismatchException.class)
     ResponseEntity<ErrorMessage> badParameter(MethodArgumentTypeMismatchException e) {
         return ResponseEntity.badRequest().body(new ErrorMessage("'" + e.getName() + "' is not valid: " + e.getValue()));
+    }
+
+    @ExceptionHandler(UnsupportedFileException.class)
+    ResponseEntity<ErrorMessage> unsupportedFile(UnsupportedFileException e) {
+        return ResponseEntity.badRequest().body(new ErrorMessage(e.getMessage()));
+    }
+
+    @ExceptionHandler(MaxUploadSizeExceededException.class)
+    ResponseEntity<ErrorMessage> tooLarge(MaxUploadSizeExceededException e) {
+        return ResponseEntity.status(HttpStatus.PAYLOAD_TOO_LARGE).body(new ErrorMessage("The image is larger than 25 MB. Upload a smaller JPG or PNG."));
+    }
+
+    @ExceptionHandler(MissingServletRequestPartException.class)
+    ResponseEntity<ErrorMessage> noFile(MissingServletRequestPartException e) {
+        return ResponseEntity.badRequest().body(new ErrorMessage("Choose an image of the floor plan to upload."));
     }
 
     @ExceptionHandler(ObjectOptimisticLockingFailureException.class)

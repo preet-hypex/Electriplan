@@ -58,6 +58,13 @@ public class FloorPlanVersionEntity {
     @Column(name = "based_on_version_id")
     private @Nullable UUID basedOnVersionId;
 
+    /** For a plan made by the analyser: the run, and the image it read. */
+    @Column(name = "analysis_run_id")
+    private @Nullable UUID analysisRunId;
+
+    @Column(name = "source_file_id")
+    private @Nullable UUID sourceFileId;
+
     /** The FloorPlan, as JSON (contracts/floor-plan.schema.json). */
     @JdbcTypeCode(SqlTypes.JSON)
     @Column(name = "document", nullable = false)
@@ -141,6 +148,13 @@ public class FloorPlanVersionEntity {
         scaleConfidence = figures.scaleConfidence();
         scaleMethod = figures.scaleMethod();
         contentSha256 = figures.sha256();
+    }
+
+    /** Its contents now come from an analysis run of an uploaded image. */
+    public void analysedFrom(UUID runId, UUID fileId) {
+        origin = FloorPlanOrigin.ANALYSIS;
+        analysisRunId = runId;
+        sourceFileId = fileId;
     }
 
     /** Based on another version now (a restore). */

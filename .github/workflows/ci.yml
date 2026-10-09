@@ -86,7 +86,16 @@ jobs:
           --health-interval 5s
           --health-timeout 3s
           --health-retries 10
+      # An S3-compatible store, so the S3 adapter is tested against a real one
+      # (S3FileStoreRealS3Tests). Same image and bucket as docker-compose.
+      s3:
+        image: adobe/s3mock:5.2.3
+        env:
+          COM_ADOBE_TESTING_S3MOCK_STORE_INITIAL_BUCKETS: electriplan-files
+        ports:
+          - 9090:9090
     env:
+      APP_TEST_S3_ENDPOINT: http://localhost:9090
       APP_TEST_DB_URL: jdbc:postgresql://localhost:5432/electriplan
       APP_TEST_DB_USER: electriplan
       APP_TEST_DB_PASSWORD: electriplan

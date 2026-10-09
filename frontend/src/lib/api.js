@@ -25,16 +25,21 @@ export function company() {
   return currentCompany
 }
 
+/**
+ * Calls the API with the sign-in token and the chosen company. `json` is sent
+ * as JSON; `form` (a FormData, e.g. an upload) as multipart, its own type.
+ */
 export async function api(path, options = {}) {
-  const { json, headers, ...rest } = options
+  const { json, form, headers, ...rest } = options
   const { data } = await supabase.auth.getSession()
   const token = data.session?.access_token
 
   const res = await fetch(`${BASE}${path}`, {
     ...rest,
     ...(json === undefined ? {} : { body: JSON.stringify(json) }),
+    ...(form === undefined ? {} : { body: form }),
     headers: {
-      'Content-Type': 'application/json',
+      ...(form === undefined ? { 'Content-Type': 'application/json' } : {}),
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
       ...(currentCompany ? { [COMPANY_HEADER]: currentCompany } : {}),
       ...(headers || {}),

@@ -50,6 +50,17 @@ describe('api', () => {
     expect(fetch.mock.calls[0][1].headers['X-Organisation-Id']).toBeUndefined()
   })
 
+  it('sends a form as multipart, leaving its type to the browser', async () => {
+    respond(200, {})
+    const form = new FormData()
+    form.append('file', new Blob(['png']), 'plan.png')
+    await api('/api/houses/h1/floor-plan/uploads', { method: 'POST', form })
+    const [, init] = fetch.mock.calls[0]
+    expect(init.body).toBe(form)
+    expect(init.headers['Content-Type']).toBeUndefined()
+    expect(init.headers.Authorization).toBe('Bearer tok')
+  })
+
   it('returns null for 204 No Content', async () => {
     respond(204, null)
     expect(await api('/api/things/1', { method: 'DELETE' })).toBeNull()

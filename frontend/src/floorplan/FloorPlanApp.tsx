@@ -25,6 +25,8 @@ type Screen = 'upload' | 'analysing' | 'editor'
  */
 export interface HouseMode {
   title: string
+  /** Analyses an uploaded image for the house (the API keeps it), instead of the scratch analysis. */
+  analyse: (file: File) => Promise<FloorPlan>
   status: ReactNode
   actions: ReactNode
   banner?: ReactNode
@@ -94,7 +96,7 @@ function FloorPlanScreens({ house }: { house?: HouseMode }) {
       setError(null)
       setResult(null)
       try {
-        const plan = await analyse(f)
+        const plan = await (house ? house.analyse(f) : analyse(f))
         setResult(plan)
         setAnalysisState('done')
       } catch (e) {
@@ -102,7 +104,7 @@ function FloorPlanScreens({ house }: { house?: HouseMode }) {
         setAnalysisState('error')
       }
     },
-    [],
+    [house],
   )
 
   const openSample = () => {

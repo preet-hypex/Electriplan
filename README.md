@@ -137,6 +137,30 @@ scripts/dev-company.sh you@example.com "Hypex"
 That creates the company (active, 10 seats) and makes you its owner; running it again changes nothing.
 Add `builder`, `electrician` or `viewer` as a third argument to try another role with a second account.
 
+### File storage
+
+Files (uploaded floor-plan images now; drawings, quotes and licences later) are kept in **S3**, and
+the Java API is the only part of the system that talks to it (the `files` module). Each file is
+recorded in `electriplan.stored_file` for its company, under the key
+`organisations/<company id>/files/<sha256>.<ext>`: the same image uploaded twice is kept once. People
+fetch files from `GET /api/files/{id}`, members of that company only.
+
+**Locally** Docker Compose runs an S3-compatible store, `s3` ([Adobe S3Mock](https://github.com/adobe/S3Mock)),
+with the `electriplan-files` bucket made at start and files kept in the `s3-files` volume. It answers
+at http://localhost:9090 (e.g. http://localhost:9090/electriplan-files lists what is stored).
+
+**In AWS** point the API at a real bucket:
+
+| Setting | Local (compose) | AWS |
+|---|---|---|
+| `FILES_S3_BUCKET` | `electriplan-files` | your bucket |
+| `FILES_S3_REGION` | — | e.g. `ap-southeast-2` (the default) |
+| `FILES_S3_ENDPOINT` | `http://s3:9090` | leave unset |
+| `FILES_S3_ACCESS_KEY` / `FILES_S3_SECRET_KEY` | `local` / `local` | leave unset: the API uses the AWS default credentials (an IAM role on ECS or EC2) |
+
+The API needs `s3:PutObject` and `s3:GetObject` on `arn:aws:s3:::<bucket>/organisations/*`. Keep the
+bucket private (Block Public Access on): browsers never fetch from S3 directly.
+
 ### Address finder
 
 The project form's "Find the address" suggests Australian addresses as you type, from
@@ -307,13 +331,14 @@ It is two parts, brought across from the editor MVP:
 
 | Part | Where | What |
 |---|---|---|
-| Analyser | `floorplan/` | Python 3.11, FastAPI, OpenCV and Tesseract. Every route is under `/api/floorplan` and, apart from health, needs a Supabase sign-in, verified like the Java API does (`floorplan/app/auth.py`); uploaded images are private to their uploader. Its own README-level notes live in the module docstrings; thresholds are in `floorplan/app/config.py` |
+| Analyser | `floorplan/` | Python 3.11, FastAPI, OpenCV and Tesseract. Every route is under `/api/floorplan` and, apart from health, needs a Supabase sign-in, verified like the Java API does (`floorplan/app/auth.py`). It **only analyses**: it keeps no files. Its own README-level notes live in the module docstrings; thresholds are in `floorplan/app/config.py` |
 | Editor | `frontend/src/floorplan/` | TypeScript, Zustand and Tailwind, loaded only when its page opens. Tailwind's reset is scoped to the editor (`floorplan.css`), so the other pages are untouched |
 
 The web app sends `/api/floorplan/*` to the analyser and the rest of `/api/*` to the Java API, in
-Vite's proxy in development and in `frontend/nginx.conf` in Docker. The analyser keeps uploaded
-images in the `floorplan-uploads` volume (`floorplan/.uploads/` outside Docker) so the editor can
-show them behind the plan.
+Vite's proxy in development and in `frontend/nginx.conf` in Docker. A house's uploaded image goes to
+the **Java API**, which keeps it in S3, asks the analyser to read it, and saves the plan as the house's
+draft (see [File storage](#file-storage)). The scratch editor (`/floor-plan`, plans not saved to a
+house) analyses directly and shows the picked file from the browser; nothing keeps it.
 
 | Service | Docker | Outside Docker |
 |---|---|---|

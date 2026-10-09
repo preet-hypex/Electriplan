@@ -18,6 +18,18 @@ export const openFloorPlan = (houseId: string): Promise<FloorPlanDocument> => ap
 export const saveFloorPlanDraft = (houseId: string, plan: FloorPlan, version?: number): Promise<FloorPlanDocument> =>
   api(`${base(houseId)}/draft`, { method: 'PUT', json: { document: plan, version } })
 
+/**
+ * Uploads an image for the house: the API keeps it in the company's files,
+ * the analyser reads it, and the plan becomes the house's draft (returned).
+ * `version` is the draft's, when the house has one.
+ */
+export function uploadFloorPlanImage(houseId: string, file: File, version?: number): Promise<FloorPlanDocument> {
+  const form = new FormData()
+  form.append('file', file)
+  if (version !== undefined) form.append('version', String(version))
+  return api(`${base(houseId)}/uploads`, { method: 'POST', form })
+}
+
 export const saveFloorPlanVersion = (houseId: string, version: number, note?: string): Promise<FloorPlanVersion> =>
   api(`${base(houseId)}/versions`, { method: 'POST', json: { version, note } })
 

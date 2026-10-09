@@ -229,8 +229,8 @@ Every one of these is exercised by `schema-rules.sql` in CI.
 
 | Table | What it is |
 |---|---|
-| `stored_file` | Every uploaded or generated file: purpose, storage location, type, size, hash, image size |
-| `analysis_run` | One analyser run: input file, parameters, steps, warnings, error, timings |
+| `stored_file` | Every uploaded or generated file: purpose, storage location (`s3`, key `organisations/<company>/files/<sha256>.<ext>`), type, size, hash, image size. A company's identical uploads are one file |
+| `analysis_run` | One analyser run: input file, parameters, steps, warnings, error, timings. Recorded by the API for every upload, failed ones included. Its pointer to the file is checked at the end of the transaction (V9), so deleting a company deletes its files and runs together |
 | `floor_plan_version` | The FloorPlan JSON for a level, versioned; scale and summary figures |
 
 ### Electrical
