@@ -4,7 +4,7 @@ A company's work lives in **projects** and their **houses**. From the welcome pa
 project, adds a house, uploads and edits its floor plan, and later runs the electrical design. Every
 step is saved, so coming back next time opens their work where they left it, never a blank editor.
 
-Status: **in progress**: P1–P6 are done: projects, houses, each house's floor plan saved as you edit with versions, and uploads kept in S3. The database already has the whole hierarchy
+Status: **in progress**: P1–P7 are done: projects, houses, each house's floor plan saved as you edit with versions, uploads kept in S3, and house stages that follow the work. The database already has the whole hierarchy
 ([database-schema.md](database-schema.md), migration V2); until P1, no API or screen used it, and
 the floor-plan editor saved nothing.
 
@@ -56,7 +56,7 @@ security) and checked against the role's permissions (T4):
 | P4 | ✅ **Done** — Floor-plan drafts and versions API ([api.md](api.md#floor-plans)) | For a house's level: get the current draft (or latest version); save the draft (autosave) with optimistic locking (`lock_version`; a stale save is a 409 saying who saved since); save a version (commit, with note); list versions; open a version; restore a version as the new draft. Every document checked by `FloorPlanReader`; summary columns (rooms, walls, area, open checks) and content hash derived on save. Committed versions are read-only (the database enforces it) | L |
 | P5 | ✅ **Done** (files in S3 through the Java API; the analyser only analyses) — Uploads and analysis per house | Upload an image for a house: stored once per company (`stored_file`, deduplicated by hash), analysed (`analysis_run` with parameters, warnings, timings), and the result saved as the house's draft (`origin = analysis`). The image is served back through the API to members of that company only. The analyser stops keeping files per person | L |
 | P6 | ✅ **Done** (the image behind a plan is still the analyser's, per person, until P5) — Editor opens a house | `/projects/:id/houses/:id/floor-plan` opens the draft; edits autosave (debounced, "Saving… / Saved / Not saved — retry"); conflict dialog on 409; **Save version** and a versions panel; leaving with unsaved changes warns. The current `/floor-plan` page becomes "open a house" | L |
-| P7 | House stages follow the work | Uploading → `analysing`; analysis done → `floor_plan_review`; **Approve floor plan** (commits a version) → `floor_plan_approved`; moves only as `plan_stage_transition` allows; stage history on the house page | M |
+| P7 | ✅ **Done** — House stages follow the work | Uploading → `analysing`; analysis done → `floor_plan_review`; **Approve floor plan** (commits a version) → `floor_plan_approved`; moves only as `plan_stage_transition` allows; stage history on the house page | M |
 | P8 | Electrical design output per house | The engine's `ElectricalDesign` saved per house as draft + versions (`electrical_design_version`), recording the floor-plan versions, brief, rule pack and engine version it was made from (`electrical_design_input`); reopening shows the last design. Wired when the engine runs from the editor (E14-S2) | M |
 | P9 | Clients | Optional client on a project: pick an existing one or create inline (name, email, phone); a client's projects. Not required anywhere | S |
 | P10 | Project people | Assign members to a project (`project_assignee`: lead, designer, electrician, estimator); "my projects" filter on the welcome page | S |

@@ -175,6 +175,9 @@
             "format": "uuid",
             "type": "string"
           },
+          "houseStage": {
+            "$ref": "#/components/schemas/HouseStage"
+          },
           "levelId": {
             "format": "uuid",
             "type": "string"
@@ -204,6 +207,7 @@
           "basedOnVersionNo",
           "document",
           "houseId",
+          "houseStage",
           "levelId",
           "savedAt",
           "savedBy",
@@ -975,6 +979,47 @@
         ],
         "type": "object"
       },
+      "StageEvent": {
+        "properties": {
+          "at": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "by": {
+            "format": "uuid",
+            "nullable": true,
+            "type": "string"
+          },
+          "byName": {
+            "nullable": true,
+            "type": "string"
+          },
+          "from": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/HouseStage"
+              }
+            ],
+            "nullable": true
+          },
+          "note": {
+            "nullable": true,
+            "type": "string"
+          },
+          "to": {
+            "$ref": "#/components/schemas/HouseStage"
+          }
+        },
+        "required": [
+          "at",
+          "by",
+          "byName",
+          "from",
+          "note",
+          "to"
+        ],
+        "type": "object"
+      },
       "SupabaseUser": {
         "properties": {
           "appMetadata": {
@@ -1592,6 +1637,109 @@
           "builder",
           "electrician",
           "viewer"
+        ]
+      }
+    },
+    "/api/houses/{id}/floor-plan/approve": {
+      "post": {
+        "description": "Saves the draft as a version (with the note), if there is a draft, and moves the house to floor_plan_approved: the plan electrical design starts from. Only a plan being checked (floor_plan_review) can be approved (409 otherwise). Editing it afterwards sends it back for checking.\n\n**Permission:** `floor-plan.edit` (roles: owner, admin, builder, electrician).",
+        "operationId": "approveFloorPlan",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "description": "The company to act in. Needed only when the caller belongs to more than one.",
+            "in": "header",
+            "name": "X-Organisation-Id",
+            "required": false,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CommitForm"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FloorPlanDocument"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationProblem"
+                }
+              }
+            },
+            "description": "Not a valid floor plan, or a field is wrong; `errors` names each problem. Or: No company chosen while the caller belongs to several, or the header is not a company id."
+          },
+          "401": {
+            "description": "Not signed in, or the access token is invalid or expired."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorMessage"
+                }
+              }
+            },
+            "description": "The caller is not an active member of that company, or it is closed. Or the caller's role there lacks `floor-plan.edit`."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorMessage"
+                }
+              }
+            },
+            "description": "No such house in this company, or no floor plan (version) yet."
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorMessage"
+                }
+              }
+            },
+            "description": "Saved by someone else since `version`, or the house is archived."
+          }
+        },
+        "summary": "Approve the house's floor plan",
+        "tags": [
+          "Floor plans"
+        ],
+        "x-permission": "floor-plan.edit",
+        "x-roles": [
+          "owner",
+          "admin",
+          "builder",
+          "electrician"
         ]
       }
     },
@@ -2339,6 +2487,93 @@
           "owner",
           "admin",
           "builder"
+        ]
+      }
+    },
+    "/api/houses/{id}/stages": {
+      "get": {
+        "description": "Every move of the house's stage, newest first: from, to, when, and who (with their name when known).\n\n**Permission:** `company.view` (roles: owner, admin, builder, electrician, viewer).",
+        "operationId": "listHouseStages",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "description": "The company to act in. Needed only when the caller belongs to more than one.",
+            "in": "header",
+            "name": "X-Organisation-Id",
+            "required": false,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/StageEvent"
+                  },
+                  "type": "array"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorMessage"
+                }
+              }
+            },
+            "description": "No company chosen while the caller belongs to several, or the header is not a company id."
+          },
+          "401": {
+            "description": "Not signed in, or the access token is invalid or expired."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorMessage"
+                }
+              }
+            },
+            "description": "The caller is not an active member of that company, or it is closed. Or the caller's role there lacks `company.view`."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorMessage"
+                }
+              }
+            },
+            "description": "No such project or house in this company."
+          }
+        },
+        "summary": "A house's stage history",
+        "tags": [
+          "Projects"
+        ],
+        "x-permission": "company.view",
+        "x-roles": [
+          "owner",
+          "admin",
+          "builder",
+          "electrician",
+          "viewer"
         ]
       }
     },

@@ -131,11 +131,29 @@ need `floor-plan.edit` (owner, admin, builder, electrician). An archived house's
 | `/api/houses/{id}/floor-plan/draft` | PUT | Save the plan as the draft: `{document, version?}`. `version` is the draft's from the last open or save; leave it out when there is no draft. A stale `version` is a `409`; a plan that breaks `contracts/floor-plan.schema.json` is a `400` listing each problem |
 | `/api/houses/{id}/floor-plan/uploads` | POST | Multipart: `file` (JPG or PNG, up to 25 MB), `version?` (the draft's, when there is one), `mmPerPx?` (a known scale). The image is kept in the company's files (S3), the analyser reads it, and its plan becomes the draft, pointing at the kept image (`source.imageUrl` = `/api/files/{id}`). Every upload is an `analysis_run`, kept with its steps and warnings, or its reason when it fails: `422` with the analyser's reason, `503` when it or S3 is not answering, `400` when it is not a JPG or PNG |
 | `/api/houses/{id}/floor-plan/versions` | POST | Save the draft as a version (201): `{version, note?}`. The next edit starts a new draft from it |
+| `/api/houses/{id}/floor-plan/approve` | POST | Approve the floor plan: `{version?, note?}`. The draft (if any) is saved as a version with the note, and the house moves to `floor_plan_approved`. Only a plan being checked (`floor_plan_review`) can be approved; `409` otherwise |
 | `/api/houses/{id}/floor-plan/versions` | GET | The history, newest first: number, state, note, rooms, walls, openings, floor area, open checks, when, who, and which is `current` |
 | `/api/houses/{id}/floor-plan/versions/{no}` | GET | One version, to look at |
 | `/api/houses/{id}/floor-plan/versions/{no}/restore` | POST | That version's contents become the draft: `{version?}` (the draft's, when there is one) |
 
 Saving a floor plan counts as activity on the house (migration V8), so it heads "continue where you left off".
+
+**Stages follow the work** (P7), along `plan_stage_transition` (the database refuses other moves),
+each move recorded with who made it. Every floor-plan response says where the house is (`houseStage`).
+
+| When | The house moves to |
+|---|---|
+| An image is uploaded | `analysing` |
+| The plan changes: analysed, drawn, imported, edited, restored | `floor_plan_review` (an approved plan edited is reopened) |
+| The analysis fails | back to `awaiting_upload`, or `floor_plan_review` if it has a plan |
+| The floor plan is approved | `floor_plan_approved` |
+
+Only houses in the floor-plan stages and `electrical_design` follow the floor plan; a house in review,
+quoting or later stays where it is.
+
+| Endpoint | Method | Does |
+|---|---|---|
+| `/api/houses/{id}/stages` | GET | The house's stage history, newest first: `[{from, to, at, by, byName, note}]` (`byName`: their name, or email) |
 
 ## Files
 

@@ -1,22 +1,29 @@
 package com.hypex.electriplan.projects.service;
 
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 import com.hypex.electriplan.projects.dao.HouseRepository;
 import com.hypex.electriplan.projects.dao.LevelRepository;
 import com.hypex.electriplan.projects.dao.ProjectRepository;
+import com.hypex.electriplan.projects.dao.StageEventRepository;
 import com.hypex.electriplan.projects.domain.DwellingType;
 import com.hypex.electriplan.projects.domain.ProjectsProblem;
 import com.hypex.electriplan.projects.dto.House;
 import com.hypex.electriplan.projects.dto.HouseForm;
 import com.hypex.electriplan.projects.dto.RecentHouse;
+import com.hypex.electriplan.projects.dto.StageEvent;
 import com.hypex.electriplan.projects.entity.HouseEntity;
 import com.hypex.electriplan.projects.entity.LevelEntity;
 import com.hypex.electriplan.projects.entity.ProjectEntity;
+import com.hypex.electriplan.projects.entity.StageEventEntity;
 import com.hypex.electriplan.tenancy.domain.CompanyContext;
 import com.hypex.electriplan.tenancy.service.CurrentCompany;
+import com.hypex.electriplan.users.service.People;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
@@ -36,6 +43,8 @@ public class HousesService {
     private final HouseRepository houses;
     private final LevelRepository levels;
     private final CurrentCompany current;
+    private final StageEventRepository stageEvents;
+    private final People people;
 
     /** A new house, awaiting its floor plan, with its ground floor ready for one. */
     public House add(UUID projectId, HouseForm form) {
@@ -65,6 +74,19 @@ public class HousesService {
         }
         return houses.findRecentlyChanged(PageRequest.of(0, size)).stream()
                 .map(row -> ProjectViews.recentHouse(row.house(), row.project()))
+                .toList();
+    }
+
+    /** How the house got where it is: every stage move, newest first, with who made it. */
+    @Transactional(readOnly = true)
+    public List<StageEvent> stageHistory(UUID id) {
+        HouseEntity house = houses.require(id);
+        List<StageEventEntity> events = stageEvents.findByHouseIdOrderByOccurredAtDescIdDesc(house.getId());
+        Map<UUID, String> names = people.displayNames(events.stream().map(StageEventEntity::getActorId)
+                .filter(Objects::nonNull).collect(Collectors.toCollection(LinkedHashSet::new)));
+        return events.stream()
+                .map(e -> new StageEvent(e.getFrom(), e.getTo(), e.getOccurredAt(), e.getActorId(),
+                        e.getActorId() == null ? null : names.get(e.getActorId()), e.getNote()))
                 .toList();
     }
 

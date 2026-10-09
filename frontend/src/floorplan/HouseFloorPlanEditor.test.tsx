@@ -7,9 +7,11 @@ import type { HouseMode } from './FloorPlanApp'
 
 const mocks = vi.hoisted(() => ({
   openFloorPlan: vi.fn(), saveFloorPlanDraft: vi.fn(), saveFloorPlanVersion: vi.fn(),
-  floorPlanHistory: vi.fn(), restoreFloorPlanVersion: vi.fn(), uploadFloorPlanImage: vi.fn(),
+  floorPlanHistory: vi.fn(), restoreFloorPlanVersion: vi.fn(), uploadFloorPlanImage: vi.fn(), approveFloorPlan: vi.fn(),
+  houseStages: vi.fn(),
 }))
 vi.mock('../api/floorPlans', () => mocks)
+vi.mock('../api/projects', async (original) => ({ ...(await original<object>()), houseStages: mocks.houseStages }))
 
 // The canvas is not what these tests are about: a stand-in shows what the page gives the editor.
 vi.mock('./FloorPlanApp', () => ({
@@ -32,13 +34,14 @@ const PLAN: FloorPlan = {
   rooms: [{ id: 'r1', name: 'Kitchen', polygon: [{ x: 0, y: 0 }, { x: 3000, y: 0 }, { x: 3000, y: 3000 }], labelPosition: { x: 1000, y: 1000 } }],
 }
 
-const doc = (state: 'draft' | 'committed', version: number, versionNo = 2, plan: FloorPlan = PLAN) => ({
+const doc = (state: 'draft' | 'committed', version: number, versionNo = 2, plan: FloorPlan = PLAN,
+  houseStage: 'floor_plan_review' | 'floor_plan_approved' = 'floor_plan_review') => ({
   houseId: 'h1', levelId: 'l1', versionNo, state, version, basedOnVersionNo: null,
-  document: plan as unknown as Record<string, unknown>, savedAt: '2026-10-08T00:00:00Z', savedBy: null,
+  document: plan as unknown as Record<string, unknown>, savedAt: '2026-10-08T00:00:00Z', savedBy: null, houseStage,
 })
 
 const renderEditor = (canEdit = true) =>
-  render(<HouseFloorPlanEditor houseId="h1" title="Type A · floor plan" canEdit={canEdit} getAccessToken={async () => 't'} />)
+  render(<HouseFloorPlanEditor houseId="h1" title="Type A · floor plan" stage="floor_plan_review" canEdit={canEdit} getAccessToken={async () => 't'} />)
 
 describe('HouseFloorPlanEditor', () => {
   beforeEach(() => {
@@ -123,6 +126,43 @@ describe('HouseFloorPlanEditor', () => {
     await new Promise(r => setTimeout(r, 1700))
     expect(mocks.saveFloorPlanDraft).not.toHaveBeenCalled()
     expect(screen.getByTestId('status')).toHaveTextContent('All changes saved')
+  })
+
+  it('shows where the house is, and approves a plan being checked', async () => {
+    mocks.approveFloorPlan.mockResolvedValue(doc('committed', 0, 2, PLAN, 'floor_plan_approved'))
+    renderEditor()
+    expect(await screen.findByText('Checking floor plan')).toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: /approve floor plan/i }))
+    const dialog = screen.getByRole('dialog', { name: 'Approve the floor plan' })
+    await userEvent.type(within(dialog).getByRole('textbox'), 'Matches the drawings')
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Approve' }))
+
+    await waitFor(() => expect(mocks.approveFloorPlan).toHaveBeenCalledWith('h1', 4, 'Matches the drawings'))
+    expect(await screen.findByText('Floor plan approved')).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /approve floor plan/i })).toBeNull()
+    expect(screen.getByRole('button', { name: /save version/i })).toBeDisabled()
+  })
+
+  it('moves the stage when a save does (an approved plan edited goes back for checking)', async () => {
+    mocks.openFloorPlan.mockResolvedValue(doc('committed', 0, 1, PLAN, 'floor_plan_approved'))
+    renderEditor()
+    expect(await screen.findByText('Floor plan approved')).toBeInTheDocument()
+    act(() => useEditor.getState().commit(p => { p.rooms[0].name = 'Kitchen 2' }))
+    expect(await screen.findByText('Checking floor plan', {}, { timeout: 3000 })).toBeInTheDocument()
+  })
+
+  it('lists the house’s stage history', async () => {
+    mocks.houseStages.mockResolvedValue([
+      { from: 'awaiting_upload', to: 'floor_plan_review', at: '2026-10-08T01:00:00Z', by: 'u1', byName: 'Bea Builder', note: null },
+      { from: null, to: 'awaiting_upload', at: '2026-10-08T00:00:00Z', by: 'u1', byName: 'Bea Builder', note: null },
+    ])
+    renderEditor()
+    await userEvent.click(await screen.findByRole('button', { name: /history/i }))
+    await userEvent.click(screen.getByRole('tab', { name: 'Stages' }))
+    const dialog = screen.getByRole('dialog', { name: 'Floor-plan history' })
+    expect(await within(dialog).findByText(/from Awaiting floor plan/)).toHaveTextContent('Bea Builder')
+    expect(within(dialog).getByText(/first stage/)).toBeInTheDocument()
+    expect(mocks.houseStages).toHaveBeenCalledWith('h1')
   })
 
   it('lets people who cannot edit look, without saving', async () => {

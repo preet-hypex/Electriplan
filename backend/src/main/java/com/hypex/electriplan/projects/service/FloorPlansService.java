@@ -53,38 +53,42 @@ public class FloorPlansService {
     private final LevelRepository levels;
     private final FloorPlanVersionRepository versions;
     private final CurrentCompany current;
+    private final HouseStages stages;
 
     /** What the editor opens: the draft, or the newest version; 404 when the house has no floor plan yet. */
     @Transactional(readOnly = true)
     public FloorPlanDocument open(UUID houseId) {
-        LevelEntity level = groundFloor(houses.require(houseId));
+        HouseEntity house = houses.require(houseId);
+        LevelEntity level = groundFloor(house);
         FloorPlanVersionEntity shown = versions.findDraft(level.getId())
                 .or(() -> versions.findFirstByLevelIdAndStateOrderByVersionNoDesc(level.getId(), FloorPlanState.COMMITTED))
                 .orElseThrow(() -> ProjectsProblem.missing("This house has no floor plan yet."));
-        return document(houseId, shown);
+        return document(house, shown);
     }
 
     /** The editor's plan as the house's draft: a new draft, or new contents for the one there is. */
     public FloorPlanDocument saveDraft(UUID houseId, SaveDraftForm form) {
-        FloorPlanVersionEntity draft = writeDraft(houseId, FloorPlanReading.read(form.document()), form.version(),
+        HouseEntity house = editableHouse(houseId);
+        FloorPlanVersionEntity draft = writeDraft(house, FloorPlanReading.read(form.document()), form.version(),
                 form.origin() == null ? FloorPlanOrigin.EDITOR : form.origin());
-        return document(houseId, versions.saveAndFlush(draft));
+        return document(house, versions.saveAndFlush(draft));
     }
 
     /** The analyser's plan of an uploaded image as the house's draft, recording the run and the image. */
     public FloorPlanDocument saveAnalysed(UUID houseId, JsonNode document, @Nullable Integer version, UUID runId, UUID fileId) {
-        FloorPlanVersionEntity draft = writeDraft(houseId, FloorPlanReading.read(document), version, FloorPlanOrigin.ANALYSIS);
+        HouseEntity house = editableHouse(houseId);
+        FloorPlanVersionEntity draft = writeDraft(house, FloorPlanReading.read(document), version, FloorPlanOrigin.ANALYSIS);
         draft.analysedFrom(runId, fileId);
-        return document(houseId, versions.saveAndFlush(draft));
+        return document(house, versions.saveAndFlush(draft));
     }
 
     /**
      * The house's draft with the plan in it: a new draft (numbered after the
      * last version) when there is none, otherwise the draft there is, if
-     * {@code version} is the one it has.
+     * {@code version} is the one it has. The house's plan has changed, so it
+     * needs checking: its stage follows (HouseStages).
      */
-    private FloorPlanVersionEntity writeDraft(UUID houseId, FloorPlan plan, @Nullable Integer version, FloorPlanOrigin origin) {
-        HouseEntity house = editableHouse(houseId);
+    private FloorPlanVersionEntity writeDraft(HouseEntity house, FloorPlan plan, @Nullable Integer version, FloorPlanOrigin origin) {
         LevelEntity level = groundFloor(house);
         String json = FloorPlanReading.json(plan);
 
@@ -99,12 +103,41 @@ public class FloorPlansService {
             EditVersion.requireUnchanged(version, draft.getLockVersion());
         }
         draft.replaceDocument(json, FloorPlanReading.figures(plan, json));
+        stages.floorPlanChanged(house);
         return draft;
     }
 
-    /** The storey a house's floor plan belongs to (v1: its ground floor), if the house may be changed. */
-    public UUID editableLevel(UUID houseId) {
-        return groundFloor(editableHouse(houseId)).getId();
+    /** An image is about to be analysed for the house: its storey (v1: the ground floor). The house moves to analysing. */
+    public UUID startAnalysis(UUID houseId) {
+        HouseEntity house = editableHouse(houseId);
+        stages.analysisStarted(house);
+        return groundFloor(house).getId();
+    }
+
+    /** The analysis failed: the house goes back to where its floor plan stands. */
+    public void analysisFailed(UUID houseId) {
+        HouseEntity house = houses.require(houseId);
+        UUID level = groundFloor(house).getId();
+        boolean hasPlan = !versions.findByLevelIdOrderByVersionNoDesc(level).isEmpty();
+        stages.analysisFailed(house, hasPlan);
+    }
+
+    /**
+     * Approves the house's floor plan: the draft (if any) is saved as a
+     * version, and the house moves to floor_plan_approved. Only a plan being
+     * checked can be approved.
+     */
+    public FloorPlanDocument approve(UUID houseId, CommitForm form) {
+        HouseEntity house = editableHouse(houseId);
+        LevelEntity level = groundFloor(house);
+        if (versions.findDraft(level.getId()).isPresent()) {
+            commit(houseId, form);
+        }
+        FloorPlanVersionEntity approved = versions
+                .findFirstByLevelIdAndStateOrderByVersionNoDesc(level.getId(), FloorPlanState.COMMITTED)
+                .orElseThrow(() -> ProjectsProblem.conflict("There is no floor plan to approve yet."));
+        stages.approved(house);
+        return document(house, approved);
     }
 
     /** The draft, frozen as a numbered version: from now on the storey's floor plan. */
@@ -135,8 +168,8 @@ public class FloorPlansService {
     /** One version, to look at. */
     @Transactional(readOnly = true)
     public FloorPlanDocument version(UUID houseId, int versionNo) {
-        LevelEntity level = groundFloor(houses.require(houseId));
-        return document(houseId, findVersion(level, versionNo));
+        HouseEntity house = houses.require(houseId);
+        return document(house, findVersion(groundFloor(house), versionNo));
     }
 
     /** An earlier version's contents become the draft (replacing the draft there is, which must be the one the caller saw). */
@@ -157,7 +190,8 @@ public class FloorPlansService {
         }
         FloorPlan plan = FloorPlanReading.read(FloorPlanReading.tree(earlier.getDocument()));
         draft.replaceDocument(earlier.getDocument(), FloorPlanReading.figures(plan, earlier.getDocument()));
-        return document(houseId, versions.saveAndFlush(draft));
+        stages.floorPlanChanged(house);
+        return document(house, versions.saveAndFlush(draft));
     }
 
     // ---- helpers ----
@@ -196,11 +230,12 @@ public class FloorPlansService {
                 .map(FloorPlanVersionEntity::getId).orElse(null);
     }
 
-    private FloorPlanDocument document(UUID houseId, FloorPlanVersionEntity v) {
+    private FloorPlanDocument document(HouseEntity house, FloorPlanVersionEntity v) {
         Integer basedOn = v.getBasedOnVersionId() == null ? null
                 : versions.findById(v.getBasedOnVersionId()).map(FloorPlanVersionEntity::getVersionNo).orElse(null);
-        return new FloorPlanDocument(houseId, v.getLevelId(), v.getVersionNo(), v.getState(), v.getLockVersion(), basedOn,
-                FloorPlanReading.tree(v.getDocument()), v.getUpdatedAt(), v.isDraft() ? v.getCreatedBy() : v.getCommittedBy());
+        return new FloorPlanDocument(house.getId(), v.getLevelId(), v.getVersionNo(), v.getState(), v.getLockVersion(), basedOn,
+                FloorPlanReading.tree(v.getDocument()), v.getUpdatedAt(), v.isDraft() ? v.getCreatedBy() : v.getCommittedBy(),
+                house.getStage());
     }
 
     private static FloorPlanVersion summary(FloorPlanVersionEntity v, @Nullable UUID currentId) {

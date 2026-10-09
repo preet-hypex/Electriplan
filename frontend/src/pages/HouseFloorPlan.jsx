@@ -51,6 +51,7 @@ export default function HouseFloorPlan() {
               key={house.id}
               houseId={house.id}
               title={`${house.name} · floor plan`}
+              stage={house.stage}
               canEdit={can('floor-plan.edit') && !house.archived}
               getAccessToken={getAccessToken}
             />
