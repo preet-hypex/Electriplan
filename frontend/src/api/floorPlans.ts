@@ -3,7 +3,7 @@
  * versions frozen from it. Typed from the API's contract.
  */
 import { api } from '../lib/api'
-import type { FloorPlanDocument, FloorPlanVersion } from './index'
+import type { FloorPlanDocument, FloorPlanVersion, Restored } from './index'
 import type { FloorPlan } from '../floorplan/model/types'
 
 const base = (houseId: string) => `/api/houses/${houseId}/floor-plan`
@@ -42,5 +42,14 @@ export const approveFloorPlan = (houseId: string, version?: number, note?: strin
 
 export const floorPlanHistory = (houseId: string): Promise<FloorPlanVersion[]> => api(`${base(houseId)}/versions`)
 
-export const restoreFloorPlanVersion = (houseId: string, versionNo: number, version?: number): Promise<FloorPlanDocument> =>
-  api(`${base(houseId)}/versions/${versionNo}/restore`, { method: 'POST', json: { version } })
+/** One version, to look at. */
+export const getFloorPlanVersion = (houseId: string, versionNo: number): Promise<FloorPlanDocument> =>
+  api(`${base(houseId)}/versions/${versionNo}`)
+
+/**
+ * An earlier version becomes the draft. When the draft has unsaved changes,
+ * `keepDraft` says whether to save them as a version first (true) or let the
+ * restore replace them (false); left out, they are kept.
+ */
+export const restoreFloorPlanVersion = (houseId: string, versionNo: number, version?: number, keepDraft?: boolean): Promise<Restored> =>
+  api(`${base(houseId)}/versions/${versionNo}/restore`, { method: 'POST', json: { version, keepDraft } })

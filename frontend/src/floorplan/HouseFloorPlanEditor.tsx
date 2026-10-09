@@ -7,9 +7,10 @@ import { useEditor } from './state/store'
 import { parseFloorPlanJson, serialiseFloorPlan } from './model/serialise'
 import type { FloorPlan } from './model/types'
 import {
-  approveFloorPlan, floorPlanHistory, openFloorPlan, restoreFloorPlanVersion, saveFloorPlanDraft, saveFloorPlanVersion,
-  uploadFloorPlanImage,
+  approveFloorPlan, floorPlanHistory, getFloorPlanVersion, openFloorPlan, restoreFloorPlanVersion, saveFloorPlanDraft,
+  saveFloorPlanVersion, uploadFloorPlanImage,
 } from '../api/floorPlans'
+import { PlanPreview } from './components/PlanPreview'
 import { STAGE_LABELS, houseStages } from '../api/projects'
 import type { FloorPlanDocument, FloorPlanVersion, HouseStage, StageEvent } from '../api'
 
@@ -50,16 +51,24 @@ export default function HouseFloorPlanEditor({
   const [load, setLoad] = useState<{ state: 'loading' | 'ready' | 'error'; error?: string }>({ state: 'loading' })
   /** The draft's version from the last open or save; undefined when there is no draft. */
   const draftVersion = useRef<number | undefined>(undefined)
-  const [hasDraft, setHasDraft] = useState(false)
   const [dialog, setDialog] = useState<'version' | 'approve' | 'history' | null>(null)
   const [stage, setStage] = useState<HouseStage>(initialStage)
+  /** The draft differs from the version it started from: work not saved as a version (the API says, on every response). */
+  const [unsaved, setUnsavedState] = useState(false)
+  const unsavedNow = useRef(false)
+  const setUnsaved = useCallback((value: boolean) => {
+    unsavedNow.current = value
+    setUnsavedState(value)
+  }, [])
+  /** A message for the person after something they did, e.g. that their draft was kept as a version. */
+  const [notice, setNotice] = useState<string | null>(null)
 
   const save = useCallback(async (plan: FloorPlan) => {
     const doc = await saveFloorPlanDraft(houseId, toDocument(plan), draftVersion.current)
     draftVersion.current = doc.version
-    setHasDraft(true)
     setStage(doc.houseStage)
-  }, [houseId])
+    setUnsaved(doc.unsavedChanges)
+  }, [houseId, setUnsaved])
 
   const autosave = useAutosave({ save, enabled: canEdit && load.state === 'ready' })
   const { setSaved } = autosave
@@ -68,10 +77,10 @@ export default function HouseFloorPlanEditor({
   const show = useCallback((plan: FloorPlan, doc: FloorPlanDocument | null) => {
     useEditor.getState().loadPlan(plan, title)
     draftVersion.current = doc?.state === 'draft' ? doc.version : undefined
-    setHasDraft(doc?.state === 'draft')
     if (doc) setStage(doc.houseStage)
+    setUnsaved(doc?.unsavedChanges ?? false)
     setSaved(useEditor.getState().plan)
-  }, [title, setSaved])
+  }, [title, setSaved, setUnsaved])
 
   const open = useCallback(async () => {
     setLoad({ state: 'loading' })
@@ -113,17 +122,26 @@ export default function HouseFloorPlanEditor({
     if (canEdit) await autosave.flush()
     const doc = await uploadFloorPlanImage(houseId, file, draftVersion.current)
     draftVersion.current = doc.version
-    setHasDraft(true)
     setStage(doc.houseStage)
+    setUnsaved(doc.unsavedChanges)
     const plan = fromDocument(doc)
     setSaved(plan)
     return plan
   }
 
-  const restore = async (versionNo: number) => {
+  /** Saves what is pending, then says whether the draft holds work not saved as a version (to ask before restoring). */
+  const draftHasUnsavedWork = async (): Promise<boolean> => {
     if (canEdit) await autosave.flush()
-    const doc = await restoreFloorPlanVersion(houseId, versionNo, draftVersion.current)
-    show(fromDocument(doc), doc)
+    return unsavedNow.current
+  }
+
+  /** `keepDraft`: what to do with a draft holding unsaved work (asked first); undefined when there is none. */
+  const restore = async (versionNo: number, keepDraft?: boolean) => {
+    const { draft, keptAsVersionNo } = await restoreFloorPlanVersion(houseId, versionNo, draftVersion.current, keepDraft)
+    show(fromDocument(draft), draft)
+    setNotice(keptAsVersionNo
+      ? `Version ${versionNo} is back in the editor. Your earlier draft was saved as version ${keptAsVersionNo}.`
+      : `Version ${versionNo} is back in the editor.`)
     setDialog(null)
   }
 
@@ -132,7 +150,7 @@ export default function HouseFloorPlanEditor({
     await autosave.flush()
     const doc = await approveFloorPlan(houseId, draftVersion.current, note || undefined)
     draftVersion.current = undefined
-    setHasDraft(false)
+    setUnsaved(false)
     setStage(doc.houseStage)
     setDialog(null)
   }
@@ -142,7 +160,7 @@ export default function HouseFloorPlanEditor({
     if (draftVersion.current === undefined) throw new Error('There are no changes to save as a version.')
     await saveFloorPlanVersion(houseId, draftVersion.current, note || undefined)
     draftVersion.current = undefined
-    setHasDraft(false)
+    setUnsaved(false)
     setDialog(null)
   }
 
@@ -159,7 +177,17 @@ export default function HouseFloorPlanEditor({
               <SaveStatus state={autosave.state} canEdit={canEdit} onRetry={() => void autosave.flush().catch(() => {})} />
             </>
           ),
-          banner: <Banner state={autosave.state} canEdit={canEdit} error={autosave.error} onReload={() => void open()} />,
+          banner: (
+            <>
+              {notice && (
+                <div className="flex shrink-0 items-center gap-3 border-b border-blue-200 bg-blue-50 px-4 py-2 text-[13px] text-blue-900" role="status">
+                  <span>{notice}</span>
+                  <button type="button" onClick={() => setNotice(null)} className="ml-auto font-medium" aria-label="Dismiss">×</button>
+                </div>
+              )}
+              <Banner state={autosave.state} canEdit={canEdit} error={autosave.error} onReload={() => void open()} />
+            </>
+          ),
           actions: (
             <>
               <button type="button" onClick={() => setDialog('history')} title="Earlier versions of this floor plan"
@@ -175,8 +203,8 @@ export default function HouseFloorPlanEditor({
               )}
               {canEdit && (
                 <button type="button" onClick={() => setDialog('version')}
-                  disabled={!hasDraft && autosave.state === 'saved'}
-                  title={!hasDraft && autosave.state === 'saved' ? 'No changes since the last version' : 'Keep this plan as a numbered version'}
+                  disabled={!unsaved && autosave.state === 'saved'}
+                  title={!unsaved && autosave.state === 'saved' ? 'No changes since the last version' : 'Keep this plan as a numbered version'}
                   className="inline-flex h-8 items-center gap-1.5 rounded bg-blue-600 px-3.5 text-[13px] font-medium text-white hover:bg-blue-700 disabled:opacity-50">
                   <Icon name="save" />Save version
                 </button>
@@ -196,7 +224,8 @@ export default function HouseFloorPlanEditor({
         />
       )}
       {dialog === 'history' && (
-        <HistoryDialog houseId={houseId} canRestore={canEdit} onRestore={restore} onClose={() => setDialog(null)} />
+        <HistoryDialog houseId={houseId} canRestore={canEdit} draftHasUnsavedWork={draftHasUnsavedWork} onRestore={restore}
+          onClose={() => setDialog(null)} />
       )}
     </>
   )
@@ -318,8 +347,10 @@ function StageChip({ stage }: { stage: HouseStage }) {
   return <Chip tone={tone} title="Where this house is">{STAGE_LABELS[stage] ?? stage}</Chip>
 }
 
-function HistoryDialog({ houseId, canRestore, onRestore, onClose }: {
-  houseId: string; canRestore: boolean; onRestore: (versionNo: number) => Promise<void>; onClose: () => void
+type Restore = (versionNo: number, keepDraft?: boolean) => Promise<void>
+
+function HistoryDialog({ houseId, canRestore, draftHasUnsavedWork, onRestore, onClose }: {
+  houseId: string; canRestore: boolean; draftHasUnsavedWork: () => Promise<boolean>; onRestore: Restore; onClose: () => void
 }) {
   const [tab, setTab] = useState<'versions' | 'stages'>('versions')
   return (
@@ -333,7 +364,7 @@ function HistoryDialog({ houseId, canRestore, onRestore, onClose }: {
         ))}
       </div>
       {tab === 'versions'
-        ? <VersionsTab houseId={houseId} canRestore={canRestore} onRestore={onRestore} />
+        ? <VersionsTab houseId={houseId} canRestore={canRestore} draftHasUnsavedWork={draftHasUnsavedWork} onRestore={onRestore} />
         : <StagesTab houseId={houseId} />}
       <div className="mt-4 flex justify-end">
         <button type="button" onClick={onClose} className="rounded px-3 py-1.5 text-sm text-slate-600 hover:bg-slate-100">Close</button>
@@ -367,26 +398,74 @@ function StagesTab({ houseId }: { houseId: string }) {
   )
 }
 
-function VersionsTab({ houseId, canRestore, onRestore }: {
-  houseId: string; canRestore: boolean; onRestore: (versionNo: number) => Promise<void>
+/**
+ * The versions, newest first. "View" shows one read-only; "Restore" puts it
+ * back in the editor, asking first only when the draft holds work that is not
+ * saved as a version (keep it as a version, or let it go).
+ */
+function VersionsTab({ houseId, canRestore, draftHasUnsavedWork, onRestore }: {
+  houseId: string; canRestore: boolean; draftHasUnsavedWork: () => Promise<boolean>; onRestore: Restore
 }) {
   const [versions, setVersions] = useState<FloorPlanVersion[] | null>(null)
   const [error, setError] = useState<string | null>(null)
-  const [busy, setBusy] = useState<number | null>(null)
+  const [busy, setBusy] = useState(false)
+  const [viewing, setViewing] = useState<number | null>(null)
+  /** A restore waiting for the person's choice about their unsaved draft. */
+  const [asking, setAsking] = useState<number | null>(null)
 
   useEffect(() => {
     floorPlanHistory(houseId).then(setVersions).catch((e: Error) => setError(e.message))
   }, [houseId])
 
-  const restore = async (versionNo: number) => {
-    setBusy(versionNo)
+  const run = async (action: () => Promise<void>) => {
+    setBusy(true)
     setError(null)
     try {
-      await onRestore(versionNo)
+      await action()
     } catch (e) {
       setError((e as Error).message)
-      setBusy(null)
+      setBusy(false)
     }
+  }
+
+  const restore = (versionNo: number) => run(async () => {
+    if (await draftHasUnsavedWork()) {
+      setAsking(versionNo)
+      setBusy(false)
+      return
+    }
+    await onRestore(versionNo)
+  })
+
+  if (asking !== null) {
+    return (
+      <div className="mt-4">
+        <p className="text-sm font-medium text-slate-900">Your draft has changes not saved as a version</p>
+        <p className="mt-1 text-xs text-slate-500">
+          Restoring version {asking} replaces the draft. Keep your changes as a version first, so you can come back to them?
+        </p>
+        {error && <p className="mt-2 text-xs text-red-600" role="alert">{error}</p>}
+        <div className="mt-4 flex flex-wrap justify-end gap-2">
+          <button type="button" disabled={busy} onClick={() => { setAsking(null); setError(null) }}
+            className="rounded px-3 py-1.5 text-sm text-slate-600 hover:bg-slate-100">Cancel</button>
+          <button type="button" disabled={busy} onClick={() => void run(() => onRestore(asking, false))}
+            className="rounded border border-slate-200 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50">
+            Restore without saving
+          </button>
+          <button type="button" disabled={busy} onClick={() => void run(() => onRestore(asking, true))}
+            className="rounded bg-blue-600 px-3.5 py-1.5 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-60">
+            {busy ? 'Restoring…' : 'Save as a version, then restore'}
+          </button>
+        </div>
+      </div>
+    )
+  }
+
+  if (viewing !== null) {
+    return (
+      <VersionPreview houseId={houseId} versionNo={viewing} summary={versions?.find((v) => v.versionNo === viewing)}
+        canRestore={canRestore} busy={busy} error={error} onBack={() => setViewing(null)} onRestore={() => void restore(viewing)} />
+    )
   }
 
   return (
@@ -403,15 +482,18 @@ function VersionsTab({ houseId, canRestore, onRestore }: {
                   {v.state === 'draft' ? 'Draft' : `Version ${v.versionNo}`}
                   {v.current && <span className="ml-2 rounded-full bg-emerald-50 px-2 py-0.5 text-[11px] font-medium text-emerald-700">Current</span>}
                 </p>
-                <p className="truncate text-xs text-slate-500">
-                  {v.note ? `${v.note} · ` : ''}{v.rooms} rooms{v.floorAreaM2 !== null ? ` · ${v.floorAreaM2} m²` : ''}
-                  {' · '}{new Date(v.savedAt).toLocaleString('en-AU', { dateStyle: 'medium', timeStyle: 'short' })}
-                </p>
+                <p className="truncate text-xs text-slate-500">{describe(v)}</p>
               </div>
+              {v.state === 'committed' && (
+                <button type="button" onClick={() => setViewing(v.versionNo)}
+                  className="rounded border border-slate-200 px-2.5 py-1 text-xs font-medium text-slate-700 hover:bg-slate-50">
+                  View
+                </button>
+              )}
               {canRestore && v.state === 'committed' && (
-                <button type="button" onClick={() => void restore(v.versionNo)} disabled={busy !== null}
+                <button type="button" onClick={() => void restore(v.versionNo)} disabled={busy}
                   className="rounded border border-slate-200 px-2.5 py-1 text-xs font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50">
-                  {busy === v.versionNo ? 'Restoring…' : 'Restore'}
+                  Restore
                 </button>
               )}
             </li>
@@ -422,5 +504,42 @@ function VersionsTab({ houseId, canRestore, onRestore }: {
         <p className="mt-3 text-xs text-slate-500">Restoring puts that version in the editor as the draft; the versions themselves never change.</p>
       )}
     </>
+  )
+}
+
+function describe(v: FloorPlanVersion): string {
+  return `${v.note ? `${v.note} · ` : ''}${v.rooms} rooms${v.floorAreaM2 !== null ? ` · ${v.floorAreaM2} m²` : ''} · `
+    + new Date(v.savedAt).toLocaleString('en-AU', { dateStyle: 'medium', timeStyle: 'short' })
+}
+
+/** One version, read-only: its drawing and figures, and the way back or to restore it. */
+function VersionPreview({ houseId, versionNo, summary, canRestore, busy, error, onBack, onRestore }: {
+  houseId: string; versionNo: number; summary?: FloorPlanVersion; canRestore: boolean; busy: boolean; error: string | null
+  onBack: () => void; onRestore: () => void
+}) {
+  const [plan, setPlan] = useState<FloorPlan | null>(null)
+  const [loadError, setLoadError] = useState<string | null>(null)
+  useEffect(() => {
+    getFloorPlanVersion(houseId, versionNo).then((doc) => setPlan(fromDocument(doc))).catch((e: Error) => setLoadError(e.message))
+  }, [houseId, versionNo])
+
+  return (
+    <div className="mt-3">
+      <p className="text-sm font-medium text-slate-900">Version {versionNo}{summary?.current ? ' · current' : ''}</p>
+      {summary && <p className="mb-2 text-xs text-slate-500">{describe(summary)}</p>}
+      {loadError && <p className="text-xs text-red-600" role="alert">{loadError}</p>}
+      {!plan && !loadError && <p className="text-sm text-slate-500">Loading…</p>}
+      {plan && <PlanPreview plan={plan} label={`Version ${versionNo} of the floor plan`} />}
+      {error && <p className="mt-2 text-xs text-red-600" role="alert">{error}</p>}
+      <div className="mt-3 flex justify-end gap-2">
+        <button type="button" onClick={onBack} className="rounded px-3 py-1.5 text-sm text-slate-600 hover:bg-slate-100">Back to the list</button>
+        {canRestore && (
+          <button type="button" onClick={onRestore} disabled={busy || !plan}
+            className="rounded bg-blue-600 px-3.5 py-1.5 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-60">
+            {busy ? 'Restoring…' : 'Restore this version'}
+          </button>
+        )}
+      </div>
+    </div>
   )
 }

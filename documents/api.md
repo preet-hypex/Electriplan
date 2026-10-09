@@ -134,7 +134,7 @@ need `floor-plan.edit` (owner, admin, builder, electrician). An archived house's
 | `/api/houses/{id}/floor-plan/approve` | POST | Approve the floor plan: `{version?, note?}`. The draft (if any) is saved as a version with the note, and the house moves to `floor_plan_approved`. Only a plan being checked (`floor_plan_review`) can be approved; `409` otherwise |
 | `/api/houses/{id}/floor-plan/versions` | GET | The history, newest first: number, state, note, rooms, walls, openings, floor area, open checks, when, who, and which is `current` |
 | `/api/houses/{id}/floor-plan/versions/{no}` | GET | One version, to look at |
-| `/api/houses/{id}/floor-plan/versions/{no}/restore` | POST | That version's contents become the draft: `{version?}` (the draft's, when there is one) |
+| `/api/houses/{id}/floor-plan/versions/{no}/restore` | POST | That version's contents become the draft: `{version?, keepDraft?}`. When the draft has unsaved changes (`unsavedChanges` on every floor-plan response: it differs from the version it started from), `keepDraft: true` saves it first as a version noted *"Before restoring version N"*, `false` lets the restore replace it; left out, it is kept. Returns `{draft, keptAsVersionNo}` |
 
 Saving a floor plan counts as activity on the house (migration V8), so it heads "continue where you left off".
 

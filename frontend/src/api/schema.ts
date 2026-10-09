@@ -218,7 +218,7 @@ export type paths = {
         put?: never;
         /**
          * Make an earlier version the draft
-         * @description Its contents replace the draft (send the draft's `version` when there is one).
+         * @description Its contents become the draft (send the draft's `version` when there is one). A draft with changes not saved as a version is saved first, as a version noted "Before restoring version N" (`keptAsVersionNo`).
          *
          *     **Permission:** `floor-plan.edit` (roles: owner, admin, builder, electrician).
          */
@@ -591,6 +591,7 @@ export type components = {
             /** Format: uuid */
             savedBy: string | null;
             state: components["schemas"]["FloorPlanState"];
+            unsavedChanges: boolean;
             /** Format: int32 */
             version: number;
             /** Format: int32 */
@@ -792,7 +793,13 @@ export type components = {
             /** Format: date-time */
             updatedAt: string;
         };
+        Restored: {
+            draft: components["schemas"]["FloorPlanDocument"];
+            /** Format: int32 */
+            keptAsVersionNo: number | null;
+        };
         RestoreForm: {
+            keepDraft?: boolean;
             /** Format: int32 */
             version?: number;
         };
@@ -1641,7 +1648,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["FloorPlanDocument"];
+                    "application/json": components["schemas"]["Restored"];
                 };
             };
             /** @description No company chosen while the caller belongs to several, or the header is not a company id. */

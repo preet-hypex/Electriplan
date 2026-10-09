@@ -149,6 +149,7 @@ class FloorPlansPostgresTests extends PostgresApplicationTest {
         assertThat(saved.path("version").asInt()).isZero();
         assertThat(saved.path("savedBy").asText()).isEqualTo(BUILDER.toString());
         assertThat(saved.path("document").path("rooms")).hasSize(4);
+        assertThat(saved.path("unsavedChanges").asBoolean()).as("a draft from nothing is unsaved work").isTrue();
 
         JsonNode opened = body(call(VIEWER, get(url)).andExpect(status().isOk()));
         assertThat(opened.path("document")).isEqualTo(saved.path("document"));
@@ -248,14 +249,62 @@ class FloorPlansPostgresTests extends PostgresApplicationTest {
                 .andExpect(jsonPath("$.message").value("This house has no floor-plan version 9."));
 
         call(BUILDER, post(url + "/versions/1/restore").content("{\"version\":5}")).andExpect(status().isConflict());
-        JsonNode restored = body(call(BUILDER, post(url + "/versions/1/restore").content("{\"version\":0}")).andExpect(status().isOk()));
-        assertThat(restored.path("state").asText()).isEqualTo("draft");
-        assertThat(restored.path("versionNo").asInt()).isEqualTo(2);
-        assertThat(restored.path("basedOnVersionNo").asInt()).isEqualTo(1);
-        assertThat(restored.path("document").path("rooms")).hasSize(2);
 
-        call(BUILDER, post(url + "/versions/2/restore").content("{}")).andExpect(status().isConflict())
-                .andExpect(jsonPath("$.message").value("Version 2 is the draft already."));
+        // The draft (the two-bedroom plan) was never saved as a version: it is kept first.
+        JsonNode restored = body(call(BUILDER, post(url + "/versions/1/restore").content("{\"version\":0}")).andExpect(status().isOk()));
+        assertThat(restored.path("keptAsVersionNo").asInt()).isEqualTo(2);
+        JsonNode draft = restored.path("draft");
+        assertThat(draft.path("state").asText()).isEqualTo("draft");
+        assertThat(draft.path("versionNo").asInt()).isEqualTo(3);
+        assertThat(draft.path("basedOnVersionNo").asInt()).isEqualTo(1);
+        assertThat(draft.path("document").path("rooms")).hasSize(2);
+
+        JsonNode history = body(call(VIEWER, get(url + "/versions")));
+        assertThat(history.get(1).path("versionNo").asInt()).isEqualTo(2);
+        assertThat(history.get(1).path("state").asText()).isEqualTo("committed");
+        assertThat(history.get(1).path("note").asText()).isEqualTo("Before restoring version 1");
+        assertThat(history.get(1).path("rooms").asInt()).as("the work that was in the draft").isEqualTo(4);
+        assertThat(body(call(VIEWER, get(url + "/versions/2"))).path("document").path("rooms")).hasSize(4);
+
+        assertThat(draft.path("unsavedChanges").asBoolean()).as("a copy of version 1, unchanged").isFalse();
+
+        // The draft is now an unchanged copy of version 1: restoring again keeps nothing more.
+        JsonNode again = body(call(BUILDER, post(url + "/versions/2/restore").content("{\"version\":" + draft.path("version").asInt() + "}"))
+                .andExpect(status().isOk()));
+        assertThat(again.path("keptAsVersionNo").isNull()).isTrue();
+        assertThat(again.path("draft").path("versionNo").asInt()).isEqualTo(3);
+        assertThat(again.path("draft").path("document").path("rooms")).hasSize(4);
+        assertThat(body(call(VIEWER, get(url + "/versions")))).hasSize(3);
+
+        call(BUILDER, post(url + "/versions/3/restore").content("{}")).andExpect(status().isConflict())
+                .andExpect(jsonPath("$.message").value("Version 3 is the draft already."));
+    }
+
+    @Test
+    void theDraftsChangesCanBeLetGoOnRestore() throws Exception {
+        String url = newHouse(BUILDER);
+        call(BUILDER, put(url + "/draft").content(draft(example("valid/hand-built-studio.json"), null))).andExpect(status().isOk());
+        call(BUILDER, post(url + "/versions").content(commit(0, "studio"))).andExpect(status().isCreated());
+        JsonNode edited = body(call(BUILDER, put(url + "/draft").content(draft(example("valid/analysed-two-bedroom-unit.json"), null))));
+        assertThat(edited.path("unsavedChanges").asBoolean()).isTrue();
+
+        JsonNode restored = body(call(BUILDER, post(url + "/versions/1/restore").content("{\"version\":0,\"keepDraft\":false}"))
+                .andExpect(status().isOk()));
+        assertThat(restored.path("keptAsVersionNo").isNull()).isTrue();
+        assertThat(restored.path("draft").path("versionNo").asInt()).as("the same draft, now version 1's contents").isEqualTo(2);
+        assertThat(restored.path("draft").path("unsavedChanges").asBoolean()).isFalse();
+        assertThat(body(call(VIEWER, get(url + "/versions")))).hasSize(2);
+    }
+
+    @Test
+    void restoringWithNoDraftKeepsNothing() throws Exception {
+        String url = newHouse(BUILDER);
+        call(BUILDER, put(url + "/draft").content(draft(example("valid/hand-built-studio.json"), null))).andExpect(status().isOk());
+        call(BUILDER, post(url + "/versions").content(commit(0, "studio"))).andExpect(status().isCreated());
+
+        JsonNode restored = body(call(BUILDER, post(url + "/versions/1/restore").content("{}")).andExpect(status().isOk()));
+        assertThat(restored.path("keptAsVersionNo").isNull()).isTrue();
+        assertThat(restored.path("draft").path("versionNo").asInt()).isEqualTo(2);
     }
 
     @Test

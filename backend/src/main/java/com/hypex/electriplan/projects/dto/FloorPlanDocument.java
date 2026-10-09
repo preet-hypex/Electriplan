@@ -19,6 +19,8 @@ import org.jspecify.annotations.Nullable;
  *        else since is refused (409) rather than overwritten
  * @param basedOnVersionNo the version this draft started from, if any
  * @param houseStage where the house is now (saving a plan can move it, e.g. to floor_plan_review)
+ * @param unsavedChanges a draft that differs from the version it started from (or started
+ *        from nothing): work that is not saved as a version yet. Always false for a version
  */
 public record FloorPlanDocument(
         UUID houseId,
@@ -31,5 +33,6 @@ public record FloorPlanDocument(
         JsonNode document,
         Instant savedAt,
         @Nullable UUID savedBy,
-        HouseStage houseStage) {
+        HouseStage houseStage,
+        boolean unsavedChanges) {
 }

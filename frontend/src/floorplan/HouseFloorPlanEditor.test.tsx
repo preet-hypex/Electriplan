@@ -8,6 +8,7 @@ import type { HouseMode } from './FloorPlanApp'
 const mocks = vi.hoisted(() => ({
   openFloorPlan: vi.fn(), saveFloorPlanDraft: vi.fn(), saveFloorPlanVersion: vi.fn(),
   floorPlanHistory: vi.fn(), restoreFloorPlanVersion: vi.fn(), uploadFloorPlanImage: vi.fn(), approveFloorPlan: vi.fn(),
+  getFloorPlanVersion: vi.fn(),
   houseStages: vi.fn(),
 }))
 vi.mock('../api/floorPlans', () => mocks)
@@ -35,9 +36,9 @@ const PLAN: FloorPlan = {
 }
 
 const doc = (state: 'draft' | 'committed', version: number, versionNo = 2, plan: FloorPlan = PLAN,
-  houseStage: 'floor_plan_review' | 'floor_plan_approved' = 'floor_plan_review') => ({
+  houseStage: 'floor_plan_review' | 'floor_plan_approved' = 'floor_plan_review', unsavedChanges = state === 'draft') => ({
   houseId: 'h1', levelId: 'l1', versionNo, state, version, basedOnVersionNo: null,
-  document: plan as unknown as Record<string, unknown>, savedAt: '2026-10-08T00:00:00Z', savedBy: null, houseStage,
+  document: plan as unknown as Record<string, unknown>, savedAt: '2026-10-08T00:00:00Z', savedBy: null, houseStage, unsavedChanges,
 })
 
 const renderEditor = (canEdit = true) =>
@@ -95,20 +96,80 @@ describe('HouseFloorPlanEditor', () => {
     expect(screen.getByRole('button', { name: /save version/i })).toBeDisabled()
   })
 
-  it('restores an earlier version as the draft', async () => {
-    const studio = { ...PLAN, rooms: [{ ...PLAN.rooms[0], id: 'r9', name: 'Studio' }] }
-    mocks.restoreFloorPlanVersion.mockResolvedValue(doc('draft', 6, 2, studio))
-    renderEditor()
+  const STUDIO = { ...PLAN, rooms: [{ ...PLAN.rooms[0], id: 'r9', name: 'Studio' }] }
+
+  async function openHistoryAndRestore() {
     await userEvent.click(await screen.findByRole('button', { name: /history/i }))
     const dialog = screen.getByRole('dialog', { name: 'Floor-plan history' })
     expect(await within(dialog).findByText('Version 1')).toBeInTheDocument()
     expect(within(dialog).getByText('Current')).toBeInTheDocument()
     expect(within(dialog).getAllByRole('button', { name: 'Restore' })).toHaveLength(1)
-
     await userEvent.click(within(dialog).getByRole('button', { name: 'Restore' }))
-    await waitFor(() => expect(mocks.restoreFloorPlanVersion).toHaveBeenCalledWith('h1', 1, 4))
+    return dialog
+  }
+
+  it('asks before restoring over a draft with unsaved changes, and keeps them when asked to', async () => {
+    mocks.restoreFloorPlanVersion.mockResolvedValue({ draft: doc('draft', 0, 3, STUDIO, 'floor_plan_review', false), keptAsVersionNo: 2 })
+    renderEditor()
+    const dialog = await openHistoryAndRestore()
+
+    expect(await within(dialog).findByText('Your draft has changes not saved as a version')).toBeInTheDocument()
+    expect(mocks.restoreFloorPlanVersion).not.toHaveBeenCalled()
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Save as a version, then restore' }))
+
+    await waitFor(() => expect(mocks.restoreFloorPlanVersion).toHaveBeenCalledWith('h1', 1, 4, true))
     expect(useEditor.getState().plan.rooms[0].name).toBe('Studio')
     expect(screen.queryByRole('dialog')).toBeNull()
+    expect(screen.getByRole('status')).toHaveTextContent('Your earlier draft was saved as version 2')
+    expect(screen.getByRole('button', { name: /save version/i })).toBeDisabled()
+  })
+
+  it('restores without saving when the person lets the changes go', async () => {
+    mocks.restoreFloorPlanVersion.mockResolvedValue({ draft: doc('draft', 5, 2, STUDIO, 'floor_plan_review', false), keptAsVersionNo: null })
+    renderEditor()
+    const dialog = await openHistoryAndRestore()
+    await userEvent.click(await within(dialog).findByRole('button', { name: 'Restore without saving' }))
+    await waitFor(() => expect(mocks.restoreFloorPlanVersion).toHaveBeenCalledWith('h1', 1, 4, false))
+    expect(screen.getByRole('status')).toHaveTextContent('Version 1 is back in the editor.')
+  })
+
+  it('cancels the restore from the question', async () => {
+    renderEditor()
+    const dialog = await openHistoryAndRestore()
+    await userEvent.click(await within(dialog).findByRole('button', { name: 'Cancel' }))
+    expect(within(dialog).getByText('Version 1')).toBeInTheDocument()
+    expect(mocks.restoreFloorPlanVersion).not.toHaveBeenCalled()
+  })
+
+  it('restores straight away when the draft has no unsaved changes', async () => {
+    mocks.openFloorPlan.mockResolvedValue(doc('draft', 4, 2, PLAN, 'floor_plan_review', false))
+    mocks.restoreFloorPlanVersion.mockResolvedValue({ draft: doc('draft', 5, 2, STUDIO, 'floor_plan_review', false), keptAsVersionNo: null })
+    renderEditor()
+    expect(await screen.findByRole('button', { name: /save version/i })).toBeDisabled()
+    await openHistoryAndRestore()
+    await waitFor(() => expect(mocks.restoreFloorPlanVersion).toHaveBeenCalledWith('h1', 1, 4, undefined))
+    expect(screen.queryByText('Your draft has changes not saved as a version')).toBeNull()
+  })
+
+  it('shows a version read-only before restoring it', async () => {
+    mocks.getFloorPlanVersion.mockResolvedValue(doc('committed', 0, 1, STUDIO))
+    mocks.openFloorPlan.mockResolvedValue(doc('draft', 4, 2, PLAN, 'floor_plan_review', false))
+    mocks.restoreFloorPlanVersion.mockResolvedValue({ draft: doc('draft', 5, 2, STUDIO, 'floor_plan_review', false), keptAsVersionNo: null })
+    renderEditor()
+    await userEvent.click(await screen.findByRole('button', { name: /history/i }))
+    const dialog = screen.getByRole('dialog', { name: 'Floor-plan history' })
+    await userEvent.click(await within(dialog).findByRole('button', { name: 'View' }))
+
+    const drawing = await within(dialog).findByRole('img', { name: 'Version 1 of the floor plan' })
+    expect(within(drawing).getByText('Studio')).toBeInTheDocument()
+    expect(mocks.getFloorPlanVersion).toHaveBeenCalledWith('h1', 1)
+    expect(useEditor.getState().plan.rooms[0].name).toBe('Kitchen')
+
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Back to the list' }))
+    await userEvent.click(within(dialog).getByRole('button', { name: 'View' }))
+    await userEvent.click(await within(dialog).findByRole('button', { name: 'Restore this version' }))
+    await waitFor(() => expect(mocks.restoreFloorPlanVersion).toHaveBeenCalledWith('h1', 1, 4, undefined))
+    expect(useEditor.getState().plan.rooms[0].name).toBe('Studio')
   })
 
   it('uploads an image through the API, whose analysed plan is already the saved draft', async () => {
