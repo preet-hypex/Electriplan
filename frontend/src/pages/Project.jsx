@@ -147,7 +147,7 @@ function Houses({ project, mayAdd, onAdded }) {
         )
         : (
           <table className="table">
-            <thead><tr><th>House</th><th>Type</th><th>Stage</th><th className="right">Changed</th></tr></thead>
+            <thead><tr><th>House</th><th>Type</th><th>Stage</th><th className="right">Changed</th><th /></tr></thead>
             <tbody>
               {current.map(h => (
                 <tr key={h.id}>
@@ -155,13 +155,17 @@ function Houses({ project, mayAdd, onAdded }) {
                   <td>{DWELLING_LABELS[h.dwellingType]}</td>
                   <td><StageBadge stage={h.stage} /></td>
                   <td className="right meta">{ago(h.updatedAt)}</td>
+                  <td className="right">
+                    <Link to={`/projects/${project.id}/houses/${h.id}/floor-plan`} className="btn">
+                      <Icon name="plan" size={16} />Floor plan
+                    </Link>
+                  </td>
                 </tr>
               ))}
             </tbody>
           </table>
         )}
       {mayAdd && <AddHouse projectId={project.id} onAdded={onAdded} />}
-      {current.length > 0 && <p className="hint pad">Saving each house's floor plan arrives next: until then, use the floor-plan editor and save the JSON.</p>}
     </section>
   )
 }

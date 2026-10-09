@@ -3,6 +3,8 @@ package com.hypex.electriplan.projects.entity;
 import java.util.Arrays;
 
 import com.hypex.electriplan.projects.domain.DwellingType;
+import com.hypex.electriplan.projects.domain.FloorPlanOrigin;
+import com.hypex.electriplan.projects.domain.FloorPlanState;
 import com.hypex.electriplan.projects.domain.HouseStage;
 import com.hypex.electriplan.projects.domain.ProjectStatus;
 
@@ -32,6 +34,18 @@ public final class Codes {
     static final class Dwelling implements AttributeConverter<DwellingType, String> {
         @Override public String convertToDatabaseColumn(DwellingType value) { return value.code(); }
         @Override public DwellingType convertToEntityAttribute(String code) { return fromCode(DwellingType.class, code); }
+    }
+
+    @Converter
+    static final class PlanState implements AttributeConverter<FloorPlanState, String> {
+        @Override public String convertToDatabaseColumn(FloorPlanState value) { return value.code(); }
+        @Override public FloorPlanState convertToEntityAttribute(String code) { return fromCode(FloorPlanState.class, code); }
+    }
+
+    @Converter
+    static final class Origin implements AttributeConverter<FloorPlanOrigin, String> {
+        @Override public String convertToDatabaseColumn(FloorPlanOrigin value) { return value.code(); }
+        @Override public FloorPlanOrigin convertToEntityAttribute(String code) { return fromCode(FloorPlanOrigin.class, code); }
     }
 
     @Converter

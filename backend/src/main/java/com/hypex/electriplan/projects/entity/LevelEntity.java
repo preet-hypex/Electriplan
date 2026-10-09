@@ -40,8 +40,14 @@ public class LevelEntity {
     @Column(name = "ceiling_height_mm", nullable = false)
     private int ceilingHeightMm;
 
-    @Column(name = "current_floor_plan_version_id", insertable = false, updatable = false)
+    /** The storey's latest committed floor-plan version: what designs are made from. */
+    @Column(name = "current_floor_plan_version_id", insertable = false)
     private @Nullable UUID currentFloorPlanVersionId;
+
+    /** The committed version that is now this storey's floor plan. */
+    public void useFloorPlan(UUID versionId) {
+        currentFloorPlanVersionId = versionId;
+    }
 
     public static LevelEntity groundFloor(HouseEntity house) {
         LevelEntity level = new LevelEntity();
