@@ -16,6 +16,7 @@ import com.hypex.electriplan.projects.dto.CommitForm;
 import com.hypex.electriplan.projects.dto.FloorPlanDocument;
 import com.hypex.electriplan.projects.dto.FloorPlanVersion;
 import com.hypex.electriplan.projects.dto.RestoreForm;
+import com.hypex.electriplan.projects.dto.Restored;
 import com.hypex.electriplan.projects.dto.SaveDraftForm;
 import com.hypex.electriplan.projects.entity.FloorPlanVersionEntity;
 import com.hypex.electriplan.projects.entity.HouseEntity;
@@ -172,8 +173,13 @@ public class FloorPlansService {
         return document(house, findVersion(groundFloor(house), versionNo));
     }
 
-    /** An earlier version's contents become the draft (replacing the draft there is, which must be the one the caller saw). */
-    public FloorPlanDocument restore(UUID houseId, int versionNo, RestoreForm form) {
+    /**
+     * An earlier version's contents become the draft. A draft with changes not
+     * saved as a version is saved first, as a version noted "Before restoring
+     * version N", unless the caller chose to let it go ({@code keepDraft}
+     * false). The draft must be the one the caller saw.
+     */
+    public Restored restore(UUID houseId, int versionNo, RestoreForm form) {
         HouseEntity house = editableHouse(houseId);
         LevelEntity level = groundFloor(house);
         FloorPlanVersionEntity earlier = findVersion(level, versionNo);
@@ -181,17 +187,45 @@ public class FloorPlansService {
             throw ProjectsProblem.conflict("Version " + versionNo + " is the draft already.");
         }
 
+        Integer kept = null;
         FloorPlanVersionEntity draft = versions.findDraft(level.getId()).orElse(null);
+        if (draft != null) {
+            EditVersion.requireUnchanged(form.version(), draft.getLockVersion());
+            if (hasUnsavedChanges(draft) && !Boolean.FALSE.equals(form.keepDraft())) {
+                kept = keepAsVersion(level, draft, "Before restoring version " + versionNo);
+                draft = null; // a new draft follows; there can be only one, so the kept one is written first
+            } else {
+                draft.basedOn(earlier.getId());
+            }
+        }
         if (draft == null) {
             draft = newDraft(level, FloorPlanOrigin.EDITOR, earlier.getId());
-        } else {
-            EditVersion.requireUnchanged(form.version(), draft.getLockVersion());
-            draft.basedOn(earlier.getId());
         }
+        // Written as every save writes a plan (the database reorders stored JSON), so the copy has the version's fingerprint.
         FloorPlan plan = FloorPlanReading.read(FloorPlanReading.tree(earlier.getDocument()));
-        draft.replaceDocument(earlier.getDocument(), FloorPlanReading.figures(plan, earlier.getDocument()));
+        String json = FloorPlanReading.json(plan);
+        draft.replaceDocument(json, FloorPlanReading.figures(plan, json));
         stages.floorPlanChanged(house);
-        return document(house, versions.saveAndFlush(draft));
+        return new Restored(document(house, versions.saveAndFlush(draft)), kept);
+    }
+
+    /** Whether the draft differs from the version it started from (a draft from nothing always does). */
+    private boolean hasUnsavedChanges(FloorPlanVersionEntity draft) {
+        if (draft.getBasedOnVersionId() == null) {
+            return true;
+        }
+        return versions.findById(draft.getBasedOnVersionId())
+                .map(base -> !java.util.Arrays.equals(base.getContentSha256(), draft.getContentSha256()))
+                .orElse(true);
+    }
+
+    /** The draft, frozen as a version with a note; it becomes the storey's current plan. Returns its number. */
+    private int keepAsVersion(LevelEntity level, FloorPlanVersionEntity draft, String note) {
+        draft.commit(note, current.require().userId());
+        FloorPlanVersionEntity kept = versions.saveAndFlush(draft);
+        level.useFloorPlan(kept.getId());
+        levels.saveAndFlush(level);
+        return kept.getVersionNo();
     }
 
     // ---- helpers ----
@@ -235,7 +269,7 @@ public class FloorPlansService {
                 : versions.findById(v.getBasedOnVersionId()).map(FloorPlanVersionEntity::getVersionNo).orElse(null);
         return new FloorPlanDocument(house.getId(), v.getLevelId(), v.getVersionNo(), v.getState(), v.getLockVersion(), basedOn,
                 FloorPlanReading.tree(v.getDocument()), v.getUpdatedAt(), v.isDraft() ? v.getCreatedBy() : v.getCommittedBy(),
-                house.getStage());
+                house.getStage(), v.isDraft() && hasUnsavedChanges(v));
     }
 
     private static FloorPlanVersion summary(FloorPlanVersionEntity v, @Nullable UUID currentId) {

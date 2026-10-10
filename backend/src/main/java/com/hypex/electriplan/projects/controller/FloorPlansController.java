@@ -10,6 +10,7 @@ import com.hypex.electriplan.projects.dto.ErrorMessage;
 import com.hypex.electriplan.projects.dto.FloorPlanDocument;
 import com.hypex.electriplan.projects.dto.FloorPlanVersion;
 import com.hypex.electriplan.projects.dto.RestoreForm;
+import com.hypex.electriplan.projects.dto.Restored;
 import com.hypex.electriplan.projects.dto.SaveDraftForm;
 import com.hypex.electriplan.projects.dto.ValidationProblem;
 import com.hypex.electriplan.projects.service.FloorPlansService;
@@ -166,8 +167,9 @@ public class FloorPlansController {
     @NotFound
     @Conflict
     @Operation(operationId = "restoreFloorPlanVersion", summary = "Make an earlier version the draft",
-            description = "Its contents replace the draft (send the draft's `version` when there is one).")
-    FloorPlanDocument restore(@PathVariable UUID id, @PathVariable int versionNo, @RequestBody RestoreForm form) {
+            description = "Its contents become the draft (send the draft's `version` when there is one). A draft with changes not "
+                    + "saved as a version is saved first, as a version noted \"Before restoring version N\" (`keptAsVersionNo`).")
+    Restored restore(@PathVariable UUID id, @PathVariable int versionNo, @RequestBody RestoreForm form) {
         return floorPlans.restore(id, versionNo, form);
     }
 }

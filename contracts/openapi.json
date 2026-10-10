@@ -194,6 +194,9 @@
           "state": {
             "$ref": "#/components/schemas/FloorPlanState"
           },
+          "unsavedChanges": {
+            "type": "boolean"
+          },
           "version": {
             "format": "int32",
             "type": "integer"
@@ -212,6 +215,7 @@
           "savedAt",
           "savedBy",
           "state",
+          "unsavedChanges",
           "version",
           "versionNo"
         ],
@@ -887,11 +891,31 @@
       },
       "RestoreForm": {
         "properties": {
+          "keepDraft": {
+            "type": "boolean"
+          },
           "version": {
             "format": "int32",
             "type": "integer"
           }
         },
+        "type": "object"
+      },
+      "Restored": {
+        "properties": {
+          "draft": {
+            "$ref": "#/components/schemas/FloorPlanDocument"
+          },
+          "keptAsVersionNo": {
+            "format": "int32",
+            "nullable": true,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "draft",
+          "keptAsVersionNo"
+        ],
         "type": "object"
       },
       "SaveDraftForm": {
@@ -2288,7 +2312,7 @@
     },
     "/api/houses/{id}/floor-plan/versions/{versionNo}/restore": {
       "post": {
-        "description": "Its contents replace the draft (send the draft's `version` when there is one).\n\n**Permission:** `floor-plan.edit` (roles: owner, admin, builder, electrician).",
+        "description": "Its contents become the draft (send the draft's `version` when there is one). A draft with changes not saved as a version is saved first, as a version noted \"Before restoring version N\" (`keptAsVersionNo`).\n\n**Permission:** `floor-plan.edit` (roles: owner, admin, builder, electrician).",
         "operationId": "restoreFloorPlanVersion",
         "parameters": [
           {
@@ -2335,7 +2359,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/FloorPlanDocument"
+                  "$ref": "#/components/schemas/Restored"
                 }
               }
             },
